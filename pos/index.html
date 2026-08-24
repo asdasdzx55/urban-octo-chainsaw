@@ -111,17 +111,17 @@
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
       </button>
 
-      <!-- Mobile Hamburger Menu Button -->
-      <button onclick="window.app.toggleDrawerMenu()" class="md:hidden p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition" title="القائمة الرئيسية">
+      <!-- Hamburger Menu Button (Available on Mobile and Tablet) -->
+      <button id="btn-hamburger-menu" onclick="window.app.toggleDrawerMenu()" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition flex items-center justify-center" title="القائمة الرئيسية">
         <i data-lucide="menu" class="w-5 h-5"></i>
       </button>
     </div>
 
   </header>
 
-  <!-- ==================== MOBILE SLIDE-OUT DRAWER MENU ==================== -->
-  <div id="mobile-nav-drawer" class="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden flex justify-start">
-    <div class="bg-white dark:bg-gray-800 w-72 max-w-[80vw] h-full p-5 flex flex-col justify-between shadow-2xl animate-drawer-slide-right">
+  <!-- ==================== MOBILE / TABLET SLIDE-OUT DRAWER MENU ==================== -->
+  <div id="mobile-nav-drawer" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden justify-start" onclick="if(event.target === this) window.app.closeDrawerMenu()">
+    <div class="bg-white dark:bg-gray-800 w-72 max-w-[85vw] h-full p-5 flex flex-col justify-between shadow-2xl animate-drawer-slide-right">
       
       <!-- Drawer Header -->
       <div class="flex flex-col gap-4">

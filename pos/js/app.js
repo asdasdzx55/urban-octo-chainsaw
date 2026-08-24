@@ -254,13 +254,22 @@ class App {
 
   toggleDrawerMenu() {
     const drawer = document.getElementById('mobile-nav-drawer');
-    drawer?.classList.toggle('hidden');
+    if (!drawer) return;
+    if (drawer.classList.contains('hidden') || drawer.style.display === 'none') {
+      drawer.classList.remove('hidden');
+      drawer.style.display = 'flex';
+    } else {
+      drawer.classList.add('hidden');
+      drawer.style.display = 'none';
+    }
     if (window.lucide) window.lucide.createIcons();
   }
 
   closeDrawerMenu() {
     const drawer = document.getElementById('mobile-nav-drawer');
-    drawer?.classList.add('hidden');
+    if (!drawer) return;
+    drawer.classList.add('hidden');
+    drawer.style.display = 'none';
   }
 
   /* ==================== CHECKOUT MODAL LOGIC ==================== */
@@ -366,6 +375,12 @@ class App {
 
     // Theme toggle
     document.getElementById('btn-theme-toggle')?.addEventListener('click', () => this.toggleTheme());
+
+    // Hamburger Menu button
+    document.getElementById('btn-hamburger-menu')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleDrawerMenu();
+    });
 
     // Navigation buttons
     document.querySelectorAll('.app-view-btn').forEach(btn => {

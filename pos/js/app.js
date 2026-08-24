@@ -392,7 +392,15 @@ class App {
   /* ==================== MOBILE CART DRAWER ==================== */
   toggleMobileCart() {
     const drawer = document.getElementById('mobile-cart-drawer');
-    drawer?.classList.toggle('hidden');
+    if (!drawer) return;
+    if (drawer.classList.contains('hidden') || drawer.style.display === 'none') {
+      drawer.classList.remove('hidden');
+      drawer.style.display = 'flex';
+    } else {
+      drawer.classList.add('hidden');
+      drawer.style.display = 'none';
+    }
+    if (window.lucide) window.lucide.createIcons();
   }
 
   /* ==================== EVENT BINDINGS ==================== */
@@ -409,6 +417,11 @@ class App {
     document.getElementById('btn-hamburger-menu')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleDrawerMenu();
+    });
+
+    // Add New Product Button in Inventory
+    document.getElementById('btn-add-new-product')?.addEventListener('click', () => {
+      window.inventoryController?.openNewProductForm();
     });
 
     // Navigation buttons

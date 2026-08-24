@@ -51,7 +51,9 @@ class InventoryController {
     const formTitle = document.getElementById('inv-form-title');
     if (!formBox) return;
 
-    if (formTitle) formTitle.textContent = 'إضافة صنف جديد للمتجر والمخزن';
+    if (formTitle) {
+      formTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i> إضافة صنف جديد للمتجر والمخزن`;
+    }
 
     // Reset fields with sensible defaults
     document.getElementById('inv-prod-name').value = '';
@@ -63,8 +65,19 @@ class InventoryController {
     document.getElementById('inv-prod-localcode').value = '';
 
     formBox.classList.remove('hidden');
+    formBox.style.display = 'flex';
     formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     document.getElementById('inv-prod-name')?.focus();
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeForm() {
+    const formBox = document.getElementById('inv-product-edit-form');
+    if (formBox) {
+      formBox.classList.add('hidden');
+      formBox.style.display = 'none';
+    }
   }
 
   generateRandomBarcode() {
@@ -83,8 +96,11 @@ class InventoryController {
     const formTitle = document.getElementById('inv-form-title');
     if (!formBox) return;
 
-    if (formTitle) formTitle.textContent = 'تعديل بيانات الصنف والمخزون';
+    if (formTitle) {
+      formTitle.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i> تعديل بيانات الصنف والمخزون`;
+    }
     formBox.classList.remove('hidden');
+    formBox.style.display = 'flex';
 
     // Fill form fields
     document.getElementById('inv-prod-name').value = p.name || '';
@@ -98,6 +114,7 @@ class InventoryController {
     // Scroll to form smoothly
     formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     window.posScanner?.playSuccessBeep();
+    if (window.lucide) window.lucide.createIcons();
   }
 
   adjustStock(delta) {

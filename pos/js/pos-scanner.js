@@ -135,13 +135,21 @@ class POSScanner {
     if (!modal) return;
 
     modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    if (window.lucide) window.lucide.createIcons();
     await this.startCamera();
   }
 
   closeCameraModal() {
     const modal = document.getElementById('camera-scanner-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
     this.stopCamera();
+    if (window.inventoryController) {
+      window.inventoryController.isScanningToInputField = false;
+    }
   }
 
   async startCamera() {

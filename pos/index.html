@@ -435,9 +435,8 @@
               </div>
               <div class="flex items-center gap-1.5">
                 <input type="text" id="inv-prod-barcode" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-                <button type="button" onclick="window.inventoryController.scanBarcodeWithCamera()" class="px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shrink-0 flex items-center gap-1.5 text-xs font-bold shadow-xs" title="فتح الكاميرا ومسح الباركود فوراً">
+                <button type="button" id="btn-scan-inv-barcode" onclick="window.inventoryController.scanBarcodeWithCamera()" class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shrink-0 flex items-center justify-center shadow-xs" title="فتح الكاميرا ومسح الباركود فوراً">
                   <i data-lucide="camera" class="w-4 h-4"></i>
-                  <span>مسح بالكاميرا</span>
                 </button>
               </div>
             </div>

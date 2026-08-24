@@ -424,6 +424,11 @@ class App {
       window.inventoryController?.openNewProductForm();
     });
 
+    // Scan Barcode Button in Product Form
+    document.getElementById('btn-scan-inv-barcode')?.addEventListener('click', () => {
+      window.inventoryController?.scanBarcodeWithCamera();
+    });
+
     // Navigation buttons
     document.querySelectorAll('.app-view-btn').forEach(btn => {
       btn.addEventListener('click', () => {

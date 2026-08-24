@@ -11,6 +11,7 @@ const I18N = {
     tab_image: "مسح من صورة",
     tab_generate: "إنشاء باركود / QR",
     tab_history: "سجل العمليات",
+    tab_api: "الربط مع الكاشير (API)",
     
     // Live scanner
     camera_select: "اختر الكاميرا",
@@ -87,6 +88,7 @@ const I18N = {
     tab_image: "Scan Image",
     tab_generate: "Generate Code",
     tab_history: "History",
+    tab_api: "POS & API Integration",
     
     // Live scanner
     camera_select: "Select Camera",
@@ -176,7 +178,15 @@ class App {
     window.generatorController?.init();
 
     // Auto-enumerate cameras
-    window.scannerController?.initCameras();
+    window.scannerController?.initCameras().then(() => {
+      // Check for POS Mode URL Query (?mode=pos)
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mode') === 'pos' || urlParams.get('mode') === 'pos_embedded') {
+        setTimeout(() => {
+          window.scannerController?.startLiveScanner();
+        }, 500);
+      }
+    });
 
     // Render Lucide icons
     if (window.lucide) {
@@ -395,7 +405,7 @@ class App {
     });
 
     // Update tab content containers
-    ['live', 'image', 'generate', 'history'].forEach(id => {
+    ['live', 'image', 'generate', 'history', 'api'].forEach(id => {
       const section = document.getElementById(`tab-content-${id}`);
       if (section) {
         if (id === tabId) {
@@ -416,6 +426,35 @@ class App {
   handleScanResult(text, format, source = 'camera') {
     const isURL = /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(text.trim());
     
+    // 1. Send POS Event to Parent Window (iframe) or Opener (popup)
+    const scanPayload = {
+      type: 'POS_BARCODE_SCANNED',
+      code: text,
+      format: format,
+      source: source,
+      timestamp: new Date().toISOString()
+    };
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(scanPayload, '*');
+    }
+    if (window.opener) {
+      window.opener.postMessage(scanPayload, '*');
+    }
+
+    // 2. Trigger Webhook if specified in URL query (?webhook=https://api.example.com/scan)
+    const urlParams = new URLSearchParams(window.location.search);
+    const webhookUrl = urlParams.get('webhook');
+    if (webhookUrl) {
+      try {
+        fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(scanPayload)
+        }).catch(err => console.warn('Webhook error:', err));
+      } catch (e) {}
+    }
+
     // Display result card
     const resultCard = document.getElementById('scan-result-card');
     const resultText = document.getElementById('scan-result-text');

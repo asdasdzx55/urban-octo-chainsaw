@@ -68,6 +68,30 @@ barcode-scanner-web/
 │   ├── app.js          # إدارة التبويبات واللغات والسجل والواجهة
 │   ├── scanner.js      # محرك المسح المباشر ومسح الصور
 │   ├── generator.js    # محرك توليد الأكواد والتصدير
+│   ├── pos-sdk.js      # مكتبة وSDK ربط أنظمة الكاشير ونقاط البيع
 │   └── audio.js        # مؤثرات الصوت والاهتزاز
 └── README.md           # دليل الاستخدام والتشغيل
 ```
+
+---
+
+## 💳 الربط مع أنظمة الكاشير ونقاط البيع (POS API)
+
+يمكن لأي مبرمج أو موقع كاشير استخدام الماسح بـ 3 أسطر فقط:
+
+```html
+<script src="https://asdasdzx55.github.io/urban-octo-chainsaw/js/pos-sdk.js"></script>
+<script>
+  const scanner = new POSScannerSDK({
+    scannerUrl: 'https://asdasdzx55.github.io/urban-octo-chainsaw/',
+    onScan: (data) => {
+      console.log("Barcode:", data.code);
+      // أضف السلعة للفاتورة
+    }
+  });
+  
+  // افتح الماسح بنافذة منبثقة
+  scanner.open({ autoClose: true });
+</script>
+```
+

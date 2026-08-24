@@ -100,10 +100,15 @@
         <span data-i18n="tab_generate">إنشاء باركود / QR</span>
       </button>
 
-      <button class="nav-tab-btn flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 relative" data-tab="history">
+      <button class="nav-tab-btn flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 relative" data-tab="history">
         <i data-lucide="history" class="w-4 h-4"></i>
         <span data-i18n="tab_history">السجل</span>
         <span id="history-count-badge" class="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">0</span>
+      </button>
+
+      <button class="nav-tab-btn flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="api">
+        <i data-lucide="code-2" class="w-4 h-4"></i>
+        <span data-i18n="tab_api">الربط مع الكاشير (API)</span>
       </button>
     </nav>
 
@@ -531,6 +536,129 @@
 
     </section>
 
+    <!-- ==================== TAB 5: POS & CASHIER API ==================== -->
+    <section id="tab-content-api" class="hidden flex flex-col gap-6">
+      
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-700/80 shadow-xl flex flex-col gap-6">
+        
+        <!-- API Section Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-2 border border-indigo-200 dark:border-indigo-800">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              POS & Cashier Integration API
+            </div>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">دليل ربط الماسح بنظام الكاشير ونقاط البيع (POS)</h2>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              يمكن لأي موقع كاشير أو متجر إلكتروني فتح الماسح واستقبال الأكواد الممسوحة فورياً لإضافتها لسلة المشتريات.
+            </p>
+          </div>
+
+          <!-- Live Interactive Tester Button -->
+          <button id="btn-demo-pos-sdk" onclick="const sdk = new POSScannerSDK(); sdk.open({ autoClose: false });" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition transform active:scale-95 shrink-0">
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            تجربة نافذة الكاشير المنبثقة (Live Demo)
+          </button>
+        </div>
+
+        <!-- Integration Methods Cards -->
+        <div class="flex flex-col gap-6">
+
+          <!-- Method 1: POS Web SDK (Recommended) -->
+          <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                طريقة الـ JavaScript SDK (الأسهل والأسرع - 3 أسطر فقط)
+              </h3>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">موصى به</span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              أضف ملف الـ SDK إلى صفحة الكاشير بموقعك، وافتح الماسح بنافذة منبثقة أو مضمنة واستقبل الباركود فورياً:
+            </p>
+
+            <pre class="p-4 rounded-xl bg-gray-900 text-gray-100 font-mono text-xs overflow-x-auto leading-relaxed border border-gray-800 dir-ltr text-left"><code>&lt;!-- 1. تضمين مكتبة SDK --&gt;
+&lt;script src="https://asdasdzx55.github.io/urban-octo-chainsaw/js/pos-sdk.js"&gt;&lt;/script&gt;
+
+&lt;!-- 2. زر فتح الماسح في شاشة الكاشير --&gt;
+&lt;button onclick="openPosScanner()"&gt;📷 مسح باركود منتج&lt;/button&gt;
+
+&lt;script&gt;
+  const posScanner = new POSScannerSDK({
+    scannerUrl: 'https://asdasdzx55.github.io/urban-octo-chainsaw/',
+    onScan: function(data) {
+      console.log("الباركود الممسوح:", data.code);
+      console.log("نوع الباركود:", data.format);
+      
+      // أضف المنتج مباشرة إلى فاتورة الكاشير أو سلة المشتريات:
+      addProductToCart(data.code);
+    }
+  });
+
+  function openPosScanner() {
+    posScanner.open({ autoClose: true }); // autoClose: إغلاق النافذة تلقائياً بعد أول مسح
+  }
+&lt;/script&gt;</code></pre>
+          </div>
+
+          <!-- Method 2: Iframe & PostMessage API -->
+          <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+              طريقة الـ Iframe و PostMessage API
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              إذا كنت تريد تضمين الماسح داخل جزء محدد من شاشة نقطة البيع (POS Layout) والاستماع للأحداث عبر JavaScript:
+            </p>
+
+            <pre class="p-4 rounded-xl bg-gray-900 text-gray-100 font-mono text-xs overflow-x-auto leading-relaxed border border-gray-800 dir-ltr text-left"><code>&lt;!-- تضمين الماسح داخل الشاشة --&gt;
+&lt;iframe src="https://asdasdzx55.github.io/urban-octo-chainsaw/?mode=pos" 
+        allow="camera; microphone" 
+        width="100%" height="450" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;
+
+&lt;script&gt;
+  // استقبال الباركود عند المسح مباشرة
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'POS_BARCODE_SCANNED') {
+      const barcode = event.data.code;
+      const format = event.data.format;
+      
+      // تنفيذ عملية البيع
+      handleScannedItem(barcode);
+    }
+  });
+&lt;/script&gt;</code></pre>
+          </div>
+
+          <!-- Method 3: Webhook API -->
+          <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+              طريقة الـ Webhook (إرسال تلقائي إلى سيرفر الكاشير)
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              مرر رابط الـ API الخاص بسيرفرك في عنوان URL وسيقوم الماسح بإرسال طلب <code class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">POST</code> مباشرة مع كل باركود يتم مسحه:
+            </p>
+
+            <pre class="p-4 rounded-xl bg-gray-900 text-gray-100 font-mono text-xs overflow-x-auto leading-relaxed border border-gray-800 dir-ltr text-left"><code>// رابط تشغيل الماسح مع Webhook:
+https://asdasdzx55.github.io/urban-octo-chainsaw/?mode=pos&webhook=https://api.yourpos.com/v1/scan-event
+
+// البيانات المرسلة (JSON Payload):
+{
+  "type": "POS_BARCODE_SCANNED",
+  "code": "6281000000000",
+  "format": "EAN_13",
+  "source": "camera",
+  "timestamp": "2026-08-24T14:55:00.000Z"
+}</code></pre>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
   </main>
 
   <!-- ==================== FOOTER ==================== -->
@@ -556,6 +684,7 @@
   <script src="js/audio.js"></script>
   <script src="js/scanner.js"></script>
   <script src="js/generator.js"></script>
+  <script src="js/pos-sdk.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

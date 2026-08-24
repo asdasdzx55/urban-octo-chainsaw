@@ -193,10 +193,19 @@ class POSScanner {
     if (!barcode) return;
     this.playSuccessBeep();
 
+    // 1. If scanning directly into the Add/Edit Product input field
+    if (window.inventoryController && window.inventoryController.isScanningToInputField) {
+      this.closeCameraModal();
+      window.inventoryController.setScannedBarcode(barcode);
+      return;
+    }
+
+    // 2. If in inventory search mode
     if (window.app && window.app.currentView === 'inventory') {
       this.closeCameraModal();
       window.inventoryController?.searchProductForAudit(barcode);
     } else {
+      // 3. Normal POS sale scanning
       if (window.cart) {
         window.cart.addProductByBarcode(barcode);
       }

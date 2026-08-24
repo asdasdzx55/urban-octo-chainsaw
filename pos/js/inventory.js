@@ -80,6 +80,21 @@ class InventoryController {
     }
   }
 
+  scanBarcodeWithCamera() {
+    this.isScanningToInputField = true;
+    window.posScanner?.openCameraModal();
+  }
+
+  setScannedBarcode(barcode) {
+    this.isScanningToInputField = false;
+    const barcodeInput = document.getElementById('inv-prod-barcode');
+    if (barcodeInput) {
+      barcodeInput.value = barcode.trim();
+      window.app?.showToast(`تم مسح الباركود: ${barcode} ✅`, 'success');
+      barcodeInput.focus();
+    }
+  }
+
   generateRandomBarcode() {
     // Generate 12-digit random barcode starting with 622 (Egypt/Regional standard)
     let code = '622' + Math.floor(100000000 + Math.random() * 900000000);

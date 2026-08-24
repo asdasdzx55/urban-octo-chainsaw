@@ -226,6 +226,22 @@ class App {
       }
     });
 
+    // Update Mobile Bottom Nav Tabs
+    document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+      const isTarget = btn.getAttribute('data-view') === viewName;
+      if (isTarget) {
+        btn.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+        btn.classList.remove('text-gray-400', 'dark:text-gray-500');
+        const indicator = btn.querySelector('.tab-indicator');
+        if (indicator) indicator.classList.remove('opacity-0');
+      } else {
+        btn.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+        btn.classList.add('text-gray-400', 'dark:text-gray-500');
+        const indicator = btn.querySelector('.tab-indicator');
+        if (indicator) indicator.classList.add('opacity-0');
+      }
+    });
+
     // Update View Containers
     ['pos', 'orders', 'returns', 'inventory', 'expenses', 'reports', 'settings'].forEach(v => {
       const el = document.getElementById(`view-${v}`);
@@ -249,6 +265,19 @@ class App {
     // Auto close mobile drawer menu if open
     this.closeDrawerMenu();
 
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  toggleMobileCart() {
+    const drawer = document.getElementById('mobile-cart-drawer');
+    if (!drawer) return;
+    if (drawer.classList.contains('hidden') || drawer.style.display === 'none') {
+      drawer.classList.remove('hidden');
+      drawer.style.display = 'flex';
+    } else {
+      drawer.classList.add('hidden');
+      drawer.style.display = 'none';
+    }
     if (window.lucide) window.lucide.createIcons();
   }
 

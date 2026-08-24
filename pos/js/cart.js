@@ -332,6 +332,8 @@ class POSCart {
     const fabBadge = document.getElementById('fab-cart-count');
     const fabTotal = document.getElementById('fab-cart-total');
 
+    const centerCartBadge = document.getElementById('center-cart-count');
+
     // Update Totals
     if (subtotalEl) subtotalEl.textContent = `${this.getSubtotal().toFixed(2)} ج.م`;
     if (discountEl) discountEl.textContent = `-${this.discountAmount.toFixed(2)} ج.م`;
@@ -341,6 +343,7 @@ class POSCart {
     if (mobileBadgeEl) mobileBadgeEl.textContent = count;
     if (fabBadge) fabBadge.textContent = count;
     if (fabTotal) fabTotal.textContent = `${total.toFixed(2)} ج.م`;
+    if (centerCartBadge) centerCartBadge.textContent = count;
 
     const itemsHTML = this.items.map(item => `
       <div class="p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between gap-3 cart-item-highlight">

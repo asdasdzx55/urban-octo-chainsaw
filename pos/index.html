@@ -37,7 +37,7 @@
   <link rel="stylesheet" href="css/pos.css">
   <link rel="stylesheet" href="css/receipt.css">
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-16 sm:pb-0">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0">
 
   <!-- ==================== TOP NAVIGATION HEADER ==================== -->
   <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 px-4 sm:px-6 flex items-center justify-between shadow-xs">
@@ -615,18 +615,45 @@
 
   </main>
 
-  <!-- ==================== FLOATING CART BUTTON (FAB ON MOBILE) ==================== -->
-  <div class="lg:hidden fixed bottom-6 end-6 z-40">
-    <button onclick="window.app.toggleMobileCart()" class="px-5 py-3.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-3 border-2 border-white/20 transform active:scale-95 transition-all">
-      <div class="relative flex items-center">
-        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-        <span id="fab-cart-count" class="absolute -top-2.5 -end-2.5 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black shadow-md border border-white dark:border-gray-800">0</span>
-      </div>
-      <div class="flex flex-col text-right">
-        <span class="text-[10px] text-indigo-200 leading-none">سلة المشتريات</span>
-        <span id="fab-cart-total" class="font-mono font-black text-sm leading-tight mt-0.5">0.00 ج.م</span>
-      </div>
+  <!-- ==================== NATIVE APP BOTTOM NAVIGATION BAR ==================== -->
+  <div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] px-2 py-1 flex items-center justify-around h-16">
+    
+    <!-- Tab 1: POS / Sell -->
+    <button onclick="window.app.switchView('pos')" class="mobile-tab-btn flex-1 flex flex-col items-center justify-center gap-1 py-1 text-indigo-600 dark:text-indigo-400 font-bold transition-all relative" data-view="pos">
+      <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+      <span class="text-[10px] leading-tight">البيع</span>
+      <span class="tab-indicator absolute bottom-0 w-6 h-0.5 bg-indigo-600 rounded-full transition-opacity"></span>
     </button>
+
+    <!-- Tab 2: Inventory -->
+    <button onclick="window.app.switchView('inventory')" class="mobile-tab-btn flex-1 flex flex-col items-center justify-center gap-1 py-1 text-gray-400 dark:text-gray-500 font-medium transition-all relative" data-view="inventory">
+      <i data-lucide="boxes" class="w-5 h-5"></i>
+      <span class="text-[10px] leading-tight">الجرد</span>
+      <span class="tab-indicator absolute bottom-0 w-6 h-0.5 bg-indigo-600 rounded-full transition-opacity opacity-0"></span>
+    </button>
+
+    <!-- Center Tab 3: Elevated Floating Cart Button (في النص زرار السلة المرفوع) -->
+    <div class="flex-1 flex items-center justify-center -translate-y-4">
+      <button onclick="window.app.toggleMobileCart()" class="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white flex flex-col items-center justify-center shadow-lg shadow-indigo-600/40 border-4 border-gray-100 dark:border-gray-900 transform active:scale-95 transition-all relative" title="فتح سلة المشتريات">
+        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+        <span id="center-cart-count" class="absolute -top-1 -end-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-[10px] font-black shadow-sm text-white">0</span>
+      </button>
+    </div>
+
+    <!-- Tab 4: Expenses -->
+    <button onclick="window.app.switchView('expenses')" class="mobile-tab-btn flex-1 flex flex-col items-center justify-center gap-1 py-1 text-gray-400 dark:text-gray-500 font-medium transition-all relative" data-view="expenses">
+      <i data-lucide="wallet" class="w-5 h-5"></i>
+      <span class="text-[10px] leading-tight">المصاريف</span>
+      <span class="tab-indicator absolute bottom-0 w-6 h-0.5 bg-indigo-600 rounded-full transition-opacity opacity-0"></span>
+    </button>
+
+    <!-- Tab 5: Reports -->
+    <button onclick="window.app.switchView('reports')" class="mobile-tab-btn flex-1 flex flex-col items-center justify-center gap-1 py-1 text-gray-400 dark:text-gray-500 font-medium transition-all relative" data-view="reports">
+      <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+      <span class="text-[10px] leading-tight">التقارير</span>
+      <span class="tab-indicator absolute bottom-0 w-6 h-0.5 bg-indigo-600 rounded-full transition-opacity opacity-0"></span>
+    </button>
+
   </div>
 
   <!-- ==================== MOBILE CART DRAWER (SLIDE-UP) ==================== -->

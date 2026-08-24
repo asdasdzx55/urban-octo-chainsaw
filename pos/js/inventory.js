@@ -58,6 +58,7 @@ class InventoryController {
     // Reset fields with sensible defaults
     document.getElementById('inv-prod-name').value = '';
     document.getElementById('inv-prod-category').value = 'عام';
+    if (document.getElementById('inv-prod-unittype')) document.getElementById('inv-prod-unittype').value = 'piece';
     document.getElementById('inv-prod-price').value = '0.00';
     document.getElementById('inv-prod-cost').value = '0.00';
     document.getElementById('inv-prod-stock').value = '10';
@@ -120,6 +121,9 @@ class InventoryController {
     // Fill form fields
     document.getElementById('inv-prod-name').value = p.name || '';
     document.getElementById('inv-prod-category').value = p.category || 'عام';
+    if (document.getElementById('inv-prod-unittype')) {
+      document.getElementById('inv-prod-unittype').value = p.unit_type || (p.unit === 'كجم' ? 'weight' : 'piece');
+    }
     document.getElementById('inv-prod-price').value = parseFloat(p.price || 0).toFixed(2);
     document.getElementById('inv-prod-cost').value = parseFloat(p.cost || 0).toFixed(2);
     document.getElementById('inv-prod-stock').value = parseFloat(p.stock || 0);
@@ -145,6 +149,7 @@ class InventoryController {
 
     const name = document.getElementById('inv-prod-name')?.value.trim();
     const category = document.getElementById('inv-prod-category')?.value.trim() || 'عام';
+    const unitType = document.getElementById('inv-prod-unittype')?.value || 'piece';
     const price = parseFloat(document.getElementById('inv-prod-price')?.value || 0);
     const cost = parseFloat(document.getElementById('inv-prod-cost')?.value || 0);
     const stock = parseFloat(document.getElementById('inv-prod-stock')?.value || 0);
@@ -159,6 +164,8 @@ class InventoryController {
     const payload = {
       name: name,
       category: category,
+      unit_type: unitType,
+      unit: unitType === 'weight' ? 'كجم' : 'قطعة',
       price: price,
       cost: cost,
       stock: stock,

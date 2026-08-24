@@ -184,24 +184,25 @@ class App {
 
     grid.innerHTML = filtered.map(p => {
       const price = parseFloat(p.price || 0);
-      const stock = parseInt(p.stock || 0, 10);
-      const isLowStock = stock <= 3;
+      const stock = parseFloat(p.stock || 0);
+      const isWeight = p.unit_type === 'weight' || p.unit === 'كجم' || p.is_weight;
+      const isLowStock = stock <= (isWeight ? 2 : 3);
 
       return `
-        <div onclick="window.app.onProductCardClick(${p.id})" class="p-2.5 sm:p-3 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col justify-between gap-1.5 sm:gap-2 transform active:scale-95 select-none">
+        <div onclick="window.app.onProductCardClick(${p.id})" class="p-2 sm:p-2.5 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-gray-700/80 shadow-2xs hover:shadow-sm hover:border-indigo-400 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col justify-between gap-1 transform active:scale-95 select-none">
           <div>
-            <div class="flex items-center justify-between gap-1 mb-1">
-              ${p.local_code ? `<span class="px-1.5 py-0.2 rounded bg-gray-100 dark:bg-gray-700 font-mono text-[9px] font-bold text-gray-500 dark:text-gray-400">${p.local_code}</span>` : '<span></span>'}
-              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${isLowStock ? 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'}">
-                مخزون: ${stock}
+            <div class="flex items-center justify-between gap-1 mb-0.5">
+              ${isWeight ? `<span class="px-1 py-0.2 rounded bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 text-[8px] font-bold">⚖️ وزن</span>` : (p.local_code ? `<span class="px-1 py-0.2 rounded bg-gray-100 dark:bg-gray-700 font-mono text-[8px] font-bold text-gray-500 dark:text-gray-400">${p.local_code}</span>` : '<span></span>')}
+              <span class="text-[8px] font-bold px-1 py-0.2 rounded ${isLowStock ? 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'}">
+                ${stock} ${isWeight ? 'كجم' : 'ق'}
               </span>
             </div>
-            <h4 class="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">${p.name}</h4>
+            <h4 class="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">${p.name}</h4>
           </div>
 
-          <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/60">
-            <span class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${price.toFixed(2)} <span class="text-[9px] font-normal font-sans">ج.م</span></span>
-            <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-xs">
+          <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700/60">
+            <span class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${price.toFixed(2)} <span class="text-[8px] font-normal font-sans text-gray-400">${isWeight ? 'ج.م/كجم' : 'ج.م'}</span></span>
+            <div class="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-xs">
               +
             </div>
           </div>
@@ -215,9 +216,88 @@ class App {
   onProductCardClick(productId) {
     const product = this.products.find(p => p.id === productId);
     if (product) {
-      window.posScanner?.playSuccessBeep();
-      window.cart?.addItem(product, 1);
+      const isWeight = product.unit_type === 'weight' || product.unit === 'كجم' || product.is_weight;
+      if (isWeight) {
+        this.openWeightModal(product, 1.000);
+      } else {
+        window.posScanner?.playSuccessBeep();
+        window.cart?.addItem(product, 1);
+      }
     }
+  }
+
+  /* ==================== SCALE / WEIGHT MODAL ==================== */
+  openWeightModal(product, currentQty = 1.000) {
+    this.currentWeightProduct = product;
+    const modal = document.getElementById('scale-weight-modal');
+    if (!modal) return;
+
+    document.getElementById('weight-modal-prod-name').textContent = product.name;
+    document.getElementById('weight-modal-price-label').textContent = `السعر: ${parseFloat(product.price || 0).toFixed(2)} ج.م / كجم`;
+    
+    const input = document.getElementById('scale-weight-input');
+    if (input) {
+      input.value = currentQty.toFixed(3);
+    }
+    this.onWeightInputChanged();
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    if (window.lucide) window.lucide.createIcons();
+
+    setTimeout(() => {
+      input?.focus();
+      input?.select();
+    }, 100);
+  }
+
+  closeWeightModal() {
+    const modal = document.getElementById('scale-weight-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+    this.currentWeightProduct = null;
+  }
+
+  onWeightInputChanged() {
+    if (!this.currentWeightProduct) return;
+    const input = document.getElementById('scale-weight-input');
+    const calcEl = document.getElementById('weight-modal-calc-total');
+    const weight = parseFloat(input?.value || 0);
+    const price = parseFloat(this.currentWeightProduct.price || 0);
+    const total = weight * price;
+    if (calcEl) calcEl.textContent = `${total.toFixed(2)} ج.م`;
+  }
+
+  setWeightPreset(weight) {
+    const input = document.getElementById('scale-weight-input');
+    if (input) {
+      input.value = parseFloat(weight).toFixed(3);
+      this.onWeightInputChanged();
+    }
+  }
+
+  confirmWeightAndAddToCart() {
+    if (!this.currentWeightProduct) return;
+    const input = document.getElementById('scale-weight-input');
+    const weight = parseFloat(input?.value || 0);
+
+    if (weight <= 0) {
+      this.showToast('يرجى إدخال وزن صحيح أكبر من 0', 'error');
+      return;
+    }
+
+    window.posScanner?.playSuccessBeep();
+    window.cart?.addItem(this.currentWeightProduct, weight);
+    this.closeWeightModal();
+  }
+
+  openWeightModalForItem(productId) {
+    const item = window.cart?.items?.find(i => i.product_id === productId);
+    if (!item) return;
+    const prod = this.products.find(p => p.id === productId) || item;
+    this.openWeightModal(prod, item.qty);
   }
 
   switchView(viewName) {

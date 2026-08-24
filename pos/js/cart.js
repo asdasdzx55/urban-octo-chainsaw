@@ -20,25 +20,30 @@ class POSCart {
   addItem(product, qty = 1) {
     if (!product) return;
 
+    const isWeight = product.unit_type === 'weight' || product.unit === 'كجم' || product.is_weight;
+    const unitType = isWeight ? 'weight' : 'piece';
+    const unitLabel = isWeight ? 'كجم' : 'قطعة';
+
     const existingIndex = this.items.findIndex(i => i.product_id === product.id);
 
     if (existingIndex > -1) {
-      this.items[existingIndex].qty += qty;
+      this.items[existingIndex].qty = parseFloat((this.items[existingIndex].qty + qty).toFixed(3));
     } else {
       this.items.push({
         product_id: product.id,
         name: product.name,
-        qty: qty,
+        qty: parseFloat(qty.toFixed(3)),
         price: parseFloat(product.price || 0),
         cost: parseFloat(product.cost || 0),
         barcode: product.barcode || '',
         local_code: product.local_code || '',
-        unit: product.unit || 'قطعة'
+        unit_type: unitType,
+        unit: unitLabel
       });
     }
 
     this.render();
-    window.app?.showToast(`تمت إضافة: ${product.name}`, 'success');
+    window.app?.showToast(`تمت إضافة: ${product.name} (${qty} ${unitLabel})`, 'success');
   }
 
   async addProductByBarcode(barcode) {
@@ -357,30 +362,40 @@ class POSCart {
     if (fabTotal) fabTotal.textContent = `${total.toFixed(2)} ج.م`;
     if (centerCartBadge) centerCartBadge.textContent = count;
 
-    const itemsHTML = this.items.map(item => `
-      <div class="p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between gap-3 cart-item-highlight">
-        <div class="flex-1 min-w-0">
-          <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h4>
-          <div class="flex items-center gap-2 mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-            <span class="font-bold text-indigo-600 dark:text-indigo-400">${item.price.toFixed(2)} ج.م</span>
-            ${item.local_code ? `<span class="px-1.5 py-0.2 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">${item.local_code}</span>` : ''}
+    const itemsHTML = this.items.map(item => {
+      const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
+      const step = isWeight ? 0.25 : 1;
+      const prevQty = isWeight ? parseFloat((item.qty - step).toFixed(3)) : item.qty - 1;
+      const nextQty = isWeight ? parseFloat((item.qty + step).toFixed(3)) : item.qty + 1;
+
+      return `
+        <div class="p-2.5 sm:p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center justify-between gap-2.5 cart-item-highlight">
+          <div class="flex-1 min-w-0">
+            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h4>
+            <div class="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+              <span class="font-bold text-indigo-600 dark:text-indigo-400">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
+              ${item.local_code ? `<span class="px-1 py-0.2 bg-gray-100 dark:bg-gray-700 rounded text-[9px] font-mono">${item.local_code}</span>` : ''}
+              ${isWeight ? `<span class="px-1 py-0.2 bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded text-[9px] font-bold">⚖️ وزن</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Quantity Control -->
+          <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/80 rounded-xl p-1 shrink-0">
+            <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs shadow-xs hover:bg-gray-200">-</button>
+            <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-bold text-xs text-gray-900 dark:text-white font-mono ${isWeight ? 'cursor-pointer hover:text-indigo-600 hover:underline' : ''}">
+              ${item.qty} ${isWeight ? 'كجم' : ''}
+            </span>
+            <button onclick="window.cart.updateQty(${item.product_id}, ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs hover:bg-indigo-700">+</button>
+          </div>
+
+          <!-- Item Total & Delete -->
+          <div class="text-left shrink-0 min-w-[55px]">
+            <div class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono">${(item.price * item.qty).toFixed(2)}</div>
+            <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 hover:underline">حذف</button>
           </div>
         </div>
-
-        <!-- Quantity Control -->
-        <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">
-          <button onclick="window.cart.updateQty(${item.product_id}, ${item.qty - 1})" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-gray-200">-</button>
-          <span class="w-7 text-center font-bold text-xs text-gray-900 dark:text-white">${item.qty}</span>
-          <button onclick="window.cart.updateQty(${item.product_id}, ${item.qty + 1})" class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs hover:bg-indigo-700">+</button>
-        </div>
-
-        <!-- Item Total & Delete -->
-        <div class="text-left shrink-0 min-w-[60px]">
-          <div class="text-xs sm:text-sm font-black text-gray-900 dark:text-white">${(item.price * item.qty).toFixed(2)}</div>
-          <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 hover:underline">حذف</button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     if (this.items.length === 0) {
       if (emptyNotice) emptyNotice.classList.remove('hidden');

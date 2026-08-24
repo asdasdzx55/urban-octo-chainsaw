@@ -1,0 +1,131 @@
+/* ==========================================================================
+   Thermal Receipt Stylesheet for 80mm / 58mm POS Printers
+   ========================================================================== */
+
+#receipt-print-area {
+  display: none;
+}
+
+@media print {
+  /* Hide all app UI elements on print */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only receipt */
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+
+  #receipt-print-area {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 2mm 3mm;
+    background: #ffffff;
+    color: #000000;
+    font-family: 'Courier New', Courier, monospace, 'Cairo', sans-serif;
+    font-size: 12px;
+    line-height: 1.35;
+    direction: rtl;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  .receipt-header {
+    text-align: center;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 5px;
+    margin-bottom: 6px;
+  }
+
+  .receipt-store-title {
+    font-size: 16px;
+    font-weight: 800;
+    margin: 0 0 3px 0;
+  }
+
+  .receipt-store-sub {
+    font-size: 11px;
+    margin: 0 0 2px 0;
+  }
+
+  .receipt-meta {
+    font-size: 11px;
+    margin-bottom: 6px;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 5px;
+  }
+
+  .receipt-meta-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .receipt-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+
+  .receipt-items-table th {
+    border-bottom: 1px dashed #000;
+    padding: 3px 0;
+    text-align: right;
+    font-weight: bold;
+  }
+
+  .receipt-items-table td {
+    padding: 3px 0;
+    vertical-align: top;
+  }
+
+  .receipt-totals {
+    border-top: 1px dashed #000;
+    border-bottom: 1px dashed #000;
+    padding: 5px 0;
+    margin-bottom: 6px;
+  }
+
+  .receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    font-size: 12px;
+  }
+
+  .receipt-grand-total {
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #000;
+  }
+
+  .receipt-footer {
+    text-align: center;
+    font-size: 11px;
+    margin-top: 6px;
+  }
+
+  .receipt-barcode-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 6px 0;
+  }
+
+  .receipt-barcode-container svg {
+    max-width: 100%;
+    height: 40px;
+  }
+}

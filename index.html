@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart Barcode & QR Hub | ماسح ومولد الباركود الذكي</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Barcode & QR Libraries (Free, Open-Source & Client-Side) -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+          <i data-lucide="scan-barcode" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2" data-i18n="app_title">
+            ماسح ومولد الباركود الذكي
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400 hidden sm:block" data-i18n="tagline">
+            ماسح فوري، سريع ومجاني 100% يعمل مباشرة على متصفحك
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2">
+        <!-- Sound Toggle -->
+        <button id="btn-sound-toggle" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition" title="Sound feedback">
+          <i id="sound-icon" data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="btn-toggle-theme" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition" title="Toggle Theme">
+          <i data-lucide="sun-moon" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Language Switcher -->
+        <button id="btn-toggle-lang" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-1.5">
+          <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+          <span id="lang-btn-text">English</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6">
+
+    <!-- Navigation Tabs -->
+    <nav class="flex p-1.5 bg-gray-200/80 dark:bg-gray-800/80 rounded-2xl backdrop-blur-md max-w-2xl mx-auto w-full shadow-inner">
+      <button class="nav-tab-btn flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white shadow-md" data-tab="live">
+        <i data-lucide="camera" class="w-4 h-4"></i>
+        <span data-i18n="tab_live">المسح بالكاميرا</span>
+      </button>
+
+      <button class="nav-tab-btn flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="image">
+        <i data-lucide="image" class="w-4 h-4"></i>
+        <span data-i18n="tab_image">مسح من صورة</span>
+      </button>
+
+      <button class="nav-tab-btn flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="generate">
+        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+        <span data-i18n="tab_generate">إنشاء باركود / QR</span>
+      </button>
+
+      <button class="nav-tab-btn flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 relative" data-tab="history">
+        <i data-lucide="history" class="w-4 h-4"></i>
+        <span data-i18n="tab_history">السجل</span>
+        <span id="history-count-badge" class="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">0</span>
+      </button>
+    </nav>
+
+    <!-- ==================== TAB 1: LIVE SCANNER ==================== -->
+    <section id="tab-content-live" class="flex flex-col gap-5">
+      
+      <!-- Viewport Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-xl flex flex-col gap-4">
+        
+        <!-- Scanner Top Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-gray-100 dark:border-gray-700">
+          <div id="scanner-status-badge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-gray-400 mr-1.5 ml-1.5"></span>
+            <span data-i18n="status_paused">المسح متوقف</span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Camera selection dropdown -->
+            <div class="relative">
+              <select id="camera-select" class="appearance-none bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 py-2 ps-3 pe-8 rounded-xl border-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                <option value="" data-i18n="camera_select">اختر الكاميرا</option>
+              </select>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"></i>
+            </div>
+
+            <!-- Flip camera button (Mobile) -->
+            <button id="btn-flip-camera" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Flip Camera">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Torch / Flashlight (Mobile only) -->
+            <button id="btn-torch" class="hidden p-2 rounded-xl bg-gray-800/80 text-gray-300 hover:bg-gray-700 transition" title="Flashlight">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Camera Video Viewfinder Container -->
+        <div id="scanner-viewport" class="relative w-full max-w-xl mx-auto aspect-square sm:aspect-[4/3] rounded-2xl bg-black flex items-center justify-center overflow-hidden shadow-2xl">
+          
+          <!-- Html5Qrcode video mounting point -->
+          <div id="reader" class="w-full h-full flex items-center justify-center"></div>
+
+          <!-- Laser Scan Guide line -->
+          <div id="laser-guide" class="laser-line hidden"></div>
+
+          <!-- Target Reticle Corner Guides -->
+          <div class="scan-corner scan-corner-tl"></div>
+          <div class="scan-corner scan-corner-tr"></div>
+          <div class="scan-corner scan-corner-bl"></div>
+          <div class="scan-corner scan-corner-br"></div>
+
+          <!-- Placeholder when camera is off -->
+          <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/90 text-center p-6 gap-4 z-20">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-950/80 border border-indigo-500/30 flex items-center justify-center text-indigo-400 pulse-glow">
+              <i data-lucide="camera" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-200" data-i18n="align_code_hint">وجّه الكاميرا نحو الباركود أو رمز الـ QR</p>
+              <p class="text-xs text-gray-400 mt-1">اضغط على زر تشغيل الكاميرا للبدء الفوري</p>
+            </div>
+            <button id="btn-toggle-scan" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition transform active:scale-95">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span data-i18n="btn_start_scan">تشغيل الكاميرا</span>
+            </button>
+          </div>
+
+          <!-- Loading state -->
+          <div id="scanner-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/95 text-center p-6 gap-3 z-30 hidden">
+            <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-xs font-medium text-gray-300">جاري تهيئة الكاميرا والماسح...</p>
+          </div>
+
+        </div>
+
+        <!-- Scanner Footer Options -->
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 px-2">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="chk-continuous-mode" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600">
+            <span data-i18n="continuous_mode">المسح المستمر (بدون توقف)</span>
+          </label>
+          <span class="text-[11px] opacity-70">Client-Side Engine • 100% Free</span>
+        </div>
+
+      </div>
+
+      <!-- Live Scan Result Card (Appears on successful detection) -->
+      <div id="scan-result-card" class="hidden animate-slide-up bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-emerald-500/40 shadow-xl flex flex-col gap-4">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+              <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white" data-i18n="result_title">نتيجة المسح</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                <span><b data-i18n="format_label">النوع:</b> <span id="scan-result-format" class="font-mono text-indigo-500 font-semibold">QR_CODE</span></span>
+                •
+                <span><span id="scan-result-time">--:--</span></span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result Text Area -->
+        <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 font-mono text-sm sm:text-base text-gray-800 dark:text-gray-100 break-all select-all font-medium leading-relaxed" id="scan-result-text">
+          --
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button id="btn-result-copy" class="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span data-i18n="btn_copy">نسخ النص</span>
+          </button>
+
+          <button id="btn-result-open" class="hidden flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20">
+            <i data-lucide="external-link" class="w-4 h-4"></i>
+            <span data-i18n="btn_open_url">فتح الرابط</span>
+          </button>
+
+          <button id="btn-result-share" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Share">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 2: SCAN IMAGE FILE ==================== -->
+    <section id="tab-content-image" class="hidden flex flex-col gap-6">
+      
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-700/80 shadow-xl flex flex-col gap-6">
+        
+        <!-- Drag & Drop Dropzone -->
+        <div id="image-dropzone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-4 bg-gray-50/50 dark:bg-gray-900/30">
+          <input type="file" id="image-file-input" accept="image/*" class="hidden">
+          
+          <div class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+          </div>
+
+          <div>
+            <h3 class="text-base font-bold text-gray-800 dark:text-gray-200" data-i18n="drag_drop_title">اسحب الصورة هنا أو اضغط للاختيار</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md" data-i18n="drag_drop_subtitle">
+              يدعم صيغ PNG, JPG, WEBP ولصق الصور مباشرة عبر (Ctrl + V)
+            </p>
+          </div>
+
+          <button type="button" class="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 hover:bg-indigo-700 transition">
+            اختيار صورة من جهازك
+          </button>
+        </div>
+
+        <!-- Image Preview Container -->
+        <div id="image-scan-preview" class="hidden flex flex-col items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+          <p class="text-xs font-semibold text-gray-500">معاينة الصورة المرفوعة:</p>
+          <img id="preview-image-element" class="max-h-64 max-w-full rounded-xl object-contain shadow-md" alt="Preview">
+        </div>
+
+        <!-- Hidden temp element for Html5Qrcode file decoding -->
+        <div id="image-temp-reader" class="hidden"></div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 3: GENERATOR ==================== -->
+    <section id="tab-content-generate" class="hidden flex flex-col gap-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Generator Form (7 cols) -->
+        <div class="lg:col-span-7 bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-xl flex flex-col gap-5">
+          
+          <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-5 h-5 text-indigo-500"></i>
+            خيارات وتفاصيل الرمز
+          </h2>
+
+          <!-- Radio Type: QR vs Barcode -->
+          <div class="flex items-center gap-3 p-1.5 bg-gray-100 dark:bg-gray-700/60 rounded-2xl">
+            <label class="flex-1 text-center py-2 px-3 rounded-xl cursor-pointer text-xs sm:text-sm font-semibold transition has-[:checked]:bg-white dark:has-[:checked]:bg-gray-800 has-[:checked]:text-indigo-600 dark:has-[:checked]:text-indigo-400 has-[:checked]:shadow-sm">
+              <input type="radio" name="gen-code-type" value="qr" checked class="hidden">
+              <span data-i18n="gen_type_qr">رمز QR Code (2D)</span>
+            </label>
+            <label class="flex-1 text-center py-2 px-3 rounded-xl cursor-pointer text-xs sm:text-sm font-semibold transition has-[:checked]:bg-white dark:has-[:checked]:bg-gray-800 has-[:checked]:text-indigo-600 dark:has-[:checked]:text-indigo-400 has-[:checked]:shadow-sm">
+              <input type="radio" name="gen-code-type" value="barcode" class="hidden">
+              <span data-i18n="gen_type_barcode">باركود خطي (1D)</span>
+            </label>
+          </div>
+
+          <div id="generator-form-container" class="flex flex-col gap-4">
+            
+            <!-- QR Specific Options -->
+            <div id="qr-specific-options" class="flex flex-col gap-3">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300" data-i18n="gen_content_type">نوع المحتوى</label>
+              <select id="gen-qr-type" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+                <option value="url" data-i18n="gen_url">رابط موقع (URL)</option>
+                <option value="text" data-i18n="gen_text">نص عادي</option>
+                <option value="wifi" data-i18n="gen_wifi">شبكة واي فاي (WiFi)</option>
+                <option value="vcard" data-i18n="gen_vcard">بطاقة اتصال (vCard)</option>
+                <option value="whatsapp" data-i18n="gen_whatsapp">واتساب (WhatsApp)</option>
+                <option value="email" data-i18n="gen_email">بريد إلكتروني</option>
+                <option value="phone" data-i18n="gen_phone">رقم هاتف</option>
+              </select>
+            </div>
+
+            <!-- Dynamic QR Fields -->
+            <div id="qr-dynamic-fields" class="flex flex-col gap-3">
+              <!-- URL Group -->
+              <div id="qr-group-url" class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-gray-500">الرابط (URL):</label>
+                <input type="url" id="qr-input-url" placeholder="https://example.com" value="https://example.com" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
+              </div>
+
+              <!-- Text Group -->
+              <div id="qr-group-text" class="hidden flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-gray-500">النص:</label>
+                <textarea id="qr-input-text" rows="3" placeholder="اكتب النص هنا..." class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs sm:text-sm"></textarea>
+              </div>
+
+              <!-- WiFi Group -->
+              <div id="qr-group-wifi" class="hidden flex flex-col gap-2.5">
+                <input type="text" id="qr-wifi-ssid" placeholder="اسم شبكة الواي فاي (SSID)" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <input type="password" id="qr-wifi-pass" placeholder="كلمة المرور" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <div class="flex items-center justify-between text-xs">
+                  <select id="qr-wifi-type" class="bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg p-1.5 text-xs">
+                    <option value="WPA">WPA / WPA2 / WPA3</option>
+                    <option value="WEP">WEP</option>
+                    <option value="nopass">بدون حماية (مفتوحة)</option>
+                  </select>
+                  <label class="flex items-center gap-1.5">
+                    <input type="checkbox" id="qr-wifi-hidden" class="rounded text-indigo-600">
+                    <span>شبكة مخفية</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- vCard Group -->
+              <div id="qr-group-vcard" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <input type="text" id="qr-vcard-name" placeholder="الاسم الكامل" class="bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <input type="tel" id="qr-vcard-phone" placeholder="رقم الهاتف" class="bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <input type="email" id="qr-vcard-email" placeholder="البريد الإلكتروني" class="bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <input type="text" id="qr-vcard-org" placeholder="اسم الشركة / المؤسسة" class="bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+              </div>
+
+              <!-- WhatsApp Group -->
+              <div id="qr-group-whatsapp" class="hidden flex flex-col gap-2.5">
+                <input type="tel" id="qr-wa-num" placeholder="رقم الهاتف مع مفتاح الدولة (مثال: 966501234567)" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <input type="text" id="qr-wa-msg" placeholder="رسالة ترحيبية مسبقة (اختياري)" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+              </div>
+
+              <!-- Email Group -->
+              <div id="qr-group-email" class="hidden flex flex-col gap-2.5">
+                <input type="email" id="qr-email-to" placeholder="البريد الإلكتروني المستلم" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <input type="text" id="qr-email-sub" placeholder="عنوان الرسالة" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+                <textarea id="qr-email-body" rows="2" placeholder="محتوى الرسالة..." class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl p-2.5 text-xs"></textarea>
+              </div>
+
+              <!-- Phone Group -->
+              <div id="qr-group-phone" class="hidden flex flex-col gap-1.5">
+                <input type="tel" id="qr-phone-num" placeholder="رقم الهاتف..." class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2 text-xs">
+              </div>
+            </div>
+
+            <!-- Barcode Specific Options -->
+            <div id="barcode-specific-options" class="hidden flex flex-col gap-3">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300" data-i18n="gen_barcode_format">صيغة الباركود</label>
+              <select id="gen-barcode-format" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+                <option value="CODE128">Code 128 (شامل - يدعم الحروف والأرقام)</option>
+                <option value="EAN13">EAN-13 (السلع والمنتجات التجارية - 13 رقم)</option>
+                <option value="UPC">UPC-A (منتجات أمريكا الشمالية - 12 رقم)</option>
+                <option value="CODE39">Code 39 (صناعي وعسكري)</option>
+                <option value="ITF14">ITF-14 (صناديق الشحن والتغليف)</option>
+              </select>
+            </div>
+
+            <!-- Barcode Input Value -->
+            <div id="barcode-dynamic-fields" class="hidden flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-gray-500">قيمة الباركود (الرقم أو النص):</label>
+              <input type="text" id="barcode-input-value" value="123456789012" class="w-full bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-mono">
+            </div>
+
+            <!-- Visual Customization Controls -->
+            <div class="pt-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="text-[11px] font-medium text-gray-500 block mb-1" data-i18n="gen_fg_color">لون الرمز</label>
+                <input type="color" id="gen-fg-color" value="#000000" class="w-full h-9 rounded-lg cursor-pointer bg-transparent">
+              </div>
+              <div>
+                <label class="text-[11px] font-medium text-gray-500 block mb-1" data-i18n="gen_bg_color">لون الخلفية</label>
+                <input type="color" id="gen-bg-color" value="#ffffff" class="w-full h-9 rounded-lg cursor-pointer bg-transparent">
+              </div>
+              <div>
+                <label class="text-[11px] font-medium text-gray-500 block mb-1" data-i18n="gen_size">الحجم (px)</label>
+                <input type="range" id="gen-size" min="150" max="400" step="10" value="260" class="w-full mt-2 accent-indigo-600">
+              </div>
+            </div>
+
+            <!-- Error Correction Level (QR Only) -->
+            <div id="ecc-container" class="flex items-center justify-between text-xs pt-1">
+              <span class="text-gray-500" data-i18n="gen_ecc">مستوى تصحيح الخطأ:</span>
+              <select id="gen-ecc" class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-1 text-xs">
+                <option value="L">L (7% مقاومة)</option>
+                <option value="M" selected>M (15% متوسط)</option>
+                <option value="Q">Q (25% عالي)</option>
+                <option value="H">H (30% فائق الدقة)</option>
+              </select>
+            </div>
+
+            <!-- Show Text checkbox (Barcode Only) -->
+            <div id="barcode-text-option-container" class="hidden flex items-center gap-2 text-xs">
+              <input type="checkbox" id="gen-show-text" checked class="rounded text-indigo-600">
+              <label for="gen-show-text" data-i18n="gen_show_text">إظهار الأرقام/النص أسفل الباركود</label>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Right Column: Live Preview & Export (5 cols) -->
+        <div class="lg:col-span-5 bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-xl flex flex-col items-center justify-between gap-6">
+          
+          <div class="w-full flex flex-col items-center gap-3">
+            <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 self-start">معاينة فورية للرمز:</h3>
+
+            <!-- Code Preview Box -->
+            <div class="w-full p-6 rounded-2xl bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[280px]">
+              <div id="generator-preview-box" class="p-3 bg-white rounded-xl shadow-md flex items-center justify-center max-w-full overflow-hidden">
+                <!-- Live Canvas or SVG will mount here -->
+              </div>
+            </div>
+
+            <!-- Error message if barcode is invalid -->
+            <div id="generator-error-notice" class="hidden w-full p-3 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-medium border border-rose-500/20 text-center">
+              القيمة المدخلة غير متوافقة
+            </div>
+          </div>
+
+          <!-- Download Action Buttons -->
+          <div class="w-full flex flex-col gap-2.5">
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-download-png" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-indigo-600/20">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span data-i18n="btn_download_png">تحميل PNG</span>
+              </button>
+
+              <button id="btn-download-svg" class="py-2.5 px-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+                <span data-i18n="btn_download_svg">تحميل SVG</span>
+              </button>
+            </div>
+
+            <button id="btn-print-code" class="w-full py-2.5 px-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300 text-xs font-semibold flex items-center justify-center gap-2 transition">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btn_print">طباعة الرمز مباشرة</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 4: HISTORY & EXPORT ==================== -->
+    <section id="tab-content-history" class="hidden flex flex-col gap-5">
+      
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-xl flex flex-col gap-5">
+        
+        <!-- History Header & Search/Filter Controls -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <h2 class="text-base font-bold text-gray-900 dark:text-white" data-i18n="history_title">سجل عمليات المسح</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">يتم حفظ النتائج محلياً في متصفحك لسهولة المراجعة والتصدير</p>
+          </div>
+
+          <!-- Action Buttons (Export / Clear) -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-export-csv" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btn_export_csv">تصدير Excel/CSV</span>
+            </button>
+
+            <button id="btn-export-json" class="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+              <i data-lucide="code" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btn_export_json">JSON</span>
+            </button>
+
+            <button id="btn-clear-history" class="py-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition border border-rose-200 dark:border-rose-800">
+              <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btn_clear_history">مسح السجل</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2 relative">
+            <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="history-search-input" placeholder="بحث في السجل..." data-i18n-placeholder="search_history" class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-4 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <div class="relative">
+            <select id="history-type-filter" class="w-full appearance-none bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+              <option value="all" data-i18n="filter_all">جميع الصيغ والأنواع</option>
+              <option value="QR_CODE">QR Code</option>
+              <option value="CODE_128">Code 128</option>
+              <option value="EAN_13">EAN 13</option>
+              <option value="UPC_A">UPC A</option>
+              <option value="CODE_39">Code 39</option>
+              <option value="DATA_MATRIX">DataMatrix</option>
+            </select>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute end-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"></i>
+          </div>
+        </div>
+
+        <!-- Items Container -->
+        <div id="history-list-container" class="flex flex-col gap-3 min-h-[160px]">
+          <!-- Rendered dynamically -->
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 py-4 px-4 text-center text-xs text-gray-500 dark:text-gray-400">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>© 2026 Smart Barcode & QR Web Scanner • مبني بتقنيات الويب مفتوحة المصدر 100%</p>
+      <p class="text-[11px] opacity-75">بدون رسوم API • فائق الخصوصية والسرعة</p>
+    </div>
+  </footer>
+
+  <!-- ==================== GLOBAL LOADER MODAL ==================== -->
+  <div id="global-loader" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 max-w-xs mx-4 text-center">
+      <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <p id="global-loader-msg" class="text-xs font-semibold text-gray-700 dark:text-gray-200">جاري المعالجة...</p>
+    </div>
+  </div>
+
+  <!-- Invisible Print Container -->
+  <div id="print-area"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

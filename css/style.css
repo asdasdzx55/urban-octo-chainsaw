@@ -1,0 +1,203 @@
+/* ==========================================================================
+   Barcode & QR Scanner Web App - Stylesheet
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-ar: 'Cairo', sans-serif;
+  --font-en: 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-ar);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body[dir="ltr"] {
+  font-family: var(--font-en);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.7);
+}
+
+/* Scanner Viewport & Reticle */
+#scanner-viewport {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background-color: #000;
+}
+
+#reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 1rem;
+}
+
+#reader {
+  border: none !important;
+  width: 100% !important;
+}
+
+#reader__scan_region {
+  min-height: 280px !important;
+}
+
+/* Laser Scanning Line Animation */
+.laser-line {
+  position: absolute;
+  top: 0;
+  left: 5%;
+  right: 5%;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0) 0%, #6366f1 50%, rgba(99, 102, 241, 0) 100%);
+  box-shadow: 0 0 15px #6366f1, 0 0 25px #818cf8;
+  border-radius: 50%;
+  animation: scanLaser 2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes scanLaser {
+  0% {
+    top: 10%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 90%;
+    opacity: 0.8;
+  }
+}
+
+/* Viewfinder Target Frame Corners */
+.scan-corner {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-color: #6366f1;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scan-corner-tl {
+  top: 20px;
+  left: 20px;
+  border-top-width: 4px;
+  border-left-width: 4px;
+  border-top-left-radius: 10px;
+}
+
+.scan-corner-tr {
+  top: 20px;
+  right: 20px;
+  border-top-width: 4px;
+  border-right-width: 4px;
+  border-top-right-radius: 10px;
+}
+
+.scan-corner-bl {
+  bottom: 20px;
+  left: 20px;
+  border-bottom-width: 4px;
+  border-left-width: 4px;
+  border-bottom-left-radius: 10px;
+}
+
+.scan-corner-br {
+  bottom: 20px;
+  right: 20px;
+  border-bottom-width: 4px;
+  border-right-width: 4px;
+  border-bottom-right-radius: 10px;
+}
+
+/* Drag and Drop Zone Hover Glow */
+.dropzone-active {
+  border-color: #6366f1 !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  transform: scale(1.01);
+}
+
+/* Pulse Glow Animation */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.6);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2.5s infinite;
+}
+
+/* Result Card Slide In */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-panel {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Print specific styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-area, #print-area * {
+    visibility: visible;
+  }
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+}

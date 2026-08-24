@@ -335,20 +335,28 @@
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
-        <div>
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-2 border border-indigo-200 dark:border-indigo-800">
-            <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
-            شاشة جرد المخزون وتعديل الأسعار
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-1 border border-indigo-200 dark:border-indigo-800">
+              <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
+              شاشة جرد المخزون وتعديل الأسعار
+            </div>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">جرد الكميات وإضافة وتعديل الأصناف</h2>
+            <p class="text-xs text-gray-500 mt-0.5">امسح باركود المنتج للتعديل أو اضغط على إضافة صنف جديد</p>
           </div>
-          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">جرد الكميات وتحديث أسعار البيع والتكلفة</h2>
-          <p class="text-xs text-gray-500 mt-0.5">امسح باركود المنتج بالكاميرا أو القارئ، وسيظهر لك لتعديل الكمية والسعر فورياً في السيرفر</p>
+
+          <!-- Add New Product Button -->
+          <button onclick="window.inventoryController.openNewProductForm()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 transition transform active:scale-95">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>إضافة منتج جديد +</span>
+          </button>
         </div>
 
         <!-- Barcode / Name Search Bar -->
         <div class="flex items-center gap-2 max-w-xl">
           <div class="relative flex-1">
             <i data-lucide="scan-barcode" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="inv-search-input" onkeypress="if(event.key === 'Enter') window.inventoryController.searchProductForAudit()" placeholder="امسح الباركود أو اكتب اسم الصنف..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
+            <input type="text" id="inv-search-input" onkeypress="if(event.key === 'Enter') window.inventoryController.searchProductForAudit()" placeholder="امسح الباركود أو اكتب اسم الصنف للبحث..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
           </div>
           <button onclick="window.posScanner.openCameraModal()" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا للمسح">
             <i data-lucide="camera" class="w-4 h-4"></i>
@@ -358,11 +366,11 @@
           </button>
         </div>
 
-        <!-- Product Edit Form (Hidden until product selected) -->
+        <!-- Product Edit Form (Hidden until product selected or Add New clicked) -->
         <div id="inv-product-edit-form" class="hidden p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4 animate-slide-up">
           
           <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h3 id="inv-form-title" class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i>
               تعديل بيانات الصنف والمخزون
             </h3>
@@ -372,14 +380,14 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             <!-- Product Name -->
             <div class="sm:col-span-2 flex flex-col gap-1">
-              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">اسم المنتج:</label>
-              <input type="text" id="inv-prod-name" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">اسم المنتج: <span class="text-rose-500">*</span></label>
+              <input type="text" id="inv-prod-name" placeholder="مثال: أرز بسمتي سوري 1 كجم" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
             </div>
 
             <!-- Category -->
             <div class="flex flex-col gap-1">
               <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">التصنيف:</label>
-              <input type="text" id="inv-prod-category" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+              <input type="text" id="inv-prod-category" placeholder="مثال: بقالة، منظفات..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
             </div>
 
             <!-- Selling Price -->
@@ -417,12 +425,17 @@
           <!-- Barcodes row -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-gray-500">رقم الباركود الدولي:</label>
-              <input type="text" id="inv-prod-barcode" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-mono">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-gray-500">رقم الباركود الدولي:</label>
+                <button type="button" onclick="window.inventoryController.generateRandomBarcode()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
+                  توليد باركود تلقائي 🎲
+                </button>
+              </div>
+              <input type="text" id="inv-prod-barcode" placeholder="امسح أو اكتب الباركود..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-mono">
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-xs font-semibold text-gray-500">كود الصنف المحلي (Local Code):</label>
-              <input type="text" id="inv-prod-localcode" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-mono">
+              <input type="text" id="inv-prod-localcode" placeholder="مثال: ITEM-101" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-mono">
             </div>
           </div>
 
@@ -430,7 +443,7 @@
           <div class="flex justify-end pt-3 border-t border-gray-200 dark:border-gray-700">
             <button onclick="window.inventoryController.saveProductChanges()" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/25 transition transform active:scale-95">
               <i data-lucide="check" class="w-4 h-4"></i>
-              حفظ التعديلات وتحديث السيرفر فوراً
+              <span>حفظ الصنف وتحديث السيرفر فوراً</span>
             </button>
           </div>
 

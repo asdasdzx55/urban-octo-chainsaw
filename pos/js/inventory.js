@@ -45,11 +45,45 @@ class InventoryController {
     }
   }
 
+  openNewProductForm() {
+    this.selectedProduct = { isNew: true };
+    const formBox = document.getElementById('inv-product-edit-form');
+    const formTitle = document.getElementById('inv-form-title');
+    if (!formBox) return;
+
+    if (formTitle) formTitle.textContent = 'إضافة صنف جديد للمتجر والمخزن';
+
+    // Reset fields with sensible defaults
+    document.getElementById('inv-prod-name').value = '';
+    document.getElementById('inv-prod-category').value = 'عام';
+    document.getElementById('inv-prod-price').value = '0.00';
+    document.getElementById('inv-prod-cost').value = '0.00';
+    document.getElementById('inv-prod-stock').value = '10';
+    document.getElementById('inv-prod-barcode').value = '';
+    document.getElementById('inv-prod-localcode').value = '';
+
+    formBox.classList.remove('hidden');
+    formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('inv-prod-name')?.focus();
+  }
+
+  generateRandomBarcode() {
+    // Generate 12-digit random barcode starting with 622 (Egypt/Regional standard)
+    let code = '622' + Math.floor(100000000 + Math.random() * 900000000);
+    const barcodeInput = document.getElementById('inv-prod-barcode');
+    if (barcodeInput) {
+      barcodeInput.value = code;
+      window.app?.showToast(`تم توليد باركود تلقائي: ${code}`, 'info');
+    }
+  }
+
   loadProductToForm(p) {
     this.selectedProduct = p;
     const formBox = document.getElementById('inv-product-edit-form');
+    const formTitle = document.getElementById('inv-form-title');
     if (!formBox) return;
 
+    if (formTitle) formTitle.textContent = 'تعديل بيانات الصنف والمخزون';
     formBox.classList.remove('hidden');
 
     // Fill form fields
@@ -102,21 +136,31 @@ class InventoryController {
     };
 
     try {
-      window.app?.showLoading(true, 'جاري حفظ التعديلات وتحديث المخزون والأسعار...');
+      window.app?.showLoading(true, 'جاري حفظ التعديلات في السيرفر وتحديث الكتالوج...');
       const res = await window.api.syncProduct(payload);
       window.app?.showLoading(false);
 
       if (res && res.success) {
         window.posScanner?.playSuccessBeep();
-        window.app?.showToast(`تم تحديث الصنف (${name}) والمخزون بنجاح ✅`, 'success');
+        const successMsg = this.selectedProduct.isNew ? `تمت إضافة الصنف (${name}) بنجاح ويمكن بيعه الآن ✅` : `تم تحديث الصنف (${name}) والمخزون بنجاح ✅`;
+        window.app?.showToast(successMsg, 'success');
 
-        // Update local product cache in background
-        const idx = window.app.products.findIndex(p => p.id === this.selectedProduct.id);
+        const newId = res.product_id || (this.selectedProduct.id || Date.now());
+        const fullProd = { id: newId, ...payload };
+
+        // Update or insert into local products list
+        const idx = window.app.products.findIndex(p => (this.selectedProduct.id && p.id === this.selectedProduct.id) || (barcode && p.barcode === barcode));
         if (idx > -1) {
           window.app.products[idx] = { ...window.app.products[idx], ...payload };
-          localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
-          window.app.renderProducts();
+        } else {
+          window.app.products.unshift(fullProd);
         }
+
+        // Save & Refresh Catalog
+        localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+        window.app.extractCategories();
+        window.app.renderCategories();
+        window.app.renderProducts();
 
         // Hide form
         document.getElementById('inv-product-edit-form')?.classList.add('hidden');

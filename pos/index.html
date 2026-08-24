@@ -44,11 +44,11 @@
     
     <!-- Brand / Supermarket Name -->
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 cursor-pointer" onclick="window.app.switchView('settings')">
         <i data-lucide="store" class="w-5 h-5"></i>
       </div>
       <div>
-        <h1 class="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-tight">
+        <h1 id="brand-store-name" class="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-tight">
           سوبر ماركت المنزل السوري
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
@@ -91,6 +91,11 @@
         <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
         <span>التقارير والوردية</span>
       </button>
+
+      <button class="app-view-btn px-3 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="settings">
+        <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+        <span>الإعدادات</span>
+      </button>
     </nav>
 
     <!-- Quick Action Controls -->
@@ -111,9 +116,9 @@
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
       </button>
 
-      <!-- Hamburger Menu Button (Available on Mobile and Tablet) -->
-      <button id="btn-hamburger-menu" onclick="window.app.toggleDrawerMenu()" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition flex items-center justify-center" title="القائمة الرئيسية">
-        <i data-lucide="menu" class="w-5 h-5"></i>
+      <!-- Settings Button (Replaces Hamburger Menu) -->
+      <button onclick="window.app.switchView('settings')" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center justify-center" title="إعدادات المتجر وبيانات الفاتورة">
+        <i data-lucide="settings" class="w-5 h-5"></i>
       </button>
     </div>
 
@@ -633,6 +638,128 @@
 
     </section>
 
+    <!-- ==================== VIEW 7: STORE & RECEIPT SETTINGS ==================== -->
+    <section id="view-settings" class="hidden flex flex-col gap-4">
+      
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-6">
+        
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-1 border border-indigo-200 dark:border-indigo-800">
+              <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+              إعدادات المتجر وبيانات الفاتورة
+            </div>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">تخصيص بيانات المحل وأرقام الهاتف وعنوان الفاتورة</h2>
+            <p class="text-xs text-gray-500 mt-0.5">تظهر هذه البيانات في رأس وتذييل الفواتير المطبوعة للعملاء</p>
+          </div>
+
+          <button onclick="window.settingsController.saveSettings()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 transition transform active:scale-95">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>حفظ الإعدادات</span>
+          </button>
+        </div>
+
+        <!-- Form Sections -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Card 1: Store & Receipt Header Info -->
+          <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <i data-lucide="store" class="w-4 h-4 text-indigo-600"></i>
+              بيانات المتجر ورأس الفاتورة
+            </h3>
+
+            <!-- Store Name -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">اسم المتجر / السوبر ماركت: <span class="text-rose-500">*</span></label>
+              <input type="text" id="set-store-name" placeholder="سوبر ماركت المنزل السوري" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+            </div>
+
+            <!-- Phone 1 & Phone 2 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">رقم هاتف المحل الأساسي: <span class="text-rose-500">*</span></label>
+                <input type="text" id="set-store-phone" placeholder="مثال: 01012345678" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">رقم إضافي / واتساب دليفري:</label>
+                <input type="text" id="set-store-phone2" placeholder="مثال: 01198765432" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+              </div>
+            </div>
+
+            <!-- Store Address -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">عنوان المتجر / الفرع:</label>
+              <input type="text" id="set-store-address" placeholder="مثال: شارع الجامعة، بجوار المسجد، الفرع الرئيسي" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+            </div>
+
+            <!-- Subtitle / Motto -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">العبارة الترحيبية أسفل الاسم:</label>
+              <input type="text" id="set-receipt-sub" placeholder="مثال: أشهى المنتجات والمنتجات السورية الأصلية" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+            </div>
+
+            <!-- Receipt Footer Note -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">رسالة تذييل الفاتورة والملاحظات:</label>
+              <textarea id="set-receipt-footer" rows="2" placeholder="شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاسترجاع خلال 14 يوماً" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs"></textarea>
+            </div>
+          </div>
+
+          <!-- Card 2: Printer & Server API Config -->
+          <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <i data-lucide="printer" class="w-4 h-4 text-indigo-600"></i>
+              إعدادات الطابعة والربط المركزي (API)
+            </h3>
+
+            <!-- Paper Width -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">عرض ورق الفاتورة الحرارية:</label>
+              <select id="set-paper-width" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+                <option value="80mm">طابعة كاشير 80 مم (80mm Thermal Receipt - قياسي)</option>
+                <option value="58mm">طابعة كاشير مدمجة 58 مم (58mm Mini POS)</option>
+              </select>
+            </div>
+
+            <!-- API URL -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">رابط سيرفر المزامنة (API URL):</label>
+              <input type="text" id="set-api-url" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+            </div>
+
+            <!-- Secret Token -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">مفتاح التشفير والتوكن السري (API Token):</label>
+              <input type="password" id="set-api-token" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+            </div>
+
+            <!-- Status Banner -->
+            <div class="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 flex flex-col gap-1">
+              <span class="font-bold flex items-center gap-1">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                جميع العمليات متزامنة مع السيرفر المركزي
+              </span>
+              <p class="text-[11px] opacity-80">يتم حفظ الفواتير وحركات المخزون والمصروفات فورياً في السيرفر مع إمكانية العمل أوفلاين في حال انقطاع الإنترنت.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Save Button Footer -->
+        <div class="flex justify-end pt-3 border-t border-gray-100 dark:border-gray-700">
+          <button onclick="window.settingsController.saveSettings()" class="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/25 transition transform active:scale-95">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>حفظ الإعدادات وتطبيقها فوراً</span>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
   </main>
 
   <!-- ==================== NATIVE APP BOTTOM NAVIGATION BAR ==================== -->
@@ -855,6 +982,7 @@
   <!-- Application Scripts -->
   <script src="js/api.js"></script>
   <script src="js/pos-scanner.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/expenses.js"></script>

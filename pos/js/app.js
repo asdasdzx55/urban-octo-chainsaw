@@ -32,6 +32,15 @@ class App {
     // Init Expenses & Suppliers
     window.expensesController?.init();
 
+    // Init Store Brand Name from Settings
+    if (window.settingsController) {
+      const store = window.settingsController.getStoreInfo();
+      const brand = document.getElementById('brand-store-name');
+      if (brand && store && store.store_name) {
+        brand.textContent = store.store_name;
+      }
+    }
+
     // Render Lucide icons
     if (window.lucide) window.lucide.createIcons();
   }
@@ -260,6 +269,8 @@ class App {
       window.reportsController?.loadReports('today');
     } else if (viewName === 'expenses') {
       window.expensesController?.init();
+    } else if (viewName === 'settings') {
+      window.settingsController?.initForm();
     }
 
     // Auto close mobile drawer menu if open

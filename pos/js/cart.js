@@ -215,11 +215,23 @@ class POSCart {
                       (inv.payment_method === 'انستا باي' || inv.payment_method === 'instapay') ? '📱 إنستاباي' :
                       (inv.payment_method === 'فيزا' || inv.payment_method === 'card') ? '💳 فيزا/بطاقة' : '💵 نقدي (كاش)';
 
+    const store = window.settingsController ? window.settingsController.getStoreInfo() : {
+      store_name: 'سوبر ماركت المنزل السوري',
+      store_phone: '01000000000',
+      store_phone2: '',
+      store_address: '',
+      receipt_sub: 'أشهى المنتجات والمنتجات السورية الأصلية',
+      receipt_footer: 'شكراً لزيارتكم سوبر ماركت المنزل السوري • يُرجى الاحتفاظ بالفاتورة للاسترجاع'
+    };
+
+    const phonesText = [store.store_phone, store.store_phone2].filter(Boolean).join(' • ');
+
     const receiptHTML = `
       <div class="receipt-header">
-        <div class="receipt-store-title">سوبر ماركت المنزل السوري</div>
-        <div class="receipt-store-sub">أشهى المنتجات والمنتجات السورية الأصلية</div>
-        <div class="receipt-store-sub">هاتف: 01000000000 • خدمة التوصيل</div>
+        <div class="receipt-store-title">${store.store_name}</div>
+        ${store.receipt_sub ? `<div class="receipt-store-sub">${store.receipt_sub}</div>` : ''}
+        ${phonesText ? `<div class="receipt-store-sub">📞 هاتف: ${phonesText}</div>` : ''}
+        ${store.store_address ? `<div class="receipt-store-sub">📍 ${store.store_address}</div>` : ''}
       </div>
 
       <div class="receipt-meta">
@@ -290,8 +302,8 @@ class POSCart {
       </div>
 
       <div class="receipt-footer">
-        <p>شكراً لزيارتكم سوبر ماركت المنزل السوري</p>
-        <p>الأسعار شاملة ضريبة القيمة المضافة • يُرجى الاحتفاظ بالفاتورة للاسترجاع</p>
+        <p>${store.receipt_footer || 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاسترجاع'}</p>
+        <p style="font-size: 9px; margin-top: 2px;">الأسعار شاملة ضريبة القيمة المضافة</p>
       </div>
     `;
 

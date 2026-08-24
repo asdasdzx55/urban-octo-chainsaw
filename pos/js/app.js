@@ -179,20 +179,20 @@ class App {
       const isLowStock = stock <= 3;
 
       return `
-        <div onclick="window.app.onProductCardClick(${p.id})" class="p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col justify-between gap-3 transform active:scale-98 select-none">
+        <div onclick="window.app.onProductCardClick(${p.id})" class="p-2.5 sm:p-3 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col justify-between gap-1.5 sm:gap-2 transform active:scale-95 select-none">
           <div>
             <div class="flex items-center justify-between gap-1 mb-1">
-              ${p.local_code ? `<span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 font-mono text-[10px] font-bold text-gray-600 dark:text-gray-300">${p.local_code}</span>` : '<span></span>'}
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${isLowStock ? 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'}">
+              ${p.local_code ? `<span class="px-1.5 py-0.2 rounded bg-gray-100 dark:bg-gray-700 font-mono text-[9px] font-bold text-gray-500 dark:text-gray-400">${p.local_code}</span>` : '<span></span>'}
+              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${isLowStock ? 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'}">
                 مخزون: ${stock}
               </span>
             </div>
-            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">${p.name}</h4>
+            <h4 class="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">${p.name}</h4>
           </div>
 
-          <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/60">
-            <span class="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400">${price.toFixed(2)} <span class="text-[10px] font-normal">ج.م</span></span>
-            <div class="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-base shadow-xs">
+          <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/60">
+            <span class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${price.toFixed(2)} <span class="text-[9px] font-normal font-sans">ج.م</span></span>
+            <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-xs">
               +
             </div>
           </div>

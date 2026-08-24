@@ -101,8 +101,8 @@
         <span class="hidden sm:inline">مسح بالكاميرا</span>
       </button>
 
-      <!-- Sync Refresh Products -->
-      <button onclick="window.app.fetchProducts()" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition" title="تحديث الأصناف من السيرفر">
+      <!-- Sync Refresh Products (Desktop) -->
+      <button onclick="window.app.fetchProducts()" class="hidden sm:flex p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition" title="تحديث الأصناف من السيرفر">
         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
       </button>
 
@@ -110,9 +110,78 @@
       <button id="btn-theme-toggle" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition" title="تبديل المظهر">
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
       </button>
+
+      <!-- Mobile Hamburger Menu Button -->
+      <button onclick="window.app.toggleDrawerMenu()" class="md:hidden p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition" title="القائمة الرئيسية">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
     </div>
 
   </header>
+
+  <!-- ==================== MOBILE SLIDE-OUT DRAWER MENU ==================== -->
+  <div id="mobile-nav-drawer" class="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden flex justify-start">
+    <div class="bg-white dark:bg-gray-800 w-72 max-w-[80vw] h-full p-5 flex flex-col justify-between shadow-2xl animate-drawer-slide-right">
+      
+      <!-- Drawer Header -->
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold">
+              <i data-lucide="store" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-black text-gray-900 dark:text-white">المنزل السوري POS</h3>
+          </div>
+          <button onclick="window.app.closeDrawerMenu()" class="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Menu Navigation Links -->
+        <nav class="flex flex-col gap-1.5">
+          <button onclick="window.app.switchView('pos')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="pos">
+            <i data-lucide="shopping-cart" class="w-4 h-4 text-indigo-500"></i>
+            <span>شاشة الكاشير والبيع</span>
+          </button>
+
+          <button onclick="window.app.switchView('inventory')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="inventory">
+            <i data-lucide="boxes" class="w-4 h-4 text-amber-500"></i>
+            <span>جرد المخزون وتعديل الأسعار</span>
+          </button>
+
+          <button onclick="window.app.switchView('expenses')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="expenses">
+            <i data-lucide="wallet" class="w-4 h-4 text-purple-500"></i>
+            <span>المصروفات وسداد الموردين</span>
+          </button>
+
+          <button onclick="window.app.switchView('orders')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="orders">
+            <i data-lucide="globe" class="w-4 h-4 text-blue-500"></i>
+            <span>طلبات المتجر الأونلاين</span>
+          </button>
+
+          <button onclick="window.app.switchView('returns')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="returns">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-500"></i>
+            <span>شاشة المرتجعات</span>
+          </button>
+
+          <button onclick="window.app.switchView('reports')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="reports">
+            <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-500"></i>
+            <span>تقارير الوردية (Z-Report)</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+        <button onclick="window.app.fetchProducts()" class="w-full py-2.5 px-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-xs font-bold flex items-center justify-center gap-2 text-gray-700 dark:text-gray-200">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>تحديث الأصناف من السيرفر</span>
+        </button>
+        <p class="text-[10px] text-gray-400 text-center">سوبر ماركت المنزل السوري • POS v2.0</p>
+      </div>
+
+    </div>
+  </div>
 
   <!-- ==================== MAIN APPLICATION CONTAINER ==================== -->
   <main class="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-5 flex flex-col">
@@ -523,6 +592,11 @@
             <div id="rep-instapay-sales" class="text-base sm:text-xl font-black text-purple-900 dark:text-white mt-1">0.00 ج.م</div>
           </div>
 
+          <div class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800">
+            <span class="text-[11px] font-bold text-rose-600 dark:text-rose-400">مبيعات فودافون كاش</span>
+            <div id="rep-vodafone-sales" class="text-base sm:text-xl font-black text-rose-900 dark:text-white mt-1">0.00 ج.م</div>
+          </div>
+
           <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-800">
             <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400">عدد الفواتير</span>
             <div id="rep-invoices-count" class="text-base sm:text-xl font-black text-amber-900 dark:text-white mt-1">0</div>
@@ -541,41 +615,18 @@
 
   </main>
 
-  <!-- ==================== MOBILE BOTTOM APP BAR ==================== -->
-  <div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center justify-between shadow-2xl">
-    
-    <!-- View Switchers (Mobile) -->
-    <div class="flex items-center gap-1">
-      <button onclick="window.app.switchView('pos')" class="app-view-btn p-2 rounded-xl text-indigo-600" data-view="pos" title="كاشير">
-        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
-      </button>
-
-      <button onclick="window.app.switchView('inventory')" class="app-view-btn p-2 rounded-xl text-gray-500" data-view="inventory" title="جرد">
-        <i data-lucide="boxes" class="w-5 h-5"></i>
-      </button>
-
-      <button onclick="window.app.switchView('expenses')" class="app-view-btn p-2 rounded-xl text-gray-500" data-view="expenses" title="مصروفات">
-        <i data-lucide="wallet" class="w-5 h-5"></i>
-      </button>
-
-      <button onclick="window.app.switchView('orders')" class="app-view-btn p-2 rounded-xl text-gray-500" data-view="orders" title="طلبات">
-        <i data-lucide="globe" class="w-5 h-5"></i>
-      </button>
-
-      <button onclick="window.app.switchView('reports')" class="app-view-btn p-2 rounded-xl text-gray-500" data-view="reports" title="تقارير">
-        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <!-- Mobile Open Cart Drawer Button -->
-    <button onclick="window.app.toggleMobileCart()" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-600/30">
-      <div class="flex items-center gap-1">
-        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-        <span id="mobile-cart-badge" class="px-1.5 py-0.2 rounded-full bg-indigo-800 text-[10px]">0</span>
+  <!-- ==================== FLOATING CART BUTTON (FAB ON MOBILE) ==================== -->
+  <div class="lg:hidden fixed bottom-6 end-6 z-40">
+    <button onclick="window.app.toggleMobileCart()" class="px-5 py-3.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-3 border-2 border-white/20 transform active:scale-95 transition-all">
+      <div class="relative flex items-center">
+        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+        <span id="fab-cart-count" class="absolute -top-2.5 -end-2.5 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black shadow-md border border-white dark:border-gray-800">0</span>
       </div>
-      <span id="mobile-cart-total-val">0.00 ج.م</span>
+      <div class="flex flex-col text-right">
+        <span class="text-[10px] text-indigo-200 leading-none">سلة المشتريات</span>
+        <span id="fab-cart-total" class="font-mono font-black text-sm leading-tight mt-0.5">0.00 ج.م</span>
+      </div>
     </button>
-
   </div>
 
   <!-- ==================== MOBILE CART DRAWER (SLIDE-UP) ==================== -->
@@ -594,12 +645,12 @@
       </div>
 
       <!-- Scrollable Items inside mobile drawer -->
-      <div class="flex-1 overflow-y-auto py-3 max-h-60 flex flex-col gap-2">
-        <p class="text-xs text-gray-400 text-center">راجع الأصناف واضغط على إتمام البيع</p>
+      <div id="mobile-cart-drawer-list" class="flex-1 overflow-y-auto py-3 max-h-72 flex flex-col gap-2">
+        <p class="text-xs text-gray-400 text-center py-6">السلة فارغة</p>
       </div>
 
       <!-- Drawer Checkout Button -->
-      <button id="btn-mobile-checkout" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 mt-3 flex items-center justify-center gap-2">
+      <button id="btn-mobile-checkout" onclick="window.app.openCheckoutModal()" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 mt-3 flex items-center justify-center gap-2 transition">
         <span>متابعة الدفع</span>
       </button>
 
@@ -655,19 +706,23 @@
         <span id="checkout-modal-total" class="text-xl font-black text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
       </div>
 
-      <!-- Payment Method Switcher -->
-      <div class="flex items-center gap-2">
-        <button onclick="window.app.selectPaymentMethod('cash')" class="pay-method-btn flex-1 py-3 px-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center justify-center gap-1.5" data-method="cash">
+      <!-- Payment Method Switcher (Cash, InstaPay, Vodafone Cash, Card) -->
+      <div class="grid grid-cols-4 gap-1.5">
+        <button onclick="window.app.selectPaymentMethod('cash')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex flex-col items-center justify-center gap-1" data-method="cash">
           <i data-lucide="banknote" class="w-4 h-4"></i>
-          نقدي (كاش)
+          <span>كاش</span>
         </button>
-        <button onclick="window.app.selectPaymentMethod('instapay')" class="pay-method-btn flex-1 py-3 px-2 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1.5" data-method="instapay">
+        <button onclick="window.app.selectPaymentMethod('instapay')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="instapay">
           <i data-lucide="smartphone" class="w-4 h-4"></i>
-          إنستاباي
+          <span>إنستاباي</span>
         </button>
-        <button onclick="window.app.selectPaymentMethod('card')" class="pay-method-btn flex-1 py-3 px-2 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1.5" data-method="card">
+        <button onclick="window.app.selectPaymentMethod('vodafone_cash')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="vodafone_cash">
+          <i data-lucide="phone-call" class="w-4 h-4 text-rose-500"></i>
+          <span>فودافون</span>
+        </button>
+        <button onclick="window.app.selectPaymentMethod('card')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="card">
           <i data-lucide="credit-card" class="w-4 h-4"></i>
-          بطاقة/فيزا
+          <span>فيزا</span>
         </button>
       </div>
 
@@ -698,6 +753,12 @@
       <div id="checkout-instapay-fields" class="hidden flex flex-col gap-2">
         <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم مرجع إنستاباي (اختياري):</label>
         <input type="text" oninput="window.cart.instapayRef = this.value" placeholder="مثال: IPN-98472910..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+      </div>
+
+      <!-- Vodafone Cash Fields -->
+      <div id="checkout-vodafone-fields" class="hidden flex flex-col gap-2">
+        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم محفظة فودافون كاش / مرجع التحويل (اختياري):</label>
+        <input type="text" oninput="window.cart.vodafoneRef = this.value" placeholder="مثال: 010xxxxxxxx أو رقم العملية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
       </div>
 
       <!-- Confirm Payment Button -->

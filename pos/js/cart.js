@@ -97,6 +97,7 @@ class POSCart {
     this.discountAmount = 0;
     this.paidAmount = 0;
     this.instapayRef = '';
+    this.vodafoneRef = '';
     this.render();
   }
 
@@ -132,12 +133,16 @@ class POSCart {
 
     const total = this.getTotal();
 
+    const paymentMethodLabel = this.paymentMethod === 'vodafone_cash' ? 'فودافون كاش' : 
+                               this.paymentMethod === 'instapay' ? 'انستا باي' : 
+                               this.paymentMethod === 'card' ? 'فيزا' : 'كاش';
+
     // Prepare Sale Payload according to Syrian Home REST API
     const payload = {
       customer_name: this.customerName || 'عميل نقدي',
       customer_phone: this.customerPhone || '',
-      payment_method: this.paymentMethod,
-      instapay_ref: this.paymentMethod === 'instapay' ? this.instapayRef : '',
+      payment_method: paymentMethodLabel,
+      instapay_ref: this.paymentMethod === 'instapay' ? this.instapayRef : (this.paymentMethod === 'vodafone_cash' ? this.vodafoneRef : ''),
       total: total,
       discount: this.discountAmount,
       tax: this.taxRate,
@@ -168,7 +173,7 @@ class POSCart {
           created_at: new Date().toLocaleString('ar-EG'),
           cashier: this.cashierNotes,
           customer_name: this.customerName,
-          payment_method: this.paymentMethod,
+          payment_method: paymentMethodLabel,
           items: [...this.items],
           subtotal: this.getSubtotal(),
           discount: this.discountAmount,
@@ -206,6 +211,10 @@ class POSCart {
     const printArea = document.getElementById('receipt-print-area');
     if (!modal || !container) return;
 
+    const pmDisplay = (inv.payment_method === 'فودافون كاش' || inv.payment_method === 'vodafone_cash') ? '📱 فودافون كاش' :
+                      (inv.payment_method === 'انستا باي' || inv.payment_method === 'instapay') ? '📱 إنستاباي' :
+                      (inv.payment_method === 'فيزا' || inv.payment_method === 'card') ? '💳 فيزا/بطاقة' : '💵 نقدي (كاش)';
+
     const receiptHTML = `
       <div class="receipt-header">
         <div class="receipt-store-title">سوبر ماركت المنزل السوري</div>
@@ -224,7 +233,7 @@ class POSCart {
         </div>
         <div class="receipt-meta-row">
           <span>العميل: ${inv.customer_name}</span>
-          <span>طريقة الدفع: ${inv.payment_method === 'instapay' ? 'إنستاباي' : inv.payment_method === 'card' ? 'فيزا/بطاقة' : 'نقدي'}</span>
+          <span>طريقة الدفع: ${pmDisplay}</span>
         </div>
       </div>
 
@@ -319,6 +328,10 @@ class POSCart {
     const total = this.getTotal();
     const count = this.getTotalItemsCount();
 
+    const mobileListContainer = document.getElementById('mobile-cart-drawer-list');
+    const fabBadge = document.getElementById('fab-cart-count');
+    const fabTotal = document.getElementById('fab-cart-total');
+
     // Update Totals
     if (subtotalEl) subtotalEl.textContent = `${this.getSubtotal().toFixed(2)} ج.م`;
     if (discountEl) discountEl.textContent = `-${this.discountAmount.toFixed(2)} ج.م`;
@@ -326,18 +339,10 @@ class POSCart {
     if (mobileTotalEl) mobileTotalEl.textContent = `${total.toFixed(2)} ج.م`;
     if (badgeEl) badgeEl.textContent = count;
     if (mobileBadgeEl) mobileBadgeEl.textContent = count;
+    if (fabBadge) fabBadge.textContent = count;
+    if (fabTotal) fabTotal.textContent = `${total.toFixed(2)} ج.م`;
 
-    if (!listContainer) return;
-
-    if (this.items.length === 0) {
-      if (emptyNotice) emptyNotice.classList.remove('hidden');
-      listContainer.innerHTML = '';
-      return;
-    }
-
-    if (emptyNotice) emptyNotice.classList.add('hidden');
-
-    listContainer.innerHTML = this.items.map(item => `
+    const itemsHTML = this.items.map(item => `
       <div class="p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between gap-3 cart-item-highlight">
         <div class="flex-1 min-w-0">
           <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h4>
@@ -361,6 +366,17 @@ class POSCart {
         </div>
       </div>
     `).join('');
+
+    if (this.items.length === 0) {
+      if (emptyNotice) emptyNotice.classList.remove('hidden');
+      if (listContainer) listContainer.innerHTML = '';
+      if (mobileListContainer) mobileListContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">السلة فارغة</p>';
+      return;
+    }
+
+    if (emptyNotice) emptyNotice.classList.add('hidden');
+    if (listContainer) listContainer.innerHTML = itemsHTML;
+    if (mobileListContainer) mobileListContainer.innerHTML = itemsHTML;
   }
 }
 

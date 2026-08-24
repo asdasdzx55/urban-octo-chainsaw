@@ -135,6 +135,16 @@ body {
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Slide Right Drawer for Mobile Navigation */
+@keyframes slideRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-drawer-slide-right {
+  animation: slideRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Numpad Key Press Feedback */
 .numpad-key:active {
   transform: scale(0.95);

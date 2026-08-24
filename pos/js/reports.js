@@ -44,21 +44,31 @@ class ReportsController {
       total_sales: 0,
       cash_sales: 0,
       instapay_sales: 0,
+      vodafone_sales: 0,
       total_invoices: 0,
       total_items_sold: 0
     };
 
-    document.getElementById('rep-total-sales').textContent = `${parseFloat(s.total_sales || 0).toFixed(2)} ج.م`;
-    document.getElementById('rep-cash-sales').textContent = `${parseFloat(s.cash_sales || 0).toFixed(2)} ج.م`;
-    document.getElementById('rep-instapay-sales').textContent = `${parseFloat(s.instapay_sales || 0).toFixed(2)} ج.م`;
-    document.getElementById('rep-invoices-count').textContent = s.total_invoices || 0;
-    document.getElementById('rep-items-count').textContent = s.total_items_sold || 0;
+    const vodafoneSales = s.sales_by_method?.['فودافون كاش'] || s.vodafone_sales || 0;
+    const instapaySales = s.sales_by_method?.['انستا باي'] || s.instapay_sales || 0;
+    const cashSales = s.sales_by_method?.['كاش'] || s.cash_sales || 0;
+
+    if (document.getElementById('rep-total-sales')) document.getElementById('rep-total-sales').textContent = `${parseFloat(s.total_sales || 0).toFixed(2)} ج.م`;
+    if (document.getElementById('rep-cash-sales')) document.getElementById('rep-cash-sales').textContent = `${parseFloat(cashSales).toFixed(2)} ج.م`;
+    if (document.getElementById('rep-instapay-sales')) document.getElementById('rep-instapay-sales').textContent = `${parseFloat(instapaySales).toFixed(2)} ج.م`;
+    if (document.getElementById('rep-vodafone-sales')) document.getElementById('rep-vodafone-sales').textContent = `${parseFloat(vodafoneSales).toFixed(2)} ج.م`;
+    if (document.getElementById('rep-invoices-count')) document.getElementById('rep-invoices-count').textContent = s.total_invoices || (s.orders_count || 0);
+    if (document.getElementById('rep-items-count')) document.getElementById('rep-items-count').textContent = s.total_items_sold || 0;
   }
 
   printZReport() {
     const s = this.summaryData || {};
     const printArea = document.getElementById('receipt-print-area');
     if (!printArea) return;
+
+    const vodafoneSales = s.sales_by_method?.['فودافون كاش'] || s.vodafone_sales || 0;
+    const instapaySales = s.sales_by_method?.['انستا باي'] || s.instapay_sales || 0;
+    const cashSales = s.sales_by_method?.['كاش'] || s.cash_sales || 0;
 
     const zReportHTML = `
       <div class="receipt-header">
@@ -85,19 +95,27 @@ class ReportsController {
         </div>
         <div class="receipt-total-row">
           <span>مبيعات النقدية (الكاش):</span>
-          <span>${parseFloat(s.cash_sales || 0).toFixed(2)} ج.م</span>
+          <span>${parseFloat(cashSales).toFixed(2)} ج.م</span>
         </div>
         <div class="receipt-total-row">
           <span>مبيعات إنستاباي (InstaPay):</span>
-          <span>${parseFloat(s.instapay_sales || 0).toFixed(2)} ج.م</span>
+          <span>${parseFloat(instapaySales).toFixed(2)} ج.م</span>
+        </div>
+        <div class="receipt-total-row">
+          <span>مبيعات فودافون كاش:</span>
+          <span>${parseFloat(vodafoneSales).toFixed(2)} ج.م</span>
         </div>
         <div class="receipt-total-row">
           <span>إجمالي عدد الفواتير:</span>
-          <span>${s.total_invoices || 0} فاتورة</span>
+          <span>${s.total_invoices || (s.orders_count || 0)} فاتورة</span>
         </div>
         <div class="receipt-total-row">
-          <span>إجمالي الأصناف المباعة:</span>
-          <span>${s.total_items_sold || 0} قطعة</span>
+          <span>إجمالي المصروفات المنصرفة:</span>
+          <span>${parseFloat(s.total_all_expenses || 0).toFixed(2)} ج.م</span>
+        </div>
+        <div class="receipt-total-row">
+          <span>صافي النقدية في الدرج:</span>
+          <span><b>${parseFloat(s.net_cash_in_drawer || cashSales).toFixed(2)} ج.م</b></span>
         </div>
       </div>
 

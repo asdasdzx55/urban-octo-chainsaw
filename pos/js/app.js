@@ -246,7 +246,21 @@ class App {
       window.expensesController?.init();
     }
 
+    // Auto close mobile drawer menu if open
+    this.closeDrawerMenu();
+
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  toggleDrawerMenu() {
+    const drawer = document.getElementById('mobile-nav-drawer');
+    drawer?.classList.toggle('hidden');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeDrawerMenu() {
+    const drawer = document.getElementById('mobile-nav-drawer');
+    drawer?.classList.add('hidden');
   }
 
   /* ==================== CHECKOUT MODAL LOGIC ==================== */
@@ -279,24 +293,32 @@ class App {
 
     const cashFields = document.getElementById('checkout-cash-fields');
     const instapayFields = document.getElementById('checkout-instapay-fields');
+    const vodafoneFields = document.getElementById('checkout-vodafone-fields');
 
     document.querySelectorAll('.pay-method-btn').forEach(btn => {
       if (btn.getAttribute('data-method') === method) {
-        btn.className = 'pay-method-btn flex-1 py-3 px-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center justify-center gap-1.5';
+        btn.className = 'pay-method-btn flex-1 py-3 px-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center justify-center gap-1';
       } else {
-        btn.className = 'pay-method-btn flex-1 py-3 px-2 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1.5';
+        btn.className = 'pay-method-btn flex-1 py-3 px-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1';
       }
     });
 
     if (method === 'cash') {
       cashFields?.classList.remove('hidden');
       instapayFields?.classList.add('hidden');
+      vodafoneFields?.classList.add('hidden');
     } else if (method === 'instapay') {
       cashFields?.classList.add('hidden');
       instapayFields?.classList.remove('hidden');
+      vodafoneFields?.classList.add('hidden');
+    } else if (method === 'vodafone_cash') {
+      cashFields?.classList.add('hidden');
+      instapayFields?.classList.add('hidden');
+      vodafoneFields?.classList.remove('hidden');
     } else {
       cashFields?.classList.add('hidden');
       instapayFields?.classList.add('hidden');
+      vodafoneFields?.classList.add('hidden');
     }
   }
 

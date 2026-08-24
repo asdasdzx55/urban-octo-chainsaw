@@ -153,25 +153,32 @@ class POSScanner {
   }
 
   async startCamera() {
-    if (this.isCameraScanning) await this.stopCamera();
-
-    this.html5QrCode = new Html5Qrcode("pos-camera-reader");
-
-    const config = {
-      fps: 15,
-      qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0,
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.QR_CODE
-      ]
-    };
+    if (this.isCameraStarting) return;
+    this.isCameraStarting = true;
 
     try {
+      if (this.isCameraScanning) {
+        await this.stopCamera();
+      }
+
+      if (!this.html5QrCode) {
+        this.html5QrCode = new Html5Qrcode("pos-camera-reader");
+      }
+
+      const config = {
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.QR_CODE
+        ]
+      };
+
       await this.html5QrCode.start(
         { facingMode: "environment" },
         config,
@@ -182,8 +189,27 @@ class POSScanner {
       );
       this.isCameraScanning = true;
     } catch (err) {
-      console.error("Camera open error:", err);
-      window.app?.showToast('تعذر فتح الكاميرا، يرجى السماح بالأذونات.', 'error');
+      console.warn("Camera open error:", err);
+      // Fallback: try default camera if facingMode: environment failed
+      try {
+        if (this.html5QrCode) {
+          await this.html5QrCode.start(
+            true,
+            { fps: 15, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+              this.handleScannedBarcode(decodedText, 'camera');
+            },
+            () => {}
+          );
+          this.isCameraScanning = true;
+          return;
+        }
+      } catch (e) {
+        console.error("Camera fallback error:", e);
+      }
+      window.app?.showToast('يرجى السماح بصلاحية الكاميرا للمتصفح.', 'error');
+    } finally {
+      this.isCameraStarting = false;
     }
   }
 

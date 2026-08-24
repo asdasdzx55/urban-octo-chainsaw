@@ -29,6 +29,9 @@ class App {
     // Health check ping
     this.checkServerHealth();
 
+    // Init Expenses & Suppliers
+    window.expensesController?.init();
+
     // Render Lucide icons
     if (window.lucide) window.lucide.createIcons();
   }
@@ -224,7 +227,7 @@ class App {
     });
 
     // Update View Containers
-    ['pos', 'orders', 'returns', 'reports', 'settings'].forEach(v => {
+    ['pos', 'orders', 'returns', 'inventory', 'expenses', 'reports', 'settings'].forEach(v => {
       const el = document.getElementById(`view-${v}`);
       if (el) {
         if (v === viewName) {
@@ -239,6 +242,8 @@ class App {
       window.ordersController?.loadOrders('pending');
     } else if (viewName === 'reports') {
       window.reportsController?.loadReports('today');
+    } else if (viewName === 'expenses') {
+      window.expensesController?.init();
     }
 
     if (window.lucide) window.lucide.createIcons();

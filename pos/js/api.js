@@ -148,6 +148,34 @@ class SyrianHomeAPI {
   async getPosReports(period = 'today') {
     return await this.get('get_pos_reports', { period: period });
   }
+
+  /**
+   * 10. Sync / Update Product Price, Cost, Stock, and Barcode
+   */
+  async syncProduct(productPayload) {
+    return await this.post('sync_product', productPayload);
+  }
+
+  /**
+   * 11. Record General Operating Expense
+   */
+  async recordExpense(expensePayload) {
+    return await this.post('record_expense', expensePayload);
+  }
+
+  /**
+   * 12. Pay Supplier & Deduct Balance
+   */
+  async paySupplier(supplierPayload) {
+    return await this.post('pay_supplier', supplierPayload);
+  }
+
+  /**
+   * 13. Get Suppliers, Expense Categories, and Partners List
+   */
+  async getPosMeta() {
+    return await this.get('get_pos_meta');
+  }
 }
 
 window.api = new SyrianHomeAPI();

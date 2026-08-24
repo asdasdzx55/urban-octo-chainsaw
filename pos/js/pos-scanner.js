@@ -193,8 +193,13 @@ class POSScanner {
     if (!barcode) return;
     this.playSuccessBeep();
 
-    if (window.cart) {
-      window.cart.addProductByBarcode(barcode);
+    if (window.app && window.app.currentView === 'inventory') {
+      this.closeCameraModal();
+      window.inventoryController?.searchProductForAudit(barcode);
+    } else {
+      if (window.cart) {
+        window.cart.addProductByBarcode(barcode);
+      }
     }
   }
 }

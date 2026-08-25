@@ -20,19 +20,20 @@ class POSCart {
   addItem(product, qty = 1) {
     if (!product) return;
 
-    const isWeight = product.unit_type === 'weight' || product.unit === 'كجم' || product.is_weight;
+    const isWeight = product.unit_type === 'weight' || product.unit === 'كجم' || product.is_weight || (typeof qty === 'number' && qty % 1 !== 0);
     const unitType = isWeight ? 'weight' : 'piece';
     const unitLabel = isWeight ? 'كجم' : 'قطعة';
 
     const existingIndex = this.items.findIndex(i => i.product_id === product.id);
+    const validQty = parseFloat(parseFloat(qty).toFixed(3));
 
     if (existingIndex > -1) {
-      this.items[existingIndex].qty = parseFloat((this.items[existingIndex].qty + qty).toFixed(3));
+      this.items[existingIndex].qty = parseFloat((this.items[existingIndex].qty + validQty).toFixed(3));
     } else {
       this.items.push({
         product_id: product.id,
         name: product.name,
-        qty: parseFloat(qty.toFixed(3)),
+        qty: validQty,
         price: parseFloat(product.price || 0),
         cost: parseFloat(product.cost || 0),
         barcode: product.barcode || '',
@@ -43,35 +44,80 @@ class POSCart {
     }
 
     this.render();
-    window.app?.showToast(`تمت إضافة: ${product.name} (${qty} ${unitLabel})`, 'success');
+    const qtyDisplay = isWeight ? `${validQty.toFixed(3)} ${unitLabel}` : `${validQty} ${unitLabel}`;
+    window.app?.showToast(`تمت إضافة: ${product.name} (${qtyDisplay})`, 'success');
   }
 
   async addProductByBarcode(barcode) {
-    const cleanCode = barcode.trim();
-    if (!cleanCode) return;
+    const rawCode = String(barcode || '').trim();
+    if (!rawCode) return;
+
+    // Parse barcode according to Syrian Home Scale & Retail rules
+    const parsed = window.BarcodeParser ? window.BarcodeParser.parse(rawCode) : {
+      isValid: true,
+      isScale: /^20\d{11}$/.test(rawCode),
+      originalBarcode: rawCode,
+      itemCode: /^20\d{11}$/.test(rawCode) ? rawCode.slice(2, 7) : rawCode,
+      itemCodeNumeric: /^20\d{11}$/.test(rawCode) ? String(parseInt(rawCode.slice(2, 7), 10)) : rawCode,
+      quantity: /^20\d{11}$/.test(rawCode) ? parseFloat((parseInt(rawCode.slice(7, 12), 10) / 1000).toFixed(3)) : 1,
+      weight: /^20\d{11}$/.test(rawCode) ? parseFloat((parseInt(rawCode.slice(7, 12), 10) / 1000).toFixed(3)) : null,
+      unitType: /^20\d{11}$/.test(rawCode) ? 'weight' : 'piece',
+      unit: /^20\d{11}$/.test(rawCode) ? 'كجم' : 'قطعة'
+    };
 
     // 1. Check local cached products first for instant response
-    let product = window.app?.products?.find(p => 
-      (p.barcode && p.barcode.trim() === cleanCode) || 
-      (p.local_code && p.local_code.trim().toLowerCase() === cleanCode.toLowerCase())
-    );
+    let product = window.app?.products?.find(p => {
+      if (window.BarcodeParser) {
+        return window.BarcodeParser.matchesProduct(parsed, p);
+      }
+      return (p.barcode && p.barcode.trim() === parsed.itemCode) || 
+             (p.local_code && p.local_code.trim().toLowerCase() === parsed.itemCode.toLowerCase());
+    });
 
     if (product) {
-      this.addItem(product, 1);
+      const productToAdd = parsed.isScale ? {
+        ...product,
+        unit_type: 'weight',
+        unit: 'كجم',
+        is_weight: true
+      } : product;
+
+      this.addItem(productToAdd, parsed.quantity);
       return;
     }
 
     // 2. Otherwise query API directly
     try {
       window.app?.showLoading(true, 'جاري البحث عن الصنف...');
-      const res = await window.api.lookupBarcode(cleanCode);
+      let res = null;
+
+      if (parsed.isScale) {
+        // Query by extracted 5-digit item code first
+        res = await window.api.lookupBarcode(parsed.itemCode);
+        if (!res || !res.success || !res.product) {
+          res = await window.api.lookupBarcode(parsed.originalBarcode);
+        }
+      } else {
+        res = await window.api.lookupBarcode(parsed.originalBarcode);
+      }
+
       window.app?.showLoading(false);
 
       if (res && res.success && res.product) {
-        this.addItem(res.product, 1);
+        const productToAdd = parsed.isScale ? {
+          ...res.product,
+          unit_type: 'weight',
+          unit: 'كجم',
+          is_weight: true
+        } : res.product;
+
+        this.addItem(productToAdd, parsed.quantity);
       } else {
         window.posScanner?.playErrorTone();
-        window.app?.showToast(`لم يتم العثور على صنف بالباركود: ${cleanCode}`, 'error');
+        const errorMsg = parsed.isScale
+          ? `لم يتم العثور على صنف ميزان بكود: ${parsed.itemCode} (وزن: ${parsed.weight} كجم)`
+          : `لم يتم العثور على صنف بالباركود: ${parsed.originalBarcode}`;
+        window.app?.showToast(errorMsg, 'error');
       }
     } catch (e) {
       window.app?.showLoading(false);
@@ -257,21 +303,25 @@ class POSCart {
       <table class="receipt-items-table">
         <thead>
           <tr>
-            <th style="width: 50%;">الصنف</th>
-            <th style="width: 15%; text-align: center;">الكمية</th>
+            <th style="width: 45%;">الصنف</th>
+            <th style="width: 20%; text-align: center;">الكمية / الوزن</th>
             <th style="width: 15%; text-align: center;">السعر</th>
             <th style="width: 20%; text-align: left;">الإجمالي</th>
           </tr>
         </thead>
         <tbody>
-          ${inv.items.map(item => `
+          ${inv.items.map(item => {
+            const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
+            const qtyStr = isWeight ? `${parseFloat(item.qty).toFixed(3)} كجم` : `${item.qty}`;
+            return `
             <tr>
               <td>${item.name}</td>
-              <td style="text-align: center;">${item.qty}</td>
+              <td style="text-align: center; font-family: monospace;">${qtyStr}</td>
               <td style="text-align: center;">${item.price.toFixed(2)}</td>
-              <td style="text-align: left;">${(item.price * item.qty).toFixed(2)}</td>
+              <td style="text-align: left; font-weight: bold;">${(item.price * item.qty).toFixed(2)}</td>
             </tr>
-          `).join('')}
+          `;
+          }).join('')}
         </tbody>
       </table>
 
@@ -383,7 +433,7 @@ class POSCart {
           <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/80 rounded-xl p-1 shrink-0">
             <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs shadow-xs hover:bg-gray-200">-</button>
             <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-bold text-xs text-gray-900 dark:text-white font-mono ${isWeight ? 'cursor-pointer hover:text-indigo-600 hover:underline' : ''}">
-              ${item.qty} ${isWeight ? 'كجم' : ''}
+              ${isWeight ? parseFloat(item.qty).toFixed(3) + ' كجم' : item.qty}
             </span>
             <button onclick="window.cart.updateQty(${item.product_id}, ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs hover:bg-indigo-700">+</button>
           </div>

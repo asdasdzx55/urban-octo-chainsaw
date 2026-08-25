@@ -425,6 +425,7 @@ class App {
 
   handleScanResult(text, format, source = 'camera') {
     const isURL = /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(text.trim());
+    const parsed = window.BarcodeParser ? window.BarcodeParser.parse(text) : null;
     
     // 1. Send POS Event to Parent Window (iframe) or Opener (popup)
     const scanPayload = {
@@ -432,6 +433,10 @@ class App {
       code: text,
       format: format,
       source: source,
+      is_scale: parsed ? parsed.isScale : false,
+      item_code: parsed ? parsed.itemCode : text,
+      weight: parsed ? parsed.weight : null,
+      quantity: parsed ? parsed.quantity : 1,
       timestamp: new Date().toISOString()
     };
 
@@ -463,8 +468,24 @@ class App {
     const openBtn = document.getElementById('btn-result-open');
 
     if (resultCard && resultText) {
-      resultText.textContent = text;
-      if (resultFormat) resultFormat.textContent = format.replace(/_/g, ' ');
+      if (parsed && parsed.isScale) {
+        resultText.innerHTML = `
+          <div class="flex flex-col gap-2">
+            <div class="font-mono text-sm sm:text-base font-bold">${this.escapeHtml(text)}</div>
+            <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center justify-between flex-wrap gap-2">
+              <span>⚖️ باركود ميزان (وزن متغير)</span>
+              <span>كود الصنف: <b class="font-mono text-indigo-500">${parsed.itemCode}</b></span>
+              <span>الوزن: <b class="font-mono text-emerald-500">${parsed.weight} كجم</b> (${parsed.weightGrams} جرام)</span>
+            </div>
+          </div>
+        `;
+      } else {
+        resultText.textContent = text;
+      }
+
+      if (resultFormat) {
+        resultFormat.textContent = (parsed && parsed.isScale ? 'EAN-13 (ميزان)' : format.replace(/_/g, ' '));
+      }
       if (resultTime) resultTime.textContent = new Date().toLocaleTimeString(this.currentLang === 'ar' ? 'ar-SA' : 'en-US');
 
       if (openBtn) {

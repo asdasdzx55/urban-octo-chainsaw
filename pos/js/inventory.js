@@ -15,12 +15,21 @@ class InventoryController {
       return;
     }
 
+    const parsed = window.BarcodeParser ? window.BarcodeParser.parse(q) : {
+      isScale: /^20\d{11}$/.test(q),
+      itemCode: /^20\d{11}$/.test(q) ? q.slice(2, 7) : q,
+      originalBarcode: q
+    };
+
     // 1. Search in local cached products first
-    let product = window.app?.products?.find(p => 
-      (p.barcode && p.barcode.trim() === q) ||
-      (p.local_code && p.local_code.trim().toLowerCase() === q.toLowerCase()) ||
-      (p.name && p.name.toLowerCase().includes(q.toLowerCase()))
-    );
+    let product = window.app?.products?.find(p => {
+      if (window.BarcodeParser) {
+        return window.BarcodeParser.matchesProduct(parsed, p) || (p.name && p.name.toLowerCase().includes(q.toLowerCase()));
+      }
+      return (p.barcode && p.barcode.trim() === parsed.itemCode) ||
+             (p.local_code && p.local_code.trim().toLowerCase() === parsed.itemCode.toLowerCase()) ||
+             (p.name && p.name.toLowerCase().includes(q.toLowerCase()));
+    });
 
     if (product) {
       this.loadProductToForm(product);
@@ -30,14 +39,22 @@ class InventoryController {
     // 2. Otherwise query API
     try {
       window.app?.showLoading(true, 'جاري البحث عن الصنف في السيرفر...');
-      const res = await window.api.lookupBarcode(q);
+      let res = null;
+      if (parsed.isScale) {
+        res = await window.api.lookupBarcode(parsed.itemCode);
+        if (!res || !res.success || !res.product) {
+          res = await window.api.lookupBarcode(parsed.originalBarcode);
+        }
+      } else {
+        res = await window.api.lookupBarcode(q);
+      }
       window.app?.showLoading(false);
 
       if (res && res.success && res.product) {
         this.loadProductToForm(res.product);
       } else {
         window.posScanner?.playErrorTone();
-        window.app?.showToast('لم يتم العثور على هذا الصنف', 'error');
+        window.app?.showToast(parsed.isScale ? `لم يتم العثور على صنف ميزان بكود: ${parsed.itemCode}` : 'لم يتم العثور على هذا الصنف', 'error');
       }
     } catch (e) {
       window.app?.showLoading(false);

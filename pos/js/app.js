@@ -1,11 +1,77 @@
-/**
- * Syrian Home POS - Main Application Controller
- * Handles Products Catalog, Categories, Search, Offline Cache, Views, and Modals.
- */
+const DEFAULT_PRODUCTS = [
+  {
+    id: 10725,
+    name: 'نوكا بالفستق',
+    category: 'حلويات ومكسرات',
+    unit_type: 'weight',
+    unit: 'كجم',
+    price: 1400.00,
+    cost: 1100.00,
+    stock: 25.500,
+    barcode: '10725',
+    local_code: '10725',
+    all_barcodes: '10725, 2010725'
+  },
+  {
+    id: 101,
+    name: 'جبنة سورية مشللة',
+    category: 'أجبان وألبان',
+    unit_type: 'weight',
+    unit: 'كجم',
+    price: 380.00,
+    cost: 300.00,
+    stock: 18.000,
+    barcode: '10101',
+    local_code: '10101'
+  },
+  {
+    id: 102,
+    name: 'زعتر حلبي ممتاز',
+    category: 'عطارة وتوابل',
+    unit_type: 'weight',
+    unit: 'كجم',
+    price: 220.00,
+    cost: 160.00,
+    stock: 30.000,
+    barcode: '10202',
+    local_code: '10202'
+  },
+  {
+    id: 103,
+    name: 'زيت زيتون سوري بكر 1 لتر',
+    category: 'بقالة وزيوت',
+    unit_type: 'piece',
+    unit: 'قطعة',
+    price: 290.00,
+    cost: 230.00,
+    stock: 45,
+    barcode: '6221000100010',
+    local_code: 'ITEM-101'
+  },
+  {
+    id: 104,
+    name: 'دبس رمان طبيعي 500 مل',
+    category: 'صلصات ومخللات',
+    unit_type: 'piece',
+    unit: 'قطعة',
+    price: 110.00,
+    cost: 85.00,
+    stock: 32,
+    barcode: '6222000200020',
+    local_code: 'ITEM-102'
+  }
+];
 
 class App {
   constructor() {
-    this.products = JSON.parse(localStorage.getItem('syrian_home_products') || '[]');
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem('syrian_home_products') || '[]');
+    } catch (e) {
+      saved = [];
+    }
+
+    this.products = (Array.isArray(saved) && saved.length > 0) ? saved : DEFAULT_PRODUCTS;
     this.categories = [];
     this.activeCategory = 'all';
     this.currentView = 'pos'; // 'pos', 'orders', 'returns', 'reports', 'settings'
@@ -16,7 +82,7 @@ class App {
     this.applyTheme(this.theme);
     this.bindEvents();
 
-    // Render initial cached products
+    // Render initial products
     if (this.products.length > 0) {
       this.extractCategories();
       this.renderCategories();
@@ -161,14 +227,25 @@ class App {
       filtered = filtered.filter(p => p.category === this.activeCategory);
     }
 
-    // Filter by Search Query (Name, Barcode, Local Code)
-    const q = (searchQuery || document.getElementById('product-search-input')?.value || '').trim().toLowerCase();
-    if (q) {
-      filtered = filtered.filter(p => 
-        (p.name && p.name.toLowerCase().includes(q)) ||
-        (p.barcode && p.barcode.includes(q)) ||
-        (p.local_code && p.local_code.toLowerCase().includes(q))
-      );
+    // Filter by Search Query (Name, Barcode, Local Code, or Parsed Scale Code)
+    const rawQ = (searchQuery || document.getElementById('product-search-input')?.value || '').trim();
+    if (rawQ) {
+      const q = rawQ.toLowerCase();
+      const parsed = window.BarcodeParser ? window.BarcodeParser.parse(rawQ) : null;
+
+      if (parsed && parsed.isScale) {
+        filtered = filtered.filter(p => 
+          window.BarcodeParser.matchesProduct(parsed, p) ||
+          (p.name && p.name.toLowerCase().includes(q))
+        );
+      } else {
+        filtered = filtered.filter(p => 
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+          (p.local_code && p.local_code.toLowerCase().includes(q)) ||
+          (String(p.id) === q)
+        );
+      }
     }
 
     if (filtered.length === 0) {
@@ -496,9 +573,22 @@ class App {
 
   /* ==================== EVENT BINDINGS ==================== */
   bindEvents() {
-    // Search input
-    document.getElementById('product-search-input')?.addEventListener('input', (e) => {
+    // Search input (Instant filter + Enter to add/scan)
+    const searchInput = document.getElementById('product-search-input');
+    searchInput?.addEventListener('input', (e) => {
       this.renderProducts(e.target.value);
+    });
+
+    searchInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = (e.target.value || '').trim();
+        if (val) {
+          e.preventDefault();
+          window.cart?.addProductByBarcode(val);
+          e.target.value = '';
+          this.renderProducts('');
+        }
+      }
     });
 
     // Theme toggle

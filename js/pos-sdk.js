@@ -42,9 +42,16 @@
       window.addEventListener('message', (event) => {
         // Filter messages from our scanner
         if (event.data && (event.data.type === 'POS_BARCODE_SCANNED' || event.data.type === 'BARCODE_SCANNED')) {
+          const rawCode = event.data.code;
+          const parsed = (typeof window !== 'undefined' && window.BarcodeParser) ? window.BarcodeParser.parse(rawCode) : null;
+
           this.onScan({
-            code: event.data.code,
+            code: rawCode,
             format: event.data.format,
+            is_scale: event.data.is_scale !== undefined ? event.data.is_scale : (parsed ? parsed.isScale : false),
+            item_code: event.data.item_code || (parsed ? parsed.itemCode : rawCode),
+            weight: event.data.weight !== undefined ? event.data.weight : (parsed ? parsed.weight : null),
+            quantity: event.data.quantity !== undefined ? event.data.quantity : (parsed ? parsed.quantity : 1),
             timestamp: event.data.timestamp || new Date().toISOString()
           });
 

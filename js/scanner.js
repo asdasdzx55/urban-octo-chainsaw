@@ -229,6 +229,10 @@ class ScannerController {
 
   onScanSuccess(decodedText, decodedResult) {
     const now = Date.now();
+    // Prevent rapid-fire accidental double scans
+    if ((now - this.lastScannedTime) < 800) {
+      return;
+    }
     // Prevent duplicated rapid fire scans of the same code
     if (decodedText === this.lastScannedText && (now - this.lastScannedTime) < this.scanDelayMs) {
       return;

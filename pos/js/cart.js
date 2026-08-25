@@ -432,19 +432,19 @@ class POSCart {
       const nextQty = isWeight ? parseFloat((item.qty + step).toFixed(3)) : item.qty + 1;
 
       return `
-        <div class="p-2.5 sm:p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center justify-between gap-2.5 cart-item-highlight">
+        <div class="p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200 dark:border-gray-600/70 shadow-xs flex items-center justify-between gap-2.5 cart-item-highlight">
           <div class="flex-1 min-w-0">
             <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h4>
             <div class="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-              <span class="font-bold text-indigo-600 dark:text-indigo-400">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
-              ${item.local_code ? `<span class="px-1 py-0.2 bg-gray-100 dark:bg-gray-700 rounded text-[9px] font-mono">${item.local_code}</span>` : ''}
-              ${isWeight ? `<span class="px-1 py-0.2 bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded text-[9px] font-bold">⚖️ وزن</span>` : ''}
+              <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
+              ${item.local_code ? `<span class="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-600 rounded text-[9px] font-mono font-bold">${item.local_code}</span>` : ''}
+              ${isWeight ? `<span class="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold">⚖️ وزن</span>` : ''}
             </div>
           </div>
 
           <!-- Quantity Control -->
-          <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/80 rounded-xl p-1 shrink-0">
-            <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs shadow-xs hover:bg-gray-200">-</button>
+          <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl p-1 shrink-0 border border-gray-200 dark:border-gray-600">
+            <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs shadow-xs hover:bg-gray-200">-</button>
             <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-bold text-xs text-gray-900 dark:text-white font-mono ${isWeight ? 'cursor-pointer hover:text-indigo-600 hover:underline' : ''}">
               ${isWeight ? parseFloat(item.qty).toFixed(3) + ' كجم' : item.qty}
             </span>
@@ -453,8 +453,8 @@ class POSCart {
 
           <!-- Item Total & Delete -->
           <div class="text-left shrink-0 min-w-[55px]">
-            <div class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono">${(item.price * item.qty).toFixed(2)}</div>
-            <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 hover:underline">حذف</button>
+            <div class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${(item.price * item.qty).toFixed(2)}</div>
+            <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 font-bold hover:underline">حذف ✕</button>
           </div>
         </div>
       `;

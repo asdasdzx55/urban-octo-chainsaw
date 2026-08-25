@@ -211,7 +211,7 @@ class App {
 
     // 1. Main Categories Bar
     let html = `
-      <button onclick="window.app.filterByCategory('all')" class="category-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${this.activeCategory === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'}">
+      <button onclick="window.app.filterByCategory('all')" class="category-btn px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${this.activeCategory === 'all' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-300'}">
         جميع الأصناف (${this.products.length})
       </button>
     `;
@@ -220,7 +220,7 @@ class App {
       const count = this.products.filter(p => (p.category || 'عام') === cat).length;
       const isSelected = this.activeCategory === cat;
       html += `
-        <button onclick="window.app.filterByCategory('${cat}')" class="category-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'}">
+        <button onclick="window.app.filterByCategory('${cat}')" class="category-btn px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-300'}">
           ${cat} (${count})
         </button>
       `;
@@ -234,8 +234,8 @@ class App {
         const subs = Array.from(this.subCategoriesMap[this.activeCategory]);
         let subHtml = `
           <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs">
-            <span class="text-[11px] font-bold text-gray-400 shrink-0">التصنيف الفرعي:</span>
-            <button onclick="window.app.filterBySubCategory('all')" class="px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${this.activeSubCategory === 'all' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'}">
+            <span class="text-[11px] font-bold text-gray-400 shrink-0">القسم الفرعي:</span>
+            <button onclick="window.app.filterBySubCategory('all')" class="px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border ${this.activeSubCategory === 'all' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50'}">
               الكل
             </button>
         `;
@@ -243,7 +243,7 @@ class App {
         subs.forEach(sub => {
           const isSubSelected = this.activeSubCategory === sub;
           subHtml += `
-            <button onclick="window.app.filterBySubCategory('${sub}')" class="px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${isSubSelected ? 'bg-indigo-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'}">
+            <button onclick="window.app.filterBySubCategory('${sub}')" class="px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border ${isSubSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50'}">
               ${sub}
             </button>
           `;
@@ -327,23 +327,45 @@ class App {
       const isLowStock = stock <= (isWeight ? 2 : 3);
 
       return `
-        <div onclick="window.app.onProductCardClick(${p.id})" class="p-2 sm:p-2.5 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-gray-700/80 shadow-2xs hover:shadow-sm hover:border-indigo-400 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col justify-between gap-1 transform active:scale-95 select-none">
-          <div>
-            <div class="flex items-center justify-between gap-1 mb-0.5">
-              ${isWeight ? `<span class="px-1 py-0.2 rounded bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 text-[8px] font-bold">⚖️ وزن</span>` : (p.local_code ? `<span class="px-1 py-0.2 rounded bg-gray-100 dark:bg-gray-700 font-mono text-[8px] font-bold text-gray-500 dark:text-gray-400">${p.local_code}</span>` : '<span></span>')}
-              <span class="text-[8px] font-bold px-1 py-0.2 rounded ${isLowStock ? 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'}">
-                ${stock} ${isWeight ? 'كجم' : 'ق'}
-              </span>
-            </div>
-            <h4 class="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">${p.name}</h4>
+        <div onclick="window.app.onProductCardClick(${p.id})" class="product-card p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer flex flex-col justify-between gap-2 select-none relative group">
+          
+          <!-- Top Badges Row -->
+          <div class="flex items-center justify-between gap-1 text-[10px]">
+            ${isWeight 
+              ? `<span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold border border-amber-200/60 dark:border-amber-800/60">⚖️ ميزان</span>` 
+              : `<span class="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200/60 dark:border-indigo-800/60">📦 قطعة</span>`
+            }
+            <span class="font-bold px-2 py-0.5 rounded-full ${isLowStock ? 'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'}">
+              ${stock} ${isWeight ? 'كجم' : 'ق'}
+            </span>
           </div>
 
-          <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700/60">
-            <span class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${price.toFixed(2)} <span class="text-[8px] font-normal font-sans text-gray-400">${isWeight ? 'ج.م/كجم' : 'ج.م'}</span></span>
-            <div class="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-xs">
+          <!-- Title & Meta -->
+          <div class="flex-1 flex flex-col justify-start my-0.5">
+            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 min-h-[2.4rem]">${p.name}</h4>
+            ${p.local_code || p.sub_category ? `
+              <p class="text-[10px] text-gray-400 mt-1 font-mono flex items-center gap-1 flex-wrap">
+                ${p.sub_category ? `<span class="text-indigo-500 dark:text-indigo-400 font-sans">${p.sub_category}</span>` : ''}
+                ${p.local_code ? `<span class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.2 rounded font-bold text-gray-500">${p.local_code}</span>` : ''}
+              </p>
+            ` : ''}
+          </div>
+
+          <!-- Price and Add Button -->
+          <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/60 mt-auto">
+            <div class="flex flex-col">
+              <span class="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400 font-mono leading-tight">
+                ${price.toFixed(2)}
+              </span>
+              <span class="text-[9px] text-gray-400 font-medium">
+                ${isWeight ? 'ج.م / كجم' : 'ج.م / قطعة'}
+              </span>
+            </div>
+            <div class="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:bg-indigo-700 transition">
               +
             </div>
           </div>
+
         </div>
       `;
     }).join('');

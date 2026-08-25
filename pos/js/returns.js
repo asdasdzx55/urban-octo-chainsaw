@@ -288,38 +288,59 @@ class ReturnsController {
     }
   }
 
-  renderRecentInvoicesList() {
+  async renderRecentInvoicesList() {
     const listContainer = document.getElementById('return-recent-invoices');
     if (!listContainer) return;
 
     try {
-      const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+      let completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+      
+      // If local cache is empty, fetch today's sales from server
+      if (completed.length === 0) {
+        try {
+          const reports = await window.api.getPosReports('today');
+          if (reports && Array.isArray(reports.recent_sales) && reports.recent_sales.length > 0) {
+            completed = reports.recent_sales.map(s => ({
+              order_id: s.id,
+              id: s.id,
+              invoice_barcode: `INV-${s.id}`,
+              created_at: s.created_at || 'اليوم',
+              customer_name: s.customer_name || 'نقدي',
+              payment_method: s.payment_method || 'كاش',
+              total: parseFloat(s.total_price || s.total || 0)
+            }));
+          }
+        } catch(err) {}
+      }
+
       if (completed.length === 0) {
         listContainer.innerHTML = `
-          <div class="p-4 text-center text-gray-400 text-xs">
-            لا توجد فواتير حديثة في الذاكرة المحلية
+          <div class="col-span-full p-4 text-center text-gray-400 text-xs bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+            <i data-lucide="receipt" class="w-6 h-6 mx-auto mb-1 opacity-40"></i>
+            لا توجد فواتير مسجلة اليوم حتى الآن
           </div>
         `;
+        if (window.lucide) window.lucide.createIcons();
         return;
       }
 
-      listContainer.innerHTML = completed.slice(0, 8).map(ord => `
-        <div onclick="window.returnsController.searchInvoice('${ord.order_id || ord.id}')" class="p-3 bg-gray-50 dark:bg-gray-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 cursor-pointer transition">
+      listContainer.innerHTML = completed.slice(0, 6).map(ord => `
+        <div onclick="window.returnsController.searchInvoice('${ord.order_id || ord.id}')" class="p-3 bg-gray-50 dark:bg-gray-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 cursor-pointer transition group">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-mono font-bold text-xs">
+            <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-mono font-bold text-xs group-hover:scale-105 transition">
               #${ord.order_id || ord.id}
             </div>
             <div>
               <h5 class="text-xs font-bold text-gray-900 dark:text-white font-mono">${ord.invoice_barcode || 'INV-' + (ord.order_id || ord.id)}</h5>
-              <p class="text-[10px] text-gray-500">${ord.created_at || 'اليوم'} • ${ord.payment_method || 'كاش'}</p>
+              <p class="text-[10px] text-gray-500">${ord.created_at || 'اليوم'} • <span class="text-indigo-600 dark:text-indigo-400 font-bold">${ord.payment_method || 'كاش'}</span></p>
             </div>
           </div>
 
           <div class="text-left flex items-center gap-2">
-            <span class="text-xs font-black text-emerald-600 font-mono">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
-            <button class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-bold shadow-xs">
+            <span class="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
+            <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-bold shadow-2xs group-hover:bg-indigo-700 transition">
               استرجاع 🔄
-            </button>
+            </span>
           </div>
         </div>
       `).join('');

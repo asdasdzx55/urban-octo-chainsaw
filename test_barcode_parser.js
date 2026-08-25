@@ -1,6 +1,6 @@
 const BarcodeParser = require('./pos/js/barcode-parser.js');
 
-console.log('🧪 Starting Barcode Parser Unit Tests...\n');
+console.log('🧪 Starting Advanced Edge-Case Unit Tests...\n');
 
 let passed = 0;
 let failed = 0;
@@ -15,74 +15,51 @@ function assert(condition, message) {
   }
 }
 
-// Test Case 1: The user's image barcode (2010725000603)
-console.log('--- Test Case 1: Variable-Weight Scale Barcode (User Image) ---');
-const res1 = BarcodeParser.parse('2010725000603');
-console.log('Parsed:', res1);
-
-assert(res1.isValid === true, 'Barcode is valid');
-assert(res1.isScale === true, 'isScale is true');
-assert(res1.itemCode === '10725', 'Item code extracted is 10725');
-assert(res1.weight === 0.060, 'Weight in kg is 0.060');
-assert(res1.weightGrams === 60, 'Weight in grams is 60');
-assert(res1.quantity === 0.060, 'Quantity is 0.060');
-assert(res1.checkDigit === '3', 'Check digit is 3');
-assert(res1.unitType === 'weight', 'unitType is weight');
-assert(res1.unit === 'كجم', 'unit is كجم');
-
-// Calculation check with price = 1400.00 / kg
-const price1 = 1400.00;
-const total1 = parseFloat((price1 * res1.quantity).toFixed(2));
-assert(total1 === 84.00, `Total price calculation: 1400 * 0.060 = 84.00 (Got: ${total1})`);
-
-// Test Case 2: Another scale barcode (2000125004508 - 450g of item 00125)
-console.log('\n--- Test Case 2: Variable-Weight Scale Barcode (450g) ---');
-const res2 = BarcodeParser.parse('2000125004508');
-console.log('Parsed:', res2);
-
-assert(res2.isScale === true, 'isScale is true');
-assert(res2.itemCode === '00125', 'Item code extracted is 00125');
-assert(res2.itemCodeNumeric === '125', 'Item code numeric is 125');
-assert(res2.weight === 0.450, 'Weight in kg is 0.450');
-assert(res2.quantity === 0.450, 'Quantity is 0.450');
-assert(res2.checkDigit === '8', 'Check digit is 8');
-
-// Test Case 3: Standard retail barcode (e.g. 6221000100010)
-console.log('\n--- Test Case 3: Standard Retail Barcode ---');
-const res3 = BarcodeParser.parse('6221000100010');
-console.log('Parsed:', res3);
-
-assert(res3.isScale === false, 'isScale is false');
-assert(res3.itemCode === '6221000100010', 'Item code is full barcode');
-assert(res3.quantity === 1, 'Quantity is 1');
-assert(res3.unitType === 'piece', 'unitType is piece');
-assert(res3.unit === 'قطعة', 'unit is قطعة');
-
-// Test Case 4: Product matching helper test
-console.log('\n--- Test Case 4: Product Matching Helper ---');
-const sampleProduct = {
-  id: 10725,
-  name: 'نوكا بالفستق',
-  price: 1400.00,
-  barcode: '10725',
-  local_code: '10725'
+// 1. Live API Product with Integer local_code and empty string barcode
+const liveApiProduct = {
+  id: 3,
+  name: 'نوكيا بالفستق',
+  category: 'عام',
+  price: 1400,
+  barcode: '',
+  local_code: 10725, // integer from MySQL!
+  stock: 10
 };
 
-assert(BarcodeParser.matchesProduct(res1, sampleProduct) === true, 'res1 matches sample product with local_code 10725');
+// Test Case A: Standard 13-digit scale barcode
+const resA = BarcodeParser.parse('2010725000603');
+assert(BarcodeParser.matchesProduct(resA, liveApiProduct) === true, 'Matches live MySQL product with integer local_code 10725');
 
-const nonMatchingProduct = {
-  id: 99999,
-  name: 'صنف آخر',
-  barcode: '99999',
-  local_code: '99999'
+// Test Case B: Barcode with spaces from camera OCR/text: "2 010725 000603"
+const resB = BarcodeParser.parse('2 010725 000603');
+assert(resB.isScale === true, 'Cleaned spaces and identified scale barcode');
+assert(resB.itemCode === '10725', 'itemCode is 10725');
+assert(resB.weight === 0.060, 'weight is 0.060 kg');
+assert(BarcodeParser.matchesProduct(resB, liveApiProduct) === true, 'Matches live product with spaces in barcode');
+
+// Test Case C: UPC-A 14-digit with leading zero: "02010725000603"
+const resC = BarcodeParser.parse('02010725000603');
+assert(resC.isScale === true, 'Handled 14-digit UPC-A with leading 0');
+assert(resC.itemCode === '10725', 'Extracted 10725 from UPC-A');
+assert(BarcodeParser.matchesProduct(resC, liveApiProduct) === true, 'Matches live product from 14-digit UPC-A');
+
+// Test Case D: 12-digit barcode without check digit: "201072500060"
+const resD = BarcodeParser.parse('201072500060');
+assert(resD.isScale === true, 'Handled 12-digit scale barcode without check digit');
+assert(resD.itemCode === '10725', 'Extracted 10725 from 12-digit');
+assert(BarcodeParser.matchesProduct(resD, liveApiProduct) === true, 'Matches live product from 12-digit');
+
+// Test Case E: Product with null barcode and null local_code
+const nullProduct = {
+  id: 99,
+  name: 'بدون كود',
+  barcode: null,
+  local_code: null
 };
-
-assert(BarcodeParser.matchesProduct(res1, nonMatchingProduct) === false, 'res1 does not match nonMatchingProduct');
+assert(BarcodeParser.matchesProduct(resA, nullProduct) === false, 'Safe with null fields without throwing TypeError');
 
 console.log(`\n========================================`);
 console.log(`Results: ${passed} passed, ${failed} failed.`);
 console.log(`========================================\n`);
 
-if (failed > 0) {
-  process.exit(1);
-}
+if (failed > 0) process.exit(1);

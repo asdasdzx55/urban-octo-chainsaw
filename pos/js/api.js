@@ -104,7 +104,14 @@ class SyrianHomeAPI {
    * 3. Lookup a product directly by barcode
    */
   async lookupBarcode(barcode) {
-    return await this.get('lookup_barcode', { barcode: barcode.trim() });
+    try {
+      const code = String(barcode || '').trim();
+      if (!code) return { success: false, error: 'Empty barcode' };
+      return await this.get('lookup_barcode', { barcode: code });
+    } catch (e) {
+      console.warn('lookupBarcode API notice:', e.message);
+      return { success: false, error: e.message };
+    }
   }
 
   /**

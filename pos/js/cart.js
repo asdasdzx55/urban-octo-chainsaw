@@ -55,14 +55,14 @@ class POSCart {
     // Parse barcode according to Syrian Home Scale & Retail rules
     const parsed = window.BarcodeParser ? window.BarcodeParser.parse(rawCode) : {
       isValid: true,
-      isScale: /^20\d{11}$/.test(rawCode),
+      isScale: /^20\d{10,11}$/.test(rawCode.replace(/\D/g, '')),
       originalBarcode: rawCode,
-      itemCode: /^20\d{11}$/.test(rawCode) ? rawCode.slice(2, 7) : rawCode,
-      itemCodeNumeric: /^20\d{11}$/.test(rawCode) ? String(parseInt(rawCode.slice(2, 7), 10)) : rawCode,
-      quantity: /^20\d{11}$/.test(rawCode) ? parseFloat((parseInt(rawCode.slice(7, 12), 10) / 1000).toFixed(3)) : 1,
-      weight: /^20\d{11}$/.test(rawCode) ? parseFloat((parseInt(rawCode.slice(7, 12), 10) / 1000).toFixed(3)) : null,
-      unitType: /^20\d{11}$/.test(rawCode) ? 'weight' : 'piece',
-      unit: /^20\d{11}$/.test(rawCode) ? 'كجم' : 'قطعة'
+      itemCode: rawCode.slice(2, 7),
+      itemCodeNumeric: String(parseInt(rawCode.slice(2, 7), 10) || rawCode.slice(2, 7)),
+      quantity: parseFloat((parseInt(rawCode.slice(7, 12), 10) / 1000).toFixed(3)) || 1,
+      weight: parseFloat((parseInt(rawCode.slice(7, 12), 10) / 1000).toFixed(3)) || null,
+      unitType: 'weight',
+      unit: 'كجم'
     };
 
     // 1. Check local cached products first for instant response
@@ -70,8 +70,10 @@ class POSCart {
       if (window.BarcodeParser) {
         return window.BarcodeParser.matchesProduct(parsed, p);
       }
-      return (p.barcode && p.barcode.trim() === parsed.itemCode) || 
-             (p.local_code && p.local_code.trim().toLowerCase() === parsed.itemCode.toLowerCase());
+      const pBarcode = String(p.barcode || '').trim();
+      const pLocal = String(p.local_code || '').trim().toLowerCase();
+      const code = String(parsed.itemCode || '').toLowerCase();
+      return (pBarcode && pBarcode === code) || (pLocal && pLocal === code);
     });
 
     if (product) {
@@ -88,7 +90,7 @@ class POSCart {
 
     // 2. Otherwise query API directly
     try {
-      window.app?.showLoading(true, 'جاري البحث عن الصنف...');
+      window.app?.showLoading(true, 'جاري البحث عن الصنف في السيرفر...');
       let res = null;
 
       if (parsed.isScale) {
@@ -122,7 +124,10 @@ class POSCart {
     } catch (e) {
       window.app?.showLoading(false);
       window.posScanner?.playErrorTone();
-      window.app?.showToast('خطأ في الاتصال بالخادم للبحث عن الباركود', 'error');
+      const notFoundMsg = parsed.isScale
+        ? `الصنف غير مسجل بكود ميزان: ${parsed.itemCode}`
+        : `الباركود غير مسجل: ${parsed.originalBarcode}`;
+      window.app?.showToast(notFoundMsg, 'error');
     }
   }
 

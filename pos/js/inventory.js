@@ -1,11 +1,90 @@
 /**
- * Syrian Home POS - Inventory & Price Manager Controller (شاشة جرد المخزون وتعديل الأسعار)
- * Allows scanning product barcode and updating stock, price, cost, and name on the server.
+ * Syrian Home POS - Inventory & Price Manager Controller (شاشة جرد المخزون وتعديل الأسعار والتصنيفات)
+ * Supports:
+ * 1. Main Categories (التصنيفات الأساسية) and Sub Categories (التصنيفات الفرعية)
+ * 2. Barcode Scanning / Automatic Barcode Generator
+ * 3. Piece vs Weight Unit Types
+ * 4. Real-time Inventory & Price Sync with Server
  */
+
+const SUPERMARKET_TAXONOMY = {
+  'أجبان وألبان': [
+    'أجبان سورية وبلدية',
+    'جبنة حلوم وموزاريلا',
+    'أجبان صفراء ورومي وشيدر',
+    'حليب ولبن ورايب',
+    'زبدة وقشطة وكريمة'
+  ],
+  'مكسرات وتسالي وحلويات': [
+    'مكسرات نيئة ومحمصة',
+    'حلويات شرقية ومعمول',
+    'حلاوة وطحينة',
+    'شيكولاتة وبسكويت وسكاكر',
+    'لب وفول سوداني ومقرمشات'
+  ],
+  'عطارة وتوابل وزيوت': [
+    'بهارات وتوابل سورية',
+    'زيت زيتون وزيوت نباتية',
+    'أعشاب وزهورات ومشروبات ساخنة',
+    'بقوليات وحبوب',
+    'مخللات وزيتون وورق عنب'
+  ],
+  'مخبوزات ومعجنات': [
+    'خبز سوري وتورتيلا',
+    'مناقيش وفطائر وسمبوسك',
+    'كعك وشابورة وبقسماط'
+  ],
+  'لحوم ودواجن ومصنعات': [
+    'لانشون وبسطرمة وروستو',
+    'سجق وسوسيس ومصنعات',
+    'لحوم ودواجن مجمدة'
+  ],
+  'مشروبات وعصائر ومياه': [
+    'مياه معدنية وفوارة',
+    'عصائر طبيعية ومشروبات غازية',
+    'شاي وقهوة وسريع التحضير'
+  ],
+  'معلبات ومواد غذائية': [
+    'تونة وسردين وأسماك',
+    'صلصة ومعجون طماطم',
+    'مكرونة وأرز وشعرية',
+    'سمن وزيوت طهي',
+    'معلبات جاهزة وفول'
+  ],
+  'منظفات وعناية منزلية': [
+    'مسحوق غسيل ومنعم أقمشة',
+    'صابون سائل وسوائل تنظيف',
+    'معطرات ومطهرات',
+    'مناديل وورقيات'
+  ],
+  'عام': [
+    'متنوع'
+  ]
+};
 
 class InventoryController {
   constructor() {
     this.selectedProduct = null;
+    this.isScanningToInputField = false;
+    this.initCategoryDatalists();
+  }
+
+  initCategoryDatalists() {
+    // Populate Main Categories Datalist
+    const mainList = document.getElementById('list-main-categories');
+    if (mainList) {
+      const allMains = Object.keys(SUPERMARKET_TAXONOMY);
+      mainList.innerHTML = allMains.map(cat => `<option value="${cat}"></option>`).join('');
+    }
+  }
+
+  onMainCategoryChanged() {
+    const mainCat = document.getElementById('inv-prod-category')?.value.trim() || '';
+    const subList = document.getElementById('list-sub-categories');
+    if (!subList) return;
+
+    const subSuggestions = SUPERMARKET_TAXONOMY[mainCat] || [];
+    subList.innerHTML = subSuggestions.map(sub => `<option value="${sub}"></option>`).join('');
   }
 
   async searchProductForAudit(query) {
@@ -69,12 +148,16 @@ class InventoryController {
     if (!formBox) return;
 
     if (formTitle) {
-      formTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i> إضافة صنف جديد للمتجر والمخزن`;
+      formTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i> إضافة صنف جديد مع التصنيف الأساسي والفرعي`;
     }
 
     // Reset fields with sensible defaults
     document.getElementById('inv-prod-name').value = '';
-    document.getElementById('inv-prod-category').value = 'عام';
+    document.getElementById('inv-prod-category').value = 'أجبان وألبان';
+    this.onMainCategoryChanged();
+    if (document.getElementById('inv-prod-subcategory')) {
+      document.getElementById('inv-prod-subcategory').value = 'أجبان سورية وبلدية';
+    }
     if (document.getElementById('inv-prod-unittype')) document.getElementById('inv-prod-unittype').value = 'piece';
     document.getElementById('inv-prod-price').value = '0.00';
     document.getElementById('inv-prod-cost').value = '0.00';
@@ -114,7 +197,6 @@ class InventoryController {
   }
 
   generateRandomBarcode() {
-    // Generate 12-digit random barcode starting with 622 (Egypt/Regional standard)
     let code = '622' + Math.floor(100000000 + Math.random() * 900000000);
     const barcodeInput = document.getElementById('inv-prod-barcode');
     if (barcodeInput) {
@@ -130,7 +212,7 @@ class InventoryController {
     if (!formBox) return;
 
     if (formTitle) {
-      formTitle.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i> تعديل بيانات الصنف والمخزون`;
+      formTitle.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i> تعديل بيانات الصنف (${p.name})`;
     }
     formBox.classList.remove('hidden');
     formBox.style.display = 'flex';
@@ -138,6 +220,12 @@ class InventoryController {
     // Fill form fields
     document.getElementById('inv-prod-name').value = p.name || '';
     document.getElementById('inv-prod-category').value = p.category || 'عام';
+    this.onMainCategoryChanged();
+    
+    if (document.getElementById('inv-prod-subcategory')) {
+      document.getElementById('inv-prod-subcategory').value = p.sub_category || p.subcategory || '';
+    }
+
     if (document.getElementById('inv-prod-unittype')) {
       document.getElementById('inv-prod-unittype').value = p.unit_type || (p.unit === 'كجم' ? 'weight' : 'piece');
     }
@@ -147,7 +235,6 @@ class InventoryController {
     document.getElementById('inv-prod-barcode').value = p.barcode || '';
     document.getElementById('inv-prod-localcode').value = p.local_code || '';
 
-    // Scroll to form smoothly
     formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     window.posScanner?.playSuccessBeep();
     if (window.lucide) window.lucide.createIcons();
@@ -166,6 +253,7 @@ class InventoryController {
 
     const name = document.getElementById('inv-prod-name')?.value.trim();
     const category = document.getElementById('inv-prod-category')?.value.trim() || 'عام';
+    const subCategory = document.getElementById('inv-prod-subcategory')?.value.trim() || '';
     const unitType = document.getElementById('inv-prod-unittype')?.value || 'piece';
     const price = parseFloat(document.getElementById('inv-prod-price')?.value || 0);
     const cost = parseFloat(document.getElementById('inv-prod-cost')?.value || 0);
@@ -179,8 +267,11 @@ class InventoryController {
     }
 
     const payload = {
+      id: this.selectedProduct.id,
       name: name,
       category: category,
+      sub_category: subCategory,
+      subcategory: subCategory,
       unit_type: unitType,
       unit: unitType === 'weight' ? 'كجم' : 'قطعة',
       price: price,

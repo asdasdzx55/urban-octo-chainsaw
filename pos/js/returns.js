@@ -1,16 +1,20 @@
 /**
  * Syrian Home POS - Returns & Refunds Controller
- * Looks up invoices by barcode/ID and processes inventory returns.
  * Supports:
- * 1. Direct Barcode Scan / Gun Scan of Invoice Receipt (e.g. INV-1, 1, Barcode)
- * 2. Local Orders Cache (localStorage: pos_completed_orders) + Remote API
- * 3. Exact Item Quantity / Weight Returns
+ * 1. Searching invoices by ID, Barcode, or Recent Invoices Quick Picker
+ * 2. Real-time API normalization (handling `{ items: [...] }` payload required by PHP backend)
+ * 3. Exact Unit & Decimal Weight Returns (e.g. 0.060 kg)
+ * 4. Local cache syncing and offline fallback
  */
 
 class ReturnsController {
   constructor() {
     this.currentOrder = null;
     this.returnCart = {}; // { product_id: return_qty }
+  }
+
+  init() {
+    this.renderRecentInvoicesList();
   }
 
   async searchInvoice(queryCode = null) {
@@ -24,13 +28,13 @@ class ReturnsController {
 
     if (input) input.value = rawVal;
 
-    // 1. Normalize Query & Extract ID
-    // e.g. "INV-1085" -> "1085", "#1085" -> "1085", "1085" -> "1085"
+    // 1. Normalize Query & Extract Clean Numeric ID
+    // e.g. "INV-4" -> "4", "#4" -> "4", "4" -> "4"
     let cleanQuery = rawVal.replace(/^[#\s]*(INV-?)?/i, '').trim();
     const numMatch = rawVal.match(/\d+/);
     const numericId = numMatch ? numMatch[0] : cleanQuery;
 
-    // 2. Check Local Completed Orders Cache First (Instant response & offline support)
+    // 2. Check Local Completed Orders Cache First
     try {
       const localOrders = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
       const localFound = localOrders.find(ord => {
@@ -48,7 +52,7 @@ class ReturnsController {
       console.warn('Local orders cache error:', e);
     }
 
-    // 3. Query REST API
+    // 3. Query Server API
     try {
       window.app?.showLoading(true, 'جاري البحث عن الفاتورة في السيرفر...');
       const res = await window.api.getOrderDetails(numericId || cleanQuery);
@@ -90,7 +94,6 @@ class ReturnsController {
         barcode: item.barcode || ''
       }));
     } else {
-      // API Format Normalization
       order = data.order || {};
       order.id = order.id || data.id;
       order.invoice_barcode = order.invoice_barcode || `INV-${order.id}`;
@@ -122,38 +125,42 @@ class ReturnsController {
 
     const ord = this.currentOrder;
     detailsBox.classList.remove('hidden');
+    detailsBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     detailsBox.innerHTML = `
-      <div class="p-5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-4">
+      <div class="p-5 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col gap-4 animate-slide-up">
         
         <!-- Header Info -->
         <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
           <div>
             <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span class="text-indigo-600 font-mono">#${ord.id}</span>
-              <span class="text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-600 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono">${ord.invoice_barcode || 'INV-' + ord.id}</span>
+              <span class="text-indigo-600 font-mono font-black text-lg">#${ord.id}</span>
+              <span class="text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-600 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono font-bold">${ord.invoice_barcode || 'INV-' + ord.id}</span>
             </h3>
             <p class="text-xs text-gray-500 mt-0.5">التاريخ: ${ord.created_at || 'اليوم'} • العميل: <b>${ord.customer_name || 'نقدي'}</b></p>
           </div>
 
           <div class="text-left">
-            <span class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
-            <p class="text-[11px] text-gray-400">طريقة الدفع: ${ord.payment_method}</p>
+            <span class="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
+            <p class="text-[11px] text-gray-400 font-bold">طريقة الدفع: ${ord.payment_method || 'كاش'}</p>
           </div>
         </div>
 
         <!-- Items Table for Returns -->
         <div>
-          <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">حدد الأصناف والكميات المراد إرجاعها:</h4>
+          <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2.5 flex items-center gap-1.5">
+            <i data-lucide="check-square" class="w-4 h-4 text-indigo-600"></i>
+            <span>حدد الأصناف والكميات المراد إرجاعها واستعادة مبالغها:</span>
+          </h4>
           
-          <div class="flex flex-col gap-2">
+          <div class="flex flex-col gap-2.5">
             ${(ord.items || []).map(item => {
               const maxRefundable = Math.max(0, parseFloat((item.qty - (item.returned_qty || 0)).toFixed(3)));
               const isWeight = (item.qty % 1 !== 0) || (maxRefundable % 1 !== 0);
               const currentSelected = this.returnCart[item.product_id] !== undefined ? this.returnCart[item.product_id] : 0;
 
               return `
-                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                   <div class="flex-1 min-w-0">
                     <h5 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h5>
                     <p class="text-[11px] text-gray-500 mt-0.5">
@@ -165,20 +172,20 @@ class ReturnsController {
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-bold text-gray-500">كمية الإرجاع:</span>
                       ${isWeight ? `
-                        <div class="flex items-center gap-1">
-                          <input type="number" step="0.005" min="0" max="${maxRefundable}" value="${currentSelected}" onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="w-24 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold px-2 py-1.5 font-mono text-center">
-                          <button type="button" onclick="window.returnsController.setReturnQty(${item.product_id}, ${maxRefundable}); window.returnsController.renderOrderDetails();" class="px-2 py-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 rounded-md border border-indigo-200">الكل</button>
+                        <div class="flex items-center gap-1.5">
+                          <input type="number" step="0.005" min="0" max="${maxRefundable}" value="${currentSelected}" onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="w-24 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-bold px-2 py-1.5 font-mono text-center">
+                          <button type="button" onclick="window.returnsController.setReturnQty(${item.product_id}, ${maxRefundable}); window.returnsController.renderOrderDetails();" class="px-2.5 py-1.5 text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition">الكل</button>
                         </div>
                       ` : `
-                        <select onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold px-2.5 py-1.5 font-mono">
+                        <select onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-bold px-3 py-1.5 font-mono">
                           ${Array.from({ length: maxRefundable + 1 }, (_, i) => `
-                            <option value="${i}" ${i === currentSelected ? 'selected' : ''}>${i}</option>
+                            <option value="${i}" ${i === currentSelected ? 'selected' : ''}>${i} قطعة</option>
                           `).join('')}
                         </select>
                       `}
                     </div>
                   ` : `
-                    <span class="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950 px-2 py-1 rounded-lg">تم إرجاعه بالكامل</span>
+                    <span class="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950 px-2.5 py-1 rounded-lg">تم إرجاعه بالكامل</span>
                   `}
                 </div>
               `;
@@ -188,11 +195,11 @@ class ReturnsController {
 
         <!-- Reason and Submit -->
         <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <input type="text" id="return-reason-input" placeholder="سبب الإرجاع (مثال: تالف أو رغبة العميل)..." class="w-full sm:w-80 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+          <input type="text" id="return-reason-input" placeholder="سبب الإرجاع (مثال: تالف أو رغبة العميل)..." class="w-full sm:w-80 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs">
           
-          <button onclick="window.returnsController.submitReturn()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-rose-600/20 transition transform active:scale-95">
+          <button onclick="window.returnsController.submitReturn()" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 transition transform active:scale-95">
             <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-            تأكيد تسجيل المرتجع واستعادة المخزون
+            <span>تأكيد استرجاع الفاتورة واستعادة المخزون</span>
           </button>
         </div>
 
@@ -218,7 +225,8 @@ class ReturnsController {
       const item = this.currentOrder.items.find(i => String(i.product_id) === String(productId));
       return {
         product_id: parseInt(productId, 10) || productId,
-        qty_to_return: qty,
+        quantity: qty,
+        qty: qty,
         refund_amount: parseFloat(((item ? item.price : 0) * qty).toFixed(2))
       };
     });
@@ -231,9 +239,11 @@ class ReturnsController {
     const totalRefund = returnItems.reduce((sum, i) => sum + i.refund_amount, 0);
     const reason = document.getElementById('return-reason-input')?.value.trim() || 'رغبة العميل';
 
+    // Send payload matching both PHP backend expectations (`items` and `return_items`)
     const payload = {
       order_id: this.currentOrder.id,
       reason: reason,
+      items: returnItems,
       return_items: returnItems
     };
 
@@ -244,7 +254,7 @@ class ReturnsController {
 
       if (res && res.success) {
         window.posScanner?.playSuccessBeep();
-        window.app?.showToast(res.message || `تم تسجيل المرتجع بقيمة ${totalRefund.toFixed(2)} ج.م واسترجاع المخزون ✅`, 'success');
+        window.app?.showToast(res.message || `تم تسجيل المرتجع بقيمة ${totalRefund.toFixed(2)} ج.م واسترجاع المخزون بنجاح ✅`, 'success');
         
         // Update local order cache
         try {
@@ -253,7 +263,7 @@ class ReturnsController {
           if (target && target.items) {
             returnItems.forEach(ret => {
               const itm = target.items.find(i => String(i.product_id || i.id) === String(ret.product_id));
-              if (itm) itm.returned_qty = (itm.returned_qty || 0) + ret.qty_to_return;
+              if (itm) itm.returned_qty = (itm.returned_qty || 0) + ret.quantity;
             });
             localStorage.setItem('pos_completed_orders', JSON.stringify(completed));
           }
@@ -264,8 +274,12 @@ class ReturnsController {
         this.returnCart = {};
         document.getElementById('return-order-details-box')?.classList.add('hidden');
         if (document.getElementById('return-search-input')) document.getElementById('return-search-input').value = '';
+        
+        // Refresh catalog in background to update stock levels
+        window.app?.refreshProductsQuietly();
+        this.renderRecentInvoicesList();
       } else {
-        throw new Error(res.message || 'فشل تسجيل المرتجع');
+        throw new Error(res.error || res.message || 'فشل تسجيل المرتجع');
       }
     } catch (err) {
       window.app?.showLoading(false);
@@ -273,7 +287,46 @@ class ReturnsController {
       window.app?.showToast(`خطأ في المرتجع: ${err.message}`, 'error');
     }
   }
+
+  renderRecentInvoicesList() {
+    const listContainer = document.getElementById('return-recent-invoices');
+    if (!listContainer) return;
+
+    try {
+      const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+      if (completed.length === 0) {
+        listContainer.innerHTML = `
+          <div class="p-4 text-center text-gray-400 text-xs">
+            لا توجد فواتير حديثة في الذاكرة المحلية
+          </div>
+        `;
+        return;
+      }
+
+      listContainer.innerHTML = completed.slice(0, 8).map(ord => `
+        <div onclick="window.returnsController.searchInvoice('${ord.order_id || ord.id}')" class="p-3 bg-gray-50 dark:bg-gray-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 cursor-pointer transition">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-mono font-bold text-xs">
+              #${ord.order_id || ord.id}
+            </div>
+            <div>
+              <h5 class="text-xs font-bold text-gray-900 dark:text-white font-mono">${ord.invoice_barcode || 'INV-' + (ord.order_id || ord.id)}</h5>
+              <p class="text-[10px] text-gray-500">${ord.created_at || 'اليوم'} • ${ord.payment_method || 'كاش'}</p>
+            </div>
+          </div>
+
+          <div class="text-left flex items-center gap-2">
+            <span class="text-xs font-black text-emerald-600 font-mono">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
+            <button class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-bold shadow-xs">
+              استرجاع 🔄
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      if (window.lucide) window.lucide.createIcons();
+    } catch(e) {}
+  }
 }
 
 window.returnsController = new ReturnsController();
-

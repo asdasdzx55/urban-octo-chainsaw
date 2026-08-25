@@ -73,7 +73,9 @@ class App {
 
     this.products = (Array.isArray(saved) && saved.length > 0) ? saved : DEFAULT_PRODUCTS;
     this.categories = [];
+    this.subCategoriesMap = {};
     this.activeCategory = 'all';
+    this.activeSubCategory = 'all';
     this.currentView = 'pos'; // 'pos', 'orders', 'returns', 'reports', 'settings'
     this.theme = localStorage.getItem('pos_theme') || 'light';
   }
@@ -140,29 +142,35 @@ class App {
       }
     } catch (e) {
       if (badge) {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> وضع عدم الاتصال`;
-        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> غير متصل`;
+        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
       }
     }
   }
 
+  /* ==================== PRODUCT CATALOG & CATEGORIES ==================== */
   async fetchProducts() {
     try {
-      this.showLoading(true, 'جاري مزامنة المنتجات والأسعار...');
+      this.showLoading(true, 'جاري تحميل الأصناف والأسعار...');
       const res = await window.api.getProducts();
       this.showLoading(false);
 
-      if (res && res.success && Array.isArray(res.products)) {
+      if (res && res.success && Array.isArray(res.products) && res.products.length > 0) {
         this.products = res.products;
         localStorage.setItem('syrian_home_products', JSON.stringify(this.products));
         this.extractCategories();
         this.renderCategories();
         this.renderProducts();
-        this.showToast(`تم تحميل ${this.products.length} صنف بنجاح`, 'success');
+      } else {
+        this.extractCategories();
+        this.renderCategories();
+        this.renderProducts();
       }
     } catch (err) {
       this.showLoading(false);
-      console.warn('Using cached products due to network issue:', err);
+      this.extractCategories();
+      this.renderCategories();
+      this.renderProducts();
     }
   }
 
@@ -172,6 +180,8 @@ class App {
       if (res && res.success && Array.isArray(res.products)) {
         this.products = res.products;
         localStorage.setItem('syrian_home_products', JSON.stringify(this.products));
+        this.extractCategories();
+        this.renderCategories();
         this.renderProducts();
       }
     } catch (e) {}
@@ -179,18 +189,27 @@ class App {
 
   extractCategories() {
     const set = new Set();
+    const subMap = {};
+
     this.products.forEach(p => {
-      if (p.category && p.category.trim()) {
-        set.add(p.category.trim());
-      }
+      const cat = (p.category && p.category.trim()) || 'عام';
+      const sub = (p.sub_category || p.subcategory || '').trim();
+
+      set.add(cat);
+      if (!subMap[cat]) subMap[cat] = new Set();
+      if (sub) subMap[cat].add(sub);
     });
+
     this.categories = Array.from(set);
+    this.subCategoriesMap = subMap;
   }
 
   renderCategories() {
     const container = document.getElementById('categories-bar');
+    const subContainer = document.getElementById('subcategories-bar');
     if (!container) return;
 
+    // 1. Main Categories Bar
     let html = `
       <button onclick="window.app.filterByCategory('all')" class="category-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${this.activeCategory === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'}">
         جميع الأصناف (${this.products.length})
@@ -198,7 +217,7 @@ class App {
     `;
 
     this.categories.forEach(cat => {
-      const count = this.products.filter(p => p.category === cat).length;
+      const count = this.products.filter(p => (p.category || 'عام') === cat).length;
       const isSelected = this.activeCategory === cat;
       html += `
         <button onclick="window.app.filterByCategory('${cat}')" class="category-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'}">
@@ -208,10 +227,47 @@ class App {
     });
 
     container.innerHTML = html;
+
+    // 2. Sub Categories Bar (if active category has subcategories)
+    if (subContainer) {
+      if (this.activeCategory !== 'all' && this.subCategoriesMap[this.activeCategory] && this.subCategoriesMap[this.activeCategory].size > 0) {
+        const subs = Array.from(this.subCategoriesMap[this.activeCategory]);
+        let subHtml = `
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs">
+            <span class="text-[11px] font-bold text-gray-400 shrink-0">التصنيف الفرعي:</span>
+            <button onclick="window.app.filterBySubCategory('all')" class="px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${this.activeSubCategory === 'all' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'}">
+              الكل
+            </button>
+        `;
+
+        subs.forEach(sub => {
+          const isSubSelected = this.activeSubCategory === sub;
+          subHtml += `
+            <button onclick="window.app.filterBySubCategory('${sub}')" class="px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${isSubSelected ? 'bg-indigo-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'}">
+              ${sub}
+            </button>
+          `;
+        });
+
+        subHtml += `</div>`;
+        subContainer.innerHTML = subHtml;
+        subContainer.classList.remove('hidden');
+      } else {
+        subContainer.innerHTML = '';
+        subContainer.classList.add('hidden');
+      }
+    }
   }
 
   filterByCategory(cat) {
     this.activeCategory = cat;
+    this.activeSubCategory = 'all';
+    this.renderCategories();
+    this.renderProducts();
+  }
+
+  filterBySubCategory(sub) {
+    this.activeSubCategory = sub;
     this.renderCategories();
     this.renderProducts();
   }
@@ -222,9 +278,14 @@ class App {
 
     let filtered = [...this.products];
 
-    // Filter by Category
+    // Filter by Main Category
     if (this.activeCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === this.activeCategory);
+      filtered = filtered.filter(p => (p.category || 'عام') === this.activeCategory);
+    }
+
+    // Filter by Sub Category
+    if (this.activeSubCategory && this.activeSubCategory !== 'all') {
+      filtered = filtered.filter(p => (p.sub_category || p.subcategory) === this.activeSubCategory);
     }
 
     // Filter by Search Query (Name, Barcode, Local Code, or Parsed Scale Code)
@@ -422,6 +483,8 @@ class App {
 
     if (viewName === 'orders') {
       window.ordersController?.loadOrders('pending');
+    } else if (viewName === 'returns') {
+      window.returnsController?.init();
     } else if (viewName === 'reports') {
       window.reportsController?.loadReports('today');
     } else if (viewName === 'expenses') {

@@ -283,6 +283,11 @@
           <!-- Categories render dynamically -->
         </div>
 
+        <!-- Sub Categories Pill Bar -->
+        <div id="subcategories-bar" class="hidden">
+          <!-- Subcategories render dynamically -->
+        </div>
+
         <!-- Products Grid -->
         <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 sm:gap-2 flex-1 overflow-y-auto min-h-[400px]">
           <!-- Products render dynamically -->
@@ -327,14 +332,14 @@
         
         <div>
           <h2 class="text-base font-bold text-gray-900 dark:text-white">شاشة المرتجعات والاسترجاع</h2>
-          <p class="text-xs text-gray-500">امسح باركود الفاتورة أو أدخل رقمها لاسترجاع الأصناف وإعادة الكميات للمخزون تلقائياً</p>
+          <p class="text-xs text-gray-500">امسح باركود الفاتورة أو اختر من قائمة الفواتير الحديثة لاسترجاع الأصناف والمبالغ تلقائياً</p>
         </div>
 
         <!-- Invoice Search Box -->
         <div class="flex items-center gap-2 max-w-xl">
           <div class="relative flex-1">
             <i data-lucide="scan-barcode" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="return-search-input" onkeypress="if(event.key === 'Enter') window.returnsController.searchInvoice()" placeholder="أدخل رقم الفاتورة أو امسح الباركود (مثال: INV-1085)..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
+            <input type="text" id="return-search-input" onkeypress="if(event.key === 'Enter') window.returnsController.searchInvoice()" placeholder="أدخل رقم الفاتورة أو امسح الباركود (مثال: INV-4 أو 4)..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
           </div>
           <button onclick="window.posScanner.openCameraModal()" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا لمسح باركود الفاتورة">
             <i data-lucide="camera" class="w-4 h-4"></i>
@@ -342,6 +347,23 @@
           <button id="btn-search-return" onclick="window.returnsController.searchInvoice()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">
             بحث
           </button>
+        </div>
+
+        <!-- Quick Recent Invoices List for Return -->
+        <div class="flex flex-col gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <i data-lucide="receipt" class="w-4 h-4 text-indigo-600"></i>
+              <span>أحدث الفواتير المسجلة (اضغط على الفاتورة للاسترجاع السريع):</span>
+            </h4>
+            <button onclick="window.returnsController.renderRecentInvoicesList()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1">
+              <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+              تحديث
+            </button>
+          </div>
+          <div id="return-recent-invoices" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <!-- Rendered dynamically -->
+          </div>
         </div>
 
         <!-- Order Details for Return -->
@@ -362,9 +384,9 @@
           <div>
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-1 border border-indigo-200 dark:border-indigo-800">
               <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
-              شاشة جرد المخزون وتعديل الأسعار
+              شاشة جرد المخزون وتعديل الأسعار والتصنيفات
             </div>
-            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">جرد الكميات وإضافة وتعديل الأصناف</h2>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">جرد الكميات وإضافة وتعديل الأصناف والتصنيفات</h2>
             <p class="text-xs text-gray-500 mt-0.5">امسح باركود المنتج للتعديل أو اضغط على إضافة صنف جديد</p>
           </div>
 
@@ -409,10 +431,30 @@
               <input type="text" id="inv-prod-name" placeholder="مثال: جبنة سورية أو أرز بسمتي" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
             </div>
 
-            <!-- Category -->
+            <!-- Main Category -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">التصنيف:</label>
-              <input type="text" id="inv-prod-category" placeholder="مثال: أجبان، بقالة..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+              <label class="text-xs font-bold text-indigo-600 dark:text-indigo-400">التصنيف الأساسي: <span class="text-rose-500">*</span></label>
+              <input type="text" id="inv-prod-category" list="list-main-categories" oninput="window.inventoryController.onMainCategoryChanged()" placeholder="اختر أو اكتب تصنيف رئيسي..." class="w-full bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              <datalist id="list-main-categories">
+                <option value="أجبان وألبان"></option>
+                <option value="مكسرات وتسالي وحلويات"></option>
+                <option value="عطارة وتوابل وزيوت"></option>
+                <option value="مخبوزات ومعجنات"></option>
+                <option value="لحوم ودواجن ومصنعات"></option>
+                <option value="مشروبات وعصائر ومياه"></option>
+                <option value="معلبات ومواد غذائية"></option>
+                <option value="منظفات وعناية منزلية"></option>
+                <option value="عام"></option>
+              </datalist>
+            </div>
+
+            <!-- Sub Category -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">التصنيف الفرعي:</label>
+              <input type="text" id="inv-prod-subcategory" list="list-sub-categories" placeholder="اختر أو اكتب تصنيف فرعي..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+              <datalist id="list-sub-categories">
+                <!-- Populated dynamically -->
+              </datalist>
             </div>
 
             <!-- Unit Type (Piece vs Weight) -->

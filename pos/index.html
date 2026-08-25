@@ -33,6 +33,16 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="كاشير السوري">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
+
   <!-- Custom POS Styles -->
   <link rel="stylesheet" href="css/pos.css">
   <link rel="stylesheet" href="css/receipt.css">
@@ -100,6 +110,12 @@
 
     <!-- Quick Action Controls -->
     <div class="flex items-center gap-2">
+      <!-- PWA Install App Button -->
+      <button onclick="window.pwaManager?.promptInstall()" class="btn-pwa-install hidden px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs items-center gap-1.5 shadow-md shadow-emerald-600/25 transition transform active:scale-95 cursor-pointer" title="تثبيت التطبيق على جهازك أو الهاتف">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">تثبيت التطبيق 📲</span>
+      </button>
+
       <!-- Camera Barcode Scanner Trigger -->
       <button id="btn-open-scanner" class="px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shadow-xs">
         <i data-lucide="scan-barcode" class="w-4 h-4"></i>
@@ -645,6 +661,24 @@
 
         </div>
 
+        <!-- Recent Transactions Table Card -->
+        <div class="flex flex-col gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="history" class="w-4 h-4 text-indigo-600"></i>
+              <span>سجل آخر الفواتير والمعاملات</span>
+            </h3>
+            <button onclick="window.reportsController.loadReports()" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1">
+              <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+              تحديث
+            </button>
+          </div>
+
+          <div id="rep-recent-sales-list" class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
       </div>
 
     </section>
@@ -1096,6 +1130,7 @@
   <script src="js/orders.js"></script>
   <script src="js/returns.js"></script>
   <script src="js/reports.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

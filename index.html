@@ -34,6 +34,16 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ماسح الباركود">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
+
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -60,6 +70,12 @@
 
       <!-- Quick Action Controls -->
       <div class="flex items-center gap-2">
+        <!-- PWA Install Button -->
+        <button onclick="window.pwaManager?.promptInstall()" class="btn-pwa-install hidden px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs items-center gap-1.5 shadow-md shadow-emerald-600/25 transition transform active:scale-95 cursor-pointer" title="تثبيت التطبيق على الهاتف أو الكمبيوتر">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">تثبيت التطبيق 📲</span>
+        </button>
+
         <!-- Link to POS Cashier App -->
         <a href="pos/" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition">
           <i data-lucide="store" class="w-4 h-4"></i>
@@ -692,6 +708,7 @@ https://asdasdzx55.github.io/urban-octo-chainsaw/?mode=pos&webhook=https://api.y
   <script src="js/scanner.js"></script>
   <script src="js/generator.js"></script>
   <script src="js/pos-sdk.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

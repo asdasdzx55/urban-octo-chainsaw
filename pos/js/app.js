@@ -584,7 +584,12 @@ class App {
         const val = (e.target.value || '').trim();
         if (val) {
           e.preventDefault();
-          window.cart?.addProductByBarcode(val);
+          e.stopPropagation();
+          if (window.posScanner) {
+            window.posScanner.onDecodedText(val, 'search_input');
+          } else {
+            window.cart?.addProductByBarcode(val);
+          }
           e.target.value = '';
           this.renderProducts('');
         }

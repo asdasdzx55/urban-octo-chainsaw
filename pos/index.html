@@ -318,9 +318,12 @@
         <div class="flex items-center gap-2 max-w-xl">
           <div class="relative flex-1">
             <i data-lucide="scan-barcode" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="return-search-input" placeholder="أدخل رقم الفاتورة أو امسح الباركود (مثال: INV-1085)..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
+            <input type="text" id="return-search-input" onkeypress="if(event.key === 'Enter') window.returnsController.searchInvoice()" placeholder="أدخل رقم الفاتورة أو امسح الباركود (مثال: INV-1085)..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
           </div>
-          <button id="btn-search-return" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">
+          <button onclick="window.posScanner.openCameraModal()" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا لمسح باركود الفاتورة">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+          </button>
+          <button id="btn-search-return" onclick="window.returnsController.searchInvoice()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">
             بحث
           </button>
         </div>

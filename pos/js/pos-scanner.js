@@ -102,11 +102,10 @@ class POSScanner {
   /* ==================== HARDWARE BARCODE GUN LISTENER ==================== */
   initHardwareListener() {
     window.addEventListener('keydown', (e) => {
-      // Don't capture when user is actively typing in a standard form input
+      // If user is typing in ANY input or textarea, let the input handle it naturally!
       const activeEl = document.activeElement;
       const tag = activeEl ? activeEl.tagName.toLowerCase() : '';
-      const isSearchInput = activeEl && activeEl.id === 'product-search-input';
-      const isInput = (tag === 'input' || tag === 'textarea') && !isSearchInput;
+      const isInput = tag === 'input' || tag === 'textarea' || activeEl?.isContentEditable;
 
       if (isInput) return;
 
@@ -115,11 +114,11 @@ class POSScanner {
       this.lastKeyTime = now;
 
       if (e.key === 'Enter') {
-        if (this.hardwareBuffer.length >= 3) {
+        if (this.hardwareBuffer.length >= 2) {
           const barcode = this.hardwareBuffer.trim();
           this.hardwareBuffer = '';
           e.preventDefault();
-          this.handleScannedBarcode(barcode, 'hardware_gun');
+          this.onDecodedText(barcode, 'hardware_gun');
         }
         this.hardwareBuffer = '';
         return;
@@ -134,7 +133,7 @@ class POSScanner {
         clearTimeout(this.hardwareScanTimeout);
         this.hardwareScanTimeout = setTimeout(() => {
           this.hardwareBuffer = '';
-        }, 400);
+        }, 300);
       }
     });
   }
@@ -384,19 +383,26 @@ class POSScanner {
       : `✅ تم المسح: ${barcode}`;
     this.updateScanFeedback(feedbackText, true);
 
-    // 1. If scanning directly into the Add/Edit Product input field
+    // 1. If in returns/refunds mode -> look up invoice
+    if (window.app && window.app.currentView === 'returns') {
+      if (this.autoCloseAfterScan) this.closeCameraModal();
+      window.returnsController?.searchInvoice(barcode);
+      return;
+    }
+
+    // 2. If scanning directly into the Add/Edit Product input field in inventory
     if (window.inventoryController && window.inventoryController.isScanningToInputField) {
       this.closeCameraModal();
       window.inventoryController.setScannedBarcode(parsed.isScale ? parsed.itemCode : barcode);
       return;
     }
 
-    // 2. If in inventory search mode
+    // 3. If in inventory search mode
     if (window.app && window.app.currentView === 'inventory') {
       if (this.autoCloseAfterScan) this.closeCameraModal();
       window.inventoryController?.searchProductForAudit(barcode);
     } else {
-      // 3. Normal POS sale scanning
+      // 4. Normal POS sale scanning
       if (window.cart) {
         window.cart.addProductByBarcode(barcode);
       }

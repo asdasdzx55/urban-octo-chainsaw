@@ -238,6 +238,14 @@ class POSCart {
           change: this.getChange()
         };
 
+        // Save to local completed orders cache for instant returns & offline lookup
+        try {
+          const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+          completed.unshift(invoiceData);
+          if (completed.length > 200) completed.pop();
+          localStorage.setItem('pos_completed_orders', JSON.stringify(completed));
+        } catch(e) {}
+
         // Reset Cart
         this.clearCart();
 

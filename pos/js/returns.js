@@ -1,6 +1,10 @@
 /**
  * Syrian Home POS - Returns & Refunds Controller
  * Looks up invoices by barcode/ID and processes inventory returns.
+ * Supports:
+ * 1. Direct Barcode Scan / Gun Scan of Invoice Receipt (e.g. INV-1, 1, Barcode)
+ * 2. Local Orders Cache (localStorage: pos_completed_orders) + Remote API
+ * 3. Exact Item Quantity / Weight Returns
  */
 
 class ReturnsController {
@@ -9,36 +13,107 @@ class ReturnsController {
     this.returnCart = {}; // { product_id: return_qty }
   }
 
-  async searchInvoice() {
+  async searchInvoice(queryCode = null) {
     const input = document.getElementById('return-search-input');
-    const value = input ? input.value.trim() : '';
+    const rawVal = String(queryCode || (input ? input.value : '')).trim();
 
-    if (!value) {
+    if (!rawVal) {
       window.app?.showToast('يرجى إدخال رقم الفاتورة أو مسح الباركود', 'error');
       return;
     }
 
-    // Extract ID if full barcode format like INV-1085
-    let orderId = value;
-    const match = value.match(/\d+/);
-    if (match) orderId = match[0];
+    if (input) input.value = rawVal;
 
+    // 1. Normalize Query & Extract ID
+    // e.g. "INV-1085" -> "1085", "#1085" -> "1085", "1085" -> "1085"
+    let cleanQuery = rawVal.replace(/^[#\s]*(INV-?)?/i, '').trim();
+    const numMatch = rawVal.match(/\d+/);
+    const numericId = numMatch ? numMatch[0] : cleanQuery;
+
+    // 2. Check Local Completed Orders Cache First (Instant response & offline support)
     try {
-      window.app?.showLoading(true, 'جاري البحث عن الفاتورة...');
-      const res = await window.api.getOrderDetails(orderId);
+      const localOrders = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+      const localFound = localOrders.find(ord => {
+        const oId = String(ord.order_id || ord.id || '');
+        const oBarcode = String(ord.invoice_barcode || '').toLowerCase();
+        const qLower = rawVal.toLowerCase();
+        return oId === cleanQuery || oId === numericId || oBarcode === qLower || oBarcode === `inv-${cleanQuery}`.toLowerCase();
+      });
+
+      if (localFound) {
+        this.loadOrderToView(localFound, 'local');
+        return;
+      }
+    } catch (e) {
+      console.warn('Local orders cache error:', e);
+    }
+
+    // 3. Query REST API
+    try {
+      window.app?.showLoading(true, 'جاري البحث عن الفاتورة في السيرفر...');
+      const res = await window.api.getOrderDetails(numericId || cleanQuery);
       window.app?.showLoading(false);
 
-      if (res && res.success && res.order) {
-        this.currentOrder = res.order;
-        this.returnCart = {};
-        this.renderOrderDetails();
+      if (res && res.success && (res.order || res.items)) {
+        this.loadOrderToView(res, 'api');
       } else {
-        window.app?.showToast('لم يتم العثور على فاتورة بهذا الرقم', 'error');
+        window.posScanner?.playErrorTone();
+        window.app?.showToast(`لم يتم العثور على فاتورة برقم: ${rawVal}`, 'error');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.app?.showToast(`خطأ أثناء جلب الفاتورة: ${err.message}`, 'error');
+      window.posScanner?.playErrorTone();
+      window.app?.showToast(`لم يتم العثور على الفاتورة: ${err.message}`, 'error');
     }
+  }
+
+  loadOrderToView(data, source = 'api') {
+    let order = null;
+    let items = [];
+
+    if (source === 'local') {
+      order = {
+        id: data.order_id || data.id,
+        invoice_barcode: data.invoice_barcode || `INV-${data.order_id || data.id}`,
+        created_at: data.created_at || 'اليوم',
+        customer_name: data.customer_name || 'نقدي',
+        payment_method: data.payment_method || 'كاش',
+        total: parseFloat(data.total || 0),
+        items: data.items || []
+      };
+      items = (data.items || []).map(item => ({
+        product_id: item.product_id || item.id,
+        name: item.name,
+        qty: parseFloat(item.qty || 1),
+        price: parseFloat(item.price || 0),
+        returned_qty: parseFloat(item.returned_qty || 0),
+        barcode: item.barcode || ''
+      }));
+    } else {
+      // API Format Normalization
+      order = data.order || {};
+      order.id = order.id || data.id;
+      order.invoice_barcode = order.invoice_barcode || `INV-${order.id}`;
+      order.total = parseFloat(order.total_price !== undefined ? order.total_price : (order.total || 0));
+      
+      const rawItems = (Array.isArray(data.items) && data.items.length > 0) ? data.items : (order.items || []);
+      items = rawItems.map(item => ({
+        product_id: item.product_id || item.id,
+        name: item.name,
+        qty: parseFloat(item.quantity !== undefined ? item.quantity : (item.qty || 1)),
+        price: parseFloat(item.price || 0),
+        returned_qty: parseFloat(item.returned_qty || 0),
+        barcode: item.barcode || ''
+      }));
+    }
+
+    order.items = items;
+    this.currentOrder = order;
+    this.returnCart = {};
+
+    window.posScanner?.playSuccessBeep();
+    this.renderOrderDetails();
+    window.app?.showToast(`تم العثور على الفاتورة #${order.id} بنجاح ✅`, 'success');
   }
 
   renderOrderDetails() {
@@ -55,14 +130,14 @@ class ReturnsController {
         <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
           <div>
             <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span class="text-indigo-600">#${ord.id}</span>
-              <span>(${ord.invoice_barcode || 'INV-' + ord.id})</span>
+              <span class="text-indigo-600 font-mono">#${ord.id}</span>
+              <span class="text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-600 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono">${ord.invoice_barcode || 'INV-' + ord.id}</span>
             </h3>
-            <p class="text-xs text-gray-500 mt-0.5">التاريخ: ${ord.created_at || 'اليوم'} • العميل: ${ord.customer_name || 'نقدي'}</p>
+            <p class="text-xs text-gray-500 mt-0.5">التاريخ: ${ord.created_at || 'اليوم'} • العميل: <b>${ord.customer_name || 'نقدي'}</b></p>
           </div>
 
           <div class="text-left">
-            <span class="text-sm font-black text-emerald-600 dark:text-emerald-400">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
+            <span class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">${parseFloat(ord.total || 0).toFixed(2)} ج.م</span>
             <p class="text-[11px] text-gray-400">طريقة الدفع: ${ord.payment_method}</p>
           </div>
         </div>
@@ -73,29 +148,37 @@ class ReturnsController {
           
           <div class="flex flex-col gap-2">
             ${(ord.items || []).map(item => {
-              const maxRefundable = Math.max(0, item.qty - (item.returned_qty || 0));
-              const currentSelected = this.returnCart[item.product_id] || 0;
+              const maxRefundable = Math.max(0, parseFloat((item.qty - (item.returned_qty || 0)).toFixed(3)));
+              const isWeight = (item.qty % 1 !== 0) || (maxRefundable % 1 !== 0);
+              const currentSelected = this.returnCart[item.product_id] !== undefined ? this.returnCart[item.product_id] : 0;
 
               return `
-                <div class="p-3 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                   <div class="flex-1 min-w-0">
                     <h5 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h5>
-                    <p class="text-[11px] text-gray-500">
-                      تم شراء: <b>${item.qty}</b> • تم إرجاع: <b>${item.returned_qty || 0}</b> • السعر: <b>${item.price.toFixed(2)} ج.م</b>
+                    <p class="text-[11px] text-gray-500 mt-0.5">
+                      تم شراء: <b class="text-gray-700 dark:text-gray-300">${item.qty} ${isWeight ? 'كجم' : 'قطعة'}</b> • تم إرجاع: <b>${item.returned_qty || 0}</b> • السعر: <b>${item.price.toFixed(2)} ج.م</b>
                     </p>
                   </div>
 
                   ${maxRefundable > 0 ? `
                     <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-500">إرجاع:</span>
-                      <select onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold px-2 py-1">
-                        ${Array.from({ length: maxRefundable + 1 }, (_, i) => `
-                          <option value="${i}" ${i === currentSelected ? 'selected' : ''}>${i}</option>
-                        `).join('')}
-                      </select>
+                      <span class="text-xs font-bold text-gray-500">كمية الإرجاع:</span>
+                      ${isWeight ? `
+                        <div class="flex items-center gap-1">
+                          <input type="number" step="0.005" min="0" max="${maxRefundable}" value="${currentSelected}" onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="w-24 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold px-2 py-1.5 font-mono text-center">
+                          <button type="button" onclick="window.returnsController.setReturnQty(${item.product_id}, ${maxRefundable}); window.returnsController.renderOrderDetails();" class="px-2 py-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 rounded-md border border-indigo-200">الكل</button>
+                        </div>
+                      ` : `
+                        <select onchange="window.returnsController.setReturnQty(${item.product_id}, this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold px-2.5 py-1.5 font-mono">
+                          ${Array.from({ length: maxRefundable + 1 }, (_, i) => `
+                            <option value="${i}" ${i === currentSelected ? 'selected' : ''}>${i}</option>
+                          `).join('')}
+                        </select>
+                      `}
                     </div>
                   ` : `
-                    <span class="text-xs font-bold text-rose-500">تم إرجاعه بالكامل</span>
+                    <span class="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950 px-2 py-1 rounded-lg">تم إرجاعه بالكامل</span>
                   `}
                 </div>
               `;
@@ -105,9 +188,9 @@ class ReturnsController {
 
         <!-- Reason and Submit -->
         <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <input type="text" id="return-reason-input" placeholder="سبب الإرجاع (مثال: تالف أو رغبة العميل)..." class="w-full sm:w-80 bg-gray-100 dark:bg-gray-700 border-none rounded-xl px-3 py-2 text-xs">
+          <input type="text" id="return-reason-input" placeholder="سبب الإرجاع (مثال: تالف أو رغبة العميل)..." class="w-full sm:w-80 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
           
-          <button onclick="window.returnsController.submitReturn()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-rose-600/20 transition">
+          <button onclick="window.returnsController.submitReturn()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-rose-600/20 transition transform active:scale-95">
             <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
             تأكيد تسجيل المرتجع واستعادة المخزون
           </button>
@@ -120,7 +203,7 @@ class ReturnsController {
   }
 
   setReturnQty(productId, qty) {
-    const num = parseInt(qty, 10);
+    const num = parseFloat(qty);
     if (num > 0) {
       this.returnCart[productId] = num;
     } else {
@@ -132,11 +215,11 @@ class ReturnsController {
     if (!this.currentOrder) return;
 
     const returnItems = Object.entries(this.returnCart).map(([productId, qty]) => {
-      const item = this.currentOrder.items.find(i => i.product_id == productId);
+      const item = this.currentOrder.items.find(i => String(i.product_id) === String(productId));
       return {
-        product_id: parseInt(productId, 10),
+        product_id: parseInt(productId, 10) || productId,
         qty_to_return: qty,
-        refund_amount: (item ? item.price : 0) * qty
+        refund_amount: parseFloat(((item ? item.price : 0) * qty).toFixed(2))
       };
     });
 
@@ -145,6 +228,7 @@ class ReturnsController {
       return;
     }
 
+    const totalRefund = returnItems.reduce((sum, i) => sum + i.refund_amount, 0);
     const reason = document.getElementById('return-reason-input')?.value.trim() || 'رغبة العميل';
 
     const payload = {
@@ -160,8 +244,21 @@ class ReturnsController {
 
       if (res && res.success) {
         window.posScanner?.playSuccessBeep();
-        window.app?.showToast(res.message || 'تم تسجيل المرتجع بنجاح واسترجاع المخزون ✅', 'success');
+        window.app?.showToast(res.message || `تم تسجيل المرتجع بقيمة ${totalRefund.toFixed(2)} ج.م واسترجاع المخزون ✅`, 'success');
         
+        // Update local order cache
+        try {
+          const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+          const target = completed.find(o => String(o.order_id || o.id) === String(this.currentOrder.id));
+          if (target && target.items) {
+            returnItems.forEach(ret => {
+              const itm = target.items.find(i => String(i.product_id || i.id) === String(ret.product_id));
+              if (itm) itm.returned_qty = (itm.returned_qty || 0) + ret.qty_to_return;
+            });
+            localStorage.setItem('pos_completed_orders', JSON.stringify(completed));
+          }
+        } catch(e) {}
+
         // Reset and hide
         this.currentOrder = null;
         this.returnCart = {};
@@ -179,3 +276,4 @@ class ReturnsController {
 }
 
 window.returnsController = new ReturnsController();
+

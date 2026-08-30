@@ -72,6 +72,9 @@ class App {
     }
 
     this.products = (Array.isArray(saved) && saved.length > 0) ? saved : DEFAULT_PRODUCTS;
+    if (window.syncManager) {
+      this.products = this.products.map(p => window.syncManager.normalizeProduct(p));
+    }
     this.categories = [];
     this.subCategoriesMap = {};
     this.activeCategory = 'all';
@@ -84,15 +87,21 @@ class App {
     this.applyTheme(this.theme);
     this.bindEvents();
 
-    // Render initial products
+    // Render initial products from local cache immediately (instant startup)
     if (this.products.length > 0) {
+      if (window.syncManager) {
+        this.products = this.products.map(p => window.syncManager.normalizeProduct(p));
+      }
       this.extractCategories();
       this.renderCategories();
       this.renderProducts();
     }
 
-    // Fetch fresh products from API
+    // Fetch fresh products from API in background and sync
     await this.fetchProducts();
+
+    // Init Sync Manager status
+    window.syncManager?.updateStatusBadge();
 
     // Health check ping
     this.checkServerHealth();
@@ -156,7 +165,7 @@ class App {
       this.showLoading(false);
 
       if (res && res.success && Array.isArray(res.products) && res.products.length > 0) {
-        this.products = res.products;
+        this.products = res.products.map(p => window.syncManager ? window.syncManager.normalizeProduct(p) : p);
         localStorage.setItem('syrian_home_products', JSON.stringify(this.products));
         this.extractCategories();
         this.renderCategories();
@@ -168,6 +177,10 @@ class App {
       }
     } catch (err) {
       this.showLoading(false);
+      // Seamless offline fallback
+      if (this.products.length > 0) {
+        this.products = this.products.map(p => window.syncManager ? window.syncManager.normalizeProduct(p) : p);
+      }
       this.extractCategories();
       this.renderCategories();
       this.renderProducts();
@@ -177,8 +190,8 @@ class App {
   async refreshProductsQuietly() {
     try {
       const res = await window.api.getProducts();
-      if (res && res.success && Array.isArray(res.products)) {
-        this.products = res.products;
+      if (res && res.success && Array.isArray(res.products) && res.products.length > 0) {
+        this.products = res.products.map(p => window.syncManager ? window.syncManager.normalizeProduct(p) : p);
         localStorage.setItem('syrian_home_products', JSON.stringify(this.products));
         this.extractCategories();
         this.renderCategories();

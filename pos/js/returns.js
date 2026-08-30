@@ -269,6 +269,9 @@ class ReturnsController {
           }
         } catch(e) {}
 
+        // Restore local inventory stock
+        this.restoreLocalStock(returnItems);
+
         // Reset and hide
         this.currentOrder = null;
         this.returnCart = {};
@@ -279,13 +282,56 @@ class ReturnsController {
         window.app?.refreshProductsQuietly();
         this.renderRecentInvoicesList();
       } else {
-        throw new Error(res.error || res.message || 'فشل تسجيل المرتجع');
+        throw new Error(res.error || res.message || 'فشل الاتصال بالسيرفر');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.posScanner?.playErrorTone();
-      window.app?.showToast(`خطأ في المرتجع: ${err.message}`, 'error');
+
+      // Offline return fallback
+      window.syncManager?.queueReturn(payload);
+      
+      // Update local order cache
+      try {
+        const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+        const target = completed.find(o => String(o.order_id || o.id) === String(this.currentOrder.id));
+        if (target && target.items) {
+          returnItems.forEach(ret => {
+            const itm = target.items.find(i => String(i.product_id || i.id) === String(ret.product_id));
+            if (itm) itm.returned_qty = (itm.returned_qty || 0) + ret.quantity;
+          });
+          localStorage.setItem('pos_completed_orders', JSON.stringify(completed));
+        }
+      } catch(e) {}
+
+      // Restore local stock immediately
+      this.restoreLocalStock(returnItems);
+
+      // Reset and hide
+      this.currentOrder = null;
+      this.returnCart = {};
+      document.getElementById('return-order-details-box')?.classList.add('hidden');
+      if (document.getElementById('return-search-input')) document.getElementById('return-search-input').value = '';
+      
+      window.posScanner?.playSuccessBeep();
+      window.app?.showToast(`تم تسجيل المرتجع محلياً (أوفلاين) واستعادة المخزون (${totalRefund.toFixed(2)} ج.م) 📦✅`, 'warning');
+      this.renderRecentInvoicesList();
     }
+  }
+
+  restoreLocalStock(returnItems) {
+    if (!Array.isArray(returnItems) || !window.app?.products) return;
+    returnItems.forEach(ret => {
+      const p = window.app.products.find(prod => prod.id === ret.product_id);
+      if (p) {
+        const curStock = parseFloat(p.stock || 0);
+        const qty = parseFloat(ret.quantity || ret.qty || 1);
+        p.stock = parseFloat((curStock + qty).toFixed(3));
+      }
+    });
+    try {
+      localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+      window.app.renderProducts();
+    } catch(e) {}
   }
 
   async renderRecentInvoicesList() {

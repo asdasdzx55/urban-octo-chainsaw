@@ -282,6 +282,19 @@ class InventoryController {
       all_barcodes: barcode
     };
 
+    // Save unit type mapping in persistent local store so it NEVER reverts on refresh
+    window.syncManager?.setProductUnitType(this.selectedProduct.id, unitType);
+    window.syncManager?.setProductUnitType({ id: this.selectedProduct.id, local_code: localCode, barcode: barcode }, unitType);
+
+    const isWeight = unitType === 'weight';
+    const normalizedProd = {
+      ...this.selectedProduct,
+      ...payload,
+      unit_type: unitType,
+      unit: isWeight ? 'كجم' : 'قطعة',
+      is_weight: isWeight
+    };
+
     try {
       window.app?.showLoading(true, 'جاري حفظ التعديلات في السيرفر وتحديث الكتالوج...');
       const res = await window.api.syncProduct(payload);
@@ -293,12 +306,12 @@ class InventoryController {
         window.app?.showToast(successMsg, 'success');
 
         const newId = res.product_id || (this.selectedProduct.id || Date.now());
-        const fullProd = { id: newId, ...payload };
+        const fullProd = { ...normalizedProd, id: newId };
 
         // Update or insert into local products list
         const idx = window.app.products.findIndex(p => (this.selectedProduct.id && p.id === this.selectedProduct.id) || (barcode && p.barcode === barcode));
         if (idx > -1) {
-          window.app.products[idx] = { ...window.app.products[idx], ...payload };
+          window.app.products[idx] = { ...window.app.products[idx], ...fullProd };
         } else {
           window.app.products.unshift(fullProd);
         }
@@ -319,8 +332,31 @@ class InventoryController {
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.posScanner?.playErrorTone();
-      window.app?.showToast(`خطأ في الحفظ: ${err.message}`, 'error');
+      
+      // Offline fallback: save locally and queue for background sync
+      window.syncManager?.queueProduct(payload);
+      window.posScanner?.playSuccessBeep();
+      window.app?.showToast(`تم حفظ الصنف (${name}) محلياً (وضع أوفلاين) وستتم مزامنته عند عودة الإنترنت 📦`, 'warning');
+
+      const offlineId = this.selectedProduct.id || Date.now();
+      const fullProd = { ...normalizedProd, id: offlineId };
+
+      const idx = window.app.products.findIndex(p => (this.selectedProduct.id && p.id === this.selectedProduct.id) || (barcode && p.barcode === barcode));
+      if (idx > -1) {
+        window.app.products[idx] = { ...window.app.products[idx], ...fullProd };
+      } else {
+        window.app.products.unshift(fullProd);
+      }
+
+      localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+      window.app.extractCategories();
+      window.app.renderCategories();
+      window.app.renderProducts();
+
+      document.getElementById('inv-product-edit-form')?.classList.add('hidden');
+      if (document.getElementById('inv-search-input')) {
+        document.getElementById('inv-search-input').value = '';
+      }
     }
   }
 }

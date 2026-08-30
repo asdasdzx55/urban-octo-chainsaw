@@ -50,28 +50,28 @@
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0">
 
   <!-- ==================== TOP NAVIGATION HEADER ==================== -->
-  <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 px-4 sm:px-6 flex items-center justify-between shadow-xs">
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 px-3 sm:px-6 flex items-center justify-between shadow-xs max-w-full overflow-hidden">
     
     <!-- Brand / Supermarket Name -->
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 cursor-pointer" onclick="window.app.switchView('settings')">
-        <i data-lucide="store" class="w-5 h-5"></i>
+    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 cursor-pointer shrink-0" onclick="window.app.switchView('settings')">
+        <i data-lucide="store" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </div>
-      <div>
-        <h1 id="brand-store-name" class="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-tight">
+      <div class="min-w-0">
+        <h1 id="brand-store-name" class="text-xs sm:text-base font-black text-gray-900 dark:text-white leading-tight truncate max-w-[140px] sm:max-w-xs">
           سوبر ماركت المنزل السوري
         </h1>
-        <div class="flex items-center gap-2 mt-0.5">
-          <span id="server-status-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+        <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+          <span id="server-status-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 truncate max-w-[150px]">
             جاري الاتصال...
           </span>
-          <span class="text-[11px] text-gray-400 hidden md:inline">• كاشير 1</span>
+          <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
         </div>
       </div>
     </div>
 
     <!-- Desktop Navigation View Switcher -->
-    <nav class="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl">
+    <nav class="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl shrink-0">
       <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1.5" data-view="pos">
         <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
         <span>البيع</span>
@@ -109,21 +109,21 @@
     </nav>
 
     <!-- Quick Action Controls -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <!-- PWA Install App Button -->
-      <button onclick="window.pwaManager?.promptInstall()" class="btn-pwa-install hidden h-9 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs items-center gap-1.5 shadow-md shadow-emerald-600/25 transition transform active:scale-95 cursor-pointer" title="تثبيت التطبيق على جهازك أو الهاتف">
+      <button onclick="window.pwaManager?.promptInstall()" class="btn-pwa-install hidden h-9 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs items-center gap-1.5 shadow-md shadow-emerald-600/25 transition transform active:scale-95 cursor-pointer" title="تثبيت التطبيق على جهازك أو الهاتف">
         <i data-lucide="download" class="w-4 h-4"></i>
-        <span class="hidden sm:inline">تثبيت التطبيق 📲</span>
+        <span class="hidden sm:inline">تثبيت 📲</span>
       </button>
 
       <!-- Camera Barcode Scanner Trigger -->
-      <button id="btn-open-scanner" class="h-9 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shadow-xs">
+      <button id="btn-open-scanner" class="h-9 px-2.5 sm:px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shadow-xs">
         <i data-lucide="scan-barcode" class="w-4 h-4"></i>
         <span class="hidden sm:inline">مسح بالكاميرا</span>
       </button>
 
       <!-- Sync Refresh Products (Desktop) -->
-      <button onclick="window.app.fetchProducts()" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition flex items-center justify-center" title="تحديث الأصناف من السيرفر">
+      <button onclick="window.app.fetchProducts()" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition hidden sm:flex items-center justify-center" title="تحديث الأصناف من السيرفر">
         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
       </button>
 
@@ -1191,6 +1191,7 @@
   <!-- Application Scripts -->
   <script src="js/barcode-parser.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/sync-manager.js"></script>
   <script src="js/pos-scanner.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/cart.js"></script>

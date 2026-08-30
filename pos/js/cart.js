@@ -246,6 +246,9 @@ class POSCart {
           localStorage.setItem('pos_completed_orders', JSON.stringify(completed));
         } catch(e) {}
 
+        // Deduct local stock
+        this.deductLocalStock(this.items);
+
         // Reset Cart
         this.clearCart();
 
@@ -259,13 +262,66 @@ class POSCart {
         // Update local reports and trigger product reload in background
         window.app?.refreshProductsQuietly();
       } else {
-        throw new Error(result.message || 'فشل حفظ الفاتورة على السيرفر');
+        throw new Error(result.message || 'فشل الاتصال بالسيرفر');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.posScanner?.playErrorTone();
-      window.app?.showToast(`خطأ أثناء الحفظ: ${err.message}`, 'error');
+
+      // ==================== OFFLINE CHECKOUT FALLBACK ====================
+      const offlineOrderId = `OFF-${Date.now().toString().slice(-6)}`;
+      const invoiceData = {
+        order_id: offlineOrderId,
+        invoice_barcode: `INV-${offlineOrderId}`,
+        created_at: new Date().toLocaleString('ar-EG'),
+        cashier: this.cashierNotes,
+        customer_name: this.customerName,
+        payment_method: paymentMethodLabel,
+        items: [...this.items],
+        subtotal: this.getSubtotal(),
+        discount: this.discountAmount,
+        total: total,
+        paid_amount: this.paidAmount || total,
+        change: this.getChange(),
+        is_offline: true
+      };
+
+      // 1. Queue sale in Sync Manager for automatic cloud sync
+      window.syncManager?.queueSale(payload, invoiceData);
+
+      // 2. Save to local completed orders
+      try {
+        const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+        completed.unshift(invoiceData);
+        if (completed.length > 200) completed.pop();
+        localStorage.setItem('pos_completed_orders', JSON.stringify(completed));
+      } catch(e) {}
+
+      // 3. Deduct stock locally
+      this.deductLocalStock(this.items);
+
+      // 4. Reset cart and show receipt
+      this.clearCart();
+      document.getElementById('checkout-modal')?.classList.add('hidden');
+      window.posScanner?.playSuccessBeep();
+      this.showReceiptModal(invoiceData);
+      window.app?.showToast('تم حفظ الفاتورة محلياً وطباعتها (وضع أوفلاين) وستتم مزامنتها تلقائياً 📦✅', 'warning');
     }
+  }
+
+  deductLocalStock(soldItems) {
+    if (!Array.isArray(soldItems) || !window.app?.products) return;
+    soldItems.forEach(sold => {
+      const p = window.app.products.find(prod => prod.id === sold.product_id);
+      if (p) {
+        const curStock = parseFloat(p.stock || 0);
+        const qty = parseFloat(sold.qty || 1);
+        p.stock = Math.max(0, parseFloat((curStock - qty).toFixed(3)));
+      }
+    });
+    try {
+      localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+      window.app.renderProducts();
+    } catch(e) {}
   }
 
   /* ==================== THERMAL RECEIPT RENDERING ==================== */

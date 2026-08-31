@@ -190,6 +190,27 @@ class SyrianHomeAPI {
   async deleteProduct(productId, barcode = '') {
     return await this.post('delete_product', { product_id: productId, barcode: barcode });
   }
+
+  /**
+   * 15. Submit Purchase Invoice (تسجيل فاتورة مشتريات / توريد وزيادة المخزون)
+   */
+  async pushPurchase(purchasePayload) {
+    return await this.post('push_purchase', purchasePayload);
+  }
+
+  /**
+   * 16. Get Past Purchase Invoices
+   */
+  async getPurchases(limit = 50) {
+    return await this.get('get_purchases', { limit: limit });
+  }
+
+  /**
+   * 17. Get Suppliers List
+   */
+  async getSuppliers() {
+    return await this.get('get_suppliers');
+  }
 }
 
 window.api = new SyrianHomeAPI();

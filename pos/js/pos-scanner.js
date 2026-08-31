@@ -397,6 +397,13 @@ class POSScanner {
       return;
     }
 
+    // 2.5 If scanning into a row inside Purchase Invoices (توريد المشتريات)
+    if (window.purchasesController && window.purchasesController.currentScanningRowIndex !== null) {
+      this.closeCameraModal();
+      window.purchasesController.setScannedBarcode(parsed.isScale ? parsed.itemCode : barcode);
+      return;
+    }
+
     // 3. If in inventory search mode
     if (window.app && window.app.currentView === 'inventory') {
       if (this.autoCloseAfterScan) this.closeCameraModal();

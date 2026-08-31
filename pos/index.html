@@ -93,8 +93,8 @@
       </button>
 
       <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="expenses">
-        <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
-        <span>المصروفات</span>
+        <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
+        <span>المشتريات والمصروفات</span>
       </button>
 
       <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="reports">
@@ -579,28 +579,170 @@
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
         <div>
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 mb-2 border border-purple-200 dark:border-purple-800">
-            <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
-            حركة الخزينة والمدفوعات
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-2 border border-indigo-200 dark:border-indigo-800">
+            <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
+            فواتير المشتريات والتوريد والمصروفات
           </div>
-          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">تسجيل المصروفات اليومية وسداد دفعات الموردين</h2>
-          <p class="text-xs text-gray-500 mt-0.5">تسجيل المصروفات النثرية أو تسديد دفعات الموردين وخصمها من الخزينة مباشرة</p>
+          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">تسجيل فواتير المشتريات من الموردين وزيادة المخزون</h2>
+          <p class="text-xs text-gray-500 mt-0.5">سجل بضائع التوريد الجديدة بطرق الدفع (كاش، آجل، إنستاباي، فودافون كاش) أو سجل المصروفات النثرية</p>
         </div>
 
-        <!-- Mode Toggle (General Expense vs Supplier Payment) -->
-        <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-2xl max-w-md">
-          <button onclick="window.expensesController.setMode('expense')" class="expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5" data-mode="expense">
+        <!-- Mode Tabs: Purchase Invoice, General Expense, Supplier Payment, Invoices History -->
+        <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700/80 p-1.5 rounded-2xl overflow-x-auto max-w-2xl no-scrollbar">
+          <button onclick="window.expensesController.setMode('purchase')" class="expense-mode-btn flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap transition" data-mode="purchase">
+            <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
+            <span>فاتورة مشتريات بضاعة</span>
+          </button>
+          <button onclick="window.expensesController.setMode('expense')" class="expense-mode-btn flex-1 py-2 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 whitespace-nowrap transition" data-mode="expense">
             <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
-            تسجيل مصروف عام
+            <span>مصروف عام ونثريات</span>
           </button>
-          <button onclick="window.expensesController.setMode('supplier')" class="expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center justify-center gap-1.5" data-mode="supplier">
+          <button onclick="window.expensesController.setMode('supplier')" class="expense-mode-btn flex-1 py-2 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 whitespace-nowrap transition" data-mode="supplier">
             <i data-lucide="truck" class="w-3.5 h-3.5"></i>
-            سداد دفعة مورد
+            <span>سداد دفعة مورد</span>
+          </button>
+          <button onclick="window.expensesController.setMode('history')" class="expense-mode-btn flex-1 py-2 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 whitespace-nowrap transition" data-mode="history">
+            <i data-lucide="history" class="w-3.5 h-3.5"></i>
+            <span>سجل الفواتير السابقة</span>
           </button>
         </div>
 
-        <!-- Form 1: General Expense -->
-        <div id="expense-general-form" class="flex flex-col gap-4 max-w-xl p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700">
+        <!-- ==================== FORM 0: PURCHASE INVOICE (DEFAULT) ==================== -->
+        <div id="purchase-invoice-form" class="flex flex-col gap-4 p-5 sm:p-6 bg-gray-50 dark:bg-gray-900/60 rounded-3xl border border-gray-200 dark:border-gray-700">
+          
+          <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-indigo-600"></i>
+              <span>بيانات فاتورة الشراء من المورد (توريد بضاعة للمخزن)</span>
+            </h3>
+            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+              تزيد رصيد المخزن تلقائياً 📦
+            </span>
+          </div>
+
+          <!-- Section 1: Supplier & Invoice Metadata -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <!-- Supplier Dropdown -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اسم المورد: <span class="text-rose-500">*</span></label>
+              <select id="purch-supplier-select" onchange="window.purchasesController.onSupplierSelectChanged()" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+                <!-- Rendered dynamically -->
+              </select>
+              <div id="purch-supplier-bal-badge" class="hidden text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5"></div>
+            </div>
+
+            <!-- Custom Supplier Name & Phone (Shown when new supplier selected) -->
+            <div id="purch-new-supplier-box" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">اسم المورد الجديد: <span class="text-rose-500">*</span></label>
+                <input type="text" id="purch-supplier-name-custom" placeholder="مثال: شركة المراعي / مورد الأجبان..." class="w-full bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2 text-xs font-bold">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">هاتف المورد (اختياري):</label>
+                <input type="text" id="purch-supplier-phone-custom" placeholder="01xxxxxxxxx" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+              </div>
+            </div>
+
+            <!-- Invoice Number -->
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">رقم الفاتورة / السند:</label>
+                <button type="button" onclick="window.purchasesController.generateInvoiceNumber()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline">رقم تلقائي 🎲</button>
+              </div>
+              <input type="text" id="purch-inv-number" placeholder="PUR-..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
+            </div>
+
+            <!-- Payment Method -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-bold text-indigo-600 dark:text-indigo-400">طريقة الدفع: <span class="text-rose-500">*</span></label>
+              <select id="purch-payment-method" onchange="window.purchasesController.onPaymentMethodChanged()" class="w-full bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                <option value="نقدي">💵 نقدي / كاش (من الدرج)</option>
+                <option value="آجل">⏳ آجل / على الحساب (يضاف لرصيد المورد)</option>
+                <option value="انستا باي">⚡ إنستاباي (InstaPay)</option>
+                <option value="فودافون كاش">📱 فودافون كاش (محفظة)</option>
+              </select>
+            </div>
+
+            <!-- Paid Amount (if partial/credit) -->
+            <div id="purch-paid-amount-box" class="hidden flex flex-col gap-1">
+              <label class="text-xs font-bold text-amber-600 dark:text-amber-400">المبلغ المدفوع مقدماً (ج.م):</label>
+              <input type="number" step="0.5" id="purch-paid-amount" placeholder="0.00" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold font-mono">
+            </div>
+
+            <!-- Invoice Date -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">تاريخ الفاتورة:</label>
+              <input type="datetime-local" id="purch-inv-date" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-mono">
+            </div>
+
+            <!-- Invoice Notes -->
+            <div class="sm:col-span-2 lg:col-span-4 flex flex-col gap-1">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">ملاحظات الفاتورة:</label>
+              <input type="text" id="purch-notes" placeholder="ملاحظات إضافية، شروط التوريد، رقم الشحنة..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+            </div>
+          </div>
+
+          <!-- Section 2: Items Table -->
+          <div class="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                <i data-lucide="boxes" class="w-4 h-4 text-indigo-600"></i>
+                <span>أصناف وبنود الفاتورة الموردة:</span>
+              </h4>
+              <button type="button" onclick="window.purchasesController.addItemRow()" class="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:bg-indigo-100 flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>إضافة صنف آخر +</span>
+              </button>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <table class="w-full text-right border-collapse">
+                <thead>
+                  <tr class="bg-gray-100/70 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold text-gray-600 dark:text-gray-300">
+                    <th class="p-2 text-center w-8">#</th>
+                    <th class="p-2">الصنف والباركود</th>
+                    <th class="p-2">نوع الوحدة</th>
+                    <th class="p-2 text-center">الكمية</th>
+                    <th class="p-2 text-center">سعر الشراء (التكلفة)</th>
+                    <th class="p-2 text-center">سعر البيع للجمهور</th>
+                    <th class="p-2 text-center">إجمالي البند</th>
+                    <th class="p-2 text-center w-10">حذف</th>
+                  </tr>
+                </thead>
+                <tbody id="purch-items-tbody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section 3: Summary Totals & Submit -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
+            <div class="flex items-center gap-6">
+              <div>
+                <span class="text-[10px] text-gray-500 font-bold block">إجمالي الأصناف:</span>
+                <span id="purch-total-items-count" class="text-xs font-black text-gray-800 dark:text-gray-200 font-mono">1 أصناف</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-500 font-bold block">إجمالي الكميات:</span>
+                <span id="purch-total-qty" class="text-xs font-black text-gray-800 dark:text-gray-200 font-mono">1</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold block">إجمالي الفاتورة المطلوب:</span>
+                <span id="purch-total-amount" class="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
+              </div>
+            </div>
+
+            <button onclick="window.purchasesController.submitPurchaseInvoice()" class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition transform active:scale-95">
+              <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+              <span>تأكيد وحفظ الفاتورة وتحديث المخزون ✅</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ==================== FORM 1: GENERAL EXPENSE ==================== -->
+        <div id="expense-general-form" class="hidden flex flex-col gap-4 max-w-xl p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700">
           <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300">تفاصيل المصروف العام:</h3>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -637,7 +779,7 @@
           </button>
         </div>
 
-        <!-- Form 2: Supplier Payment -->
+        <!-- ==================== FORM 2: SUPPLIER PAYMENT ==================== -->
         <div id="expense-supplier-form" class="hidden flex flex-col gap-4 max-w-xl p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700">
           <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300">تفاصيل سداد المورد:</h3>
 
@@ -674,6 +816,21 @@
             <i data-lucide="check" class="w-4 h-4"></i>
             تأكيد سداد الدفعة وتحديث حساب المورد
           </button>
+        </div>
+
+        <!-- ==================== CONTAINER 3: PURCHASES HISTORY ==================== -->
+        <div id="purchases-history-container" class="hidden flex flex-col gap-4">
+          <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white">سجل فواتير التوريد والمشتريات السابقة:</h3>
+            <button onclick="window.purchasesController.loadPurchasesHistory()" class="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-200 transition flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              تحديث السجل
+            </button>
+          </div>
+
+          <div id="purchases-history-list" class="flex flex-col gap-2.5">
+            <!-- Rendered dynamically -->
+          </div>
         </div>
 
       </div>
@@ -1208,6 +1365,7 @@
   <script src="js/settings.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/inventory.js"></script>
+  <script src="js/purchases.js"></script>
   <script src="js/expenses.js"></script>
   <script src="js/orders.js"></script>
   <script src="js/returns.js"></script>

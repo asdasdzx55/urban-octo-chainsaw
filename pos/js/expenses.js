@@ -7,7 +7,7 @@ class ExpensesController {
   constructor() {
     this.suppliers = [];
     this.expenseCategories = ['نثريات', 'إيجار', 'كهرباء ومياه', 'صيانة ومعدات', 'أكياس ومطبوعات', 'وجبات وبوفيه', 'نقل وشحن', 'رواتب وعمالة'];
-    this.currentMode = 'expense'; // 'expense' or 'supplier'
+    this.currentMode = 'purchase'; // 'purchase', 'expense', 'supplier', 'history'
   }
 
   async init() {
@@ -21,6 +21,7 @@ class ExpensesController {
         this.renderSuppliersDropdown();
         this.renderExpenseCategoriesDropdown();
       }
+      this.setMode(this.currentMode || 'purchase');
     } catch (e) {
       console.warn('Could not load pos meta:', e);
     }
@@ -28,24 +29,37 @@ class ExpensesController {
 
   setMode(mode) {
     this.currentMode = mode;
+    const purchForm = document.getElementById('purchase-invoice-form');
     const expForm = document.getElementById('expense-general-form');
     const supForm = document.getElementById('expense-supplier-form');
+    const historyBox = document.getElementById('purchases-history-container');
 
     document.querySelectorAll('.expense-mode-btn').forEach(btn => {
       if (btn.getAttribute('data-mode') === mode) {
-        btn.className = 'expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm';
+        btn.className = 'expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition';
       } else {
-        btn.className = 'expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700';
+        btn.className = 'expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center gap-1.5 transition';
       }
     });
 
-    if (mode === 'expense') {
+    purchForm?.classList.add('hidden');
+    expForm?.classList.add('hidden');
+    supForm?.classList.add('hidden');
+    historyBox?.classList.add('hidden');
+
+    if (mode === 'purchase') {
+      purchForm?.classList.remove('hidden');
+      window.purchasesController?.init();
+    } else if (mode === 'expense') {
       expForm?.classList.remove('hidden');
-      supForm?.classList.add('hidden');
-    } else {
-      expForm?.classList.add('hidden');
+    } else if (mode === 'supplier') {
       supForm?.classList.remove('hidden');
+    } else if (mode === 'history') {
+      historyBox?.classList.remove('hidden');
+      window.purchasesController?.loadPurchasesHistory();
     }
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   renderExpenseCategoriesDropdown() {

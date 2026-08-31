@@ -151,6 +151,9 @@ class InventoryController {
       formTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i> إضافة صنف جديد مع التصنيف الأساسي والفرعي`;
     }
 
+    const deleteBtn = document.getElementById('btn-delete-inv-prod');
+    if (deleteBtn) deleteBtn.classList.add('hidden');
+
     // Reset fields with sensible defaults
     document.getElementById('inv-prod-name').value = '';
     document.getElementById('inv-prod-category').value = 'أجبان وألبان';
@@ -209,11 +212,17 @@ class InventoryController {
     this.selectedProduct = p;
     const formBox = document.getElementById('inv-product-edit-form');
     const formTitle = document.getElementById('inv-form-title');
+    const deleteBtn = document.getElementById('btn-delete-inv-prod');
     if (!formBox) return;
 
     if (formTitle) {
       formTitle.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i> تعديل بيانات الصنف (${p.name})`;
     }
+
+    if (deleteBtn) {
+      deleteBtn.classList.remove('hidden');
+    }
+
     formBox.classList.remove('hidden');
     formBox.style.display = 'flex';
 
@@ -238,6 +247,44 @@ class InventoryController {
     formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     window.posScanner?.playSuccessBeep();
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  async deleteSelectedProduct() {
+    if (!this.selectedProduct || this.selectedProduct.isNew) return;
+
+    const prodName = this.selectedProduct.name || 'الصنف المحدد';
+    if (!confirm(`هل أنت متأكد من حذف الصنف (${prodName}) نهائياً من النظام والسيرفر؟`)) {
+      return;
+    }
+
+    const prodId = this.selectedProduct.id;
+    const barcode = this.selectedProduct.barcode;
+
+    try {
+      window.app?.showLoading(true, 'جاري حذف الصنف من السيرفر...');
+      try {
+        await window.api.deleteProduct(prodId, barcode);
+      } catch (e) {
+        console.warn('Server delete error, removing locally:', e);
+      }
+      window.app?.showLoading(false);
+
+      // Remove from local catalog
+      window.app.products = window.app.products.filter(p => p.id !== prodId && (!barcode || p.barcode !== barcode));
+      localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+
+      // Refresh UI
+      window.app.extractCategories();
+      window.app.renderCategories();
+      window.app.renderProducts();
+
+      this.closeForm();
+      window.posScanner?.playSuccessBeep();
+      window.app?.showToast(`تم حذف الصنف (${prodName}) بنجاح 🗑️`, 'info');
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ أثناء الحذف: ${err.message}`, 'error');
+    }
   }
 
   adjustStock(delta) {

@@ -183,6 +183,13 @@ class SyrianHomeAPI {
   async getPosMeta() {
     return await this.get('get_pos_meta');
   }
+
+  /**
+   * 14. Delete Product from Server Database
+   */
+  async deleteProduct(productId, barcode = '') {
+    return await this.post('delete_product', { product_id: productId, barcode: barcode });
+  }
 }
 
 window.api = new SyrianHomeAPI();

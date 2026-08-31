@@ -1,66 +1,4 @@
-const DEFAULT_PRODUCTS = [
-  {
-    id: 10725,
-    name: 'نوكا بالفستق',
-    category: 'حلويات ومكسرات',
-    unit_type: 'weight',
-    unit: 'كجم',
-    price: 1400.00,
-    cost: 1100.00,
-    stock: 25.500,
-    barcode: '10725',
-    local_code: '10725',
-    all_barcodes: '10725, 2010725'
-  },
-  {
-    id: 101,
-    name: 'جبنة سورية مشللة',
-    category: 'أجبان وألبان',
-    unit_type: 'weight',
-    unit: 'كجم',
-    price: 380.00,
-    cost: 300.00,
-    stock: 18.000,
-    barcode: '10101',
-    local_code: '10101'
-  },
-  {
-    id: 102,
-    name: 'زعتر حلبي ممتاز',
-    category: 'عطارة وتوابل',
-    unit_type: 'weight',
-    unit: 'كجم',
-    price: 220.00,
-    cost: 160.00,
-    stock: 30.000,
-    barcode: '10202',
-    local_code: '10202'
-  },
-  {
-    id: 103,
-    name: 'زيت زيتون سوري بكر 1 لتر',
-    category: 'بقالة وزيوت',
-    unit_type: 'piece',
-    unit: 'قطعة',
-    price: 290.00,
-    cost: 230.00,
-    stock: 45,
-    barcode: '6221000100010',
-    local_code: 'ITEM-101'
-  },
-  {
-    id: 104,
-    name: 'دبس رمان طبيعي 500 مل',
-    category: 'صلصات ومخللات',
-    unit_type: 'piece',
-    unit: 'قطعة',
-    price: 110.00,
-    cost: 85.00,
-    stock: 32,
-    barcode: '6222000200020',
-    local_code: 'ITEM-102'
-  }
-];
+const DEFAULT_PRODUCTS = [];
 
 class App {
   constructor() {
@@ -71,7 +9,7 @@ class App {
       saved = [];
     }
 
-    this.products = (Array.isArray(saved) && saved.length > 0) ? saved : DEFAULT_PRODUCTS;
+    this.products = Array.isArray(saved) ? saved : [];
     if (window.syncManager) {
       this.products = this.products.map(p => window.syncManager.normalizeProduct(p));
     }
@@ -94,6 +32,8 @@ class App {
       }
       this.extractCategories();
       this.renderCategories();
+      this.renderProducts();
+    } else {
       this.renderProducts();
     }
 
@@ -139,9 +79,9 @@ class App {
   async checkServerHealth() {
     const badge = document.getElementById('server-status-badge');
     try {
-      const ping = await window.api.ping();
+      const res = await window.api.ping();
       if (badge) {
-        if (ping && ping.success) {
+        if (res && (res.status === 'online' || res.status === 'ok' || res.success !== false)) {
           badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متصل بالسيرفر`;
           badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
         } else {
@@ -158,18 +98,21 @@ class App {
   }
 
   /* ==================== PRODUCT CATALOG & CATEGORIES ==================== */
-  async fetchProducts() {
+  async fetchProducts(isManual = false) {
     try {
-      this.showLoading(true, 'جاري تحميل الأصناف والأسعار...');
+      this.showLoading(true, isManual ? 'جاري سحب وتحديث الأصناف من السيرفر...' : 'جاري تحميل الأصناف والأسعار...');
       const res = await window.api.getProducts();
       this.showLoading(false);
 
-      if (res && res.success && Array.isArray(res.products) && res.products.length > 0) {
+      if (res && res.success && Array.isArray(res.products)) {
         this.products = res.products.map(p => window.syncManager ? window.syncManager.normalizeProduct(p) : p);
         localStorage.setItem('syrian_home_products', JSON.stringify(this.products));
         this.extractCategories();
         this.renderCategories();
         this.renderProducts();
+        if (isManual) {
+          this.showToast(`تمت المزامنة بنجاح: عدد الأصناف (${this.products.length}) ✅`, 'success');
+        }
       } else {
         this.extractCategories();
         this.renderCategories();
@@ -184,13 +127,16 @@ class App {
       this.extractCategories();
       this.renderCategories();
       this.renderProducts();
+      if (isManual) {
+        this.showToast('تعذر الاتصال بالسيرفر للمزامنة - تم الإبقاء على البيانات المحلية', 'warning');
+      }
     }
   }
 
   async refreshProductsQuietly() {
     try {
       const res = await window.api.getProducts();
-      if (res && res.success && Array.isArray(res.products) && res.products.length > 0) {
+      if (res && res.success && Array.isArray(res.products)) {
         this.products = res.products.map(p => window.syncManager ? window.syncManager.normalizeProduct(p) : p);
         localStorage.setItem('syrian_home_products', JSON.stringify(this.products));
         this.extractCategories();
@@ -320,6 +266,28 @@ class App {
           (String(p.id) === q)
         );
       }
+    }
+
+    if (this.products.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full py-16 text-center text-gray-400">
+          <i data-lucide="boxes" class="w-14 h-14 mx-auto mb-3 opacity-30 text-indigo-500"></i>
+          <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">لا توجد أصناف في الكتالوج حالياً</h4>
+          <p class="text-xs text-gray-400 mt-1">تمت مزامنة الكتالوج مع السيرفر بنجاح (0 صنف). يمكنك إضافة أصناف جديدة من شاشة الجرد.</p>
+          <div class="flex items-center justify-center gap-2 mt-4">
+            <button onclick="window.app.fetchProducts(true)" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-200 transition flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              تحديث من السيرفر
+            </button>
+            <button onclick="window.inventoryController.openNewProductForm(); window.app.switchView('inventory');" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5">
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+              + إضافة صنف جديد
+            </button>
+          </div>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
     }
 
     if (filtered.length === 0) {

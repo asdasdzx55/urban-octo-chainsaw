@@ -1219,25 +1219,25 @@
   </div>
 
   <!-- ==================== CHECKOUT MODAL ==================== -->
-  <div id="checkout-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full flex flex-col gap-5 shadow-2xl border border-gray-200 dark:border-gray-700">
+  <div id="checkout-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-lg w-full flex flex-col gap-4 shadow-2xl border border-gray-200 dark:border-gray-700 max-h-[92vh] overflow-y-auto">
       
       <!-- Modal Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
         <div>
           <h3 class="text-base font-bold text-gray-900 dark:text-white">إتمام عملية البيع والدفع</h3>
-          <p class="text-xs text-gray-500">حدد وسيلة الدفع واستخرج الفاتورة</p>
+          <p class="text-xs text-gray-500">حدد نوع الطلب وطريقة التحصيل لاستخراج الفاتورة</p>
         </div>
-        <button id="btn-close-checkout" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-700">
+        <button id="btn-close-checkout" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-700 transition">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Order Type Switcher (Hall / In-Store vs Home Delivery) -->
-      <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-700/60 rounded-2xl">
+      <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-700/60 rounded-2xl shrink-0">
         <button type="button" onclick="window.app.setOrderType('hall')" id="btn-ordertype-hall" class="py-2.5 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs flex items-center justify-center gap-2 transition">
           <i data-lucide="store" class="w-4 h-4"></i>
-          <span>استلام بالمحل / كاشير</span>
+          <span>استلام بالمحل / صالة</span>
         </button>
         <button type="button" onclick="window.app.setOrderType('delivery')" id="btn-ordertype-delivery" class="py-2.5 px-3 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center justify-center gap-2 transition hover:bg-gray-200 dark:hover:bg-gray-600">
           <i data-lucide="bike" class="w-4 h-4 text-emerald-500"></i>
@@ -1246,17 +1246,17 @@
       </div>
 
       <!-- Total Amount Banner -->
-      <div class="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 flex items-center justify-between">
-        <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">المبلغ المطلوب:</span>
+      <div class="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 flex items-center justify-between shrink-0">
+        <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">المبلغ الإجمالي للفاتورة:</span>
         <span id="checkout-modal-total" class="text-xl font-black text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
       </div>
 
-      <!-- Delivery Details Section (Shown when Delivery is active) -->
-      <div id="checkout-delivery-fields" class="hidden flex flex-col gap-3 p-3.5 bg-emerald-50/70 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-900/60">
+      <!-- ==================== 1. DELIVERY SECTION ==================== -->
+      <div id="checkout-delivery-fields" class="hidden flex flex-col gap-3 p-3.5 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-900/60">
         <div class="flex items-center justify-between pb-2 border-b border-emerald-200/60 dark:border-emerald-800">
           <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-            <i data-lucide="bike" class="w-4 h-4 text-emerald-600"></i>
-            <span>بيانات توصيل الدليفري والطيار</span>
+            <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i>
+            <span>بيانات العميل وعنوان التوصيل</span>
           </span>
         </div>
 
@@ -1277,7 +1277,7 @@
         <!-- Customer Address -->
         <div class="flex flex-col gap-1">
           <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300">عنوان التوصيل بالتفصيل: <span class="text-rose-500">*</span></label>
-          <textarea id="checkout-delivery-customer-address" oninput="window.cart.customerAddress = this.value" rows="2" placeholder="المنطقة، اسم الشارع، رقم العمارة، رقم الدور، الشقة، علامة مميزة..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
+          <textarea id="checkout-delivery-customer-address" oninput="window.cart.customerAddress = this.value" rows="2" placeholder="المنطقة، الشارع، رقم العمارة، رقم الدور، الشقة، علامة مميزة..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1294,7 +1294,7 @@
 
           <!-- Delivery Fee -->
           <div class="flex flex-col gap-1">
-            <label class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">مصاريف التوصيل (خدمة الدليفري ج.م):</label>
+            <label class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">مصاريف التوصيل (خدمة الدليفري):</label>
             <div class="flex items-center gap-1">
               <input type="number" step="1" id="checkout-delivery-fee" value="15" oninput="window.app.onDeliveryFeeChanged(this.value)" class="w-full bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-emerald-600">
               <button type="button" onclick="window.app.setDeliveryFeePreset(0)" class="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-[10px] font-bold hover:bg-gray-200">مجاناً</button>
@@ -1306,67 +1306,127 @@
 
       </div>
 
-      <!-- Payment Method Switcher (Cash, InstaPay, Vodafone Cash, Card, Delivery) -->
-      <div class="grid grid-cols-5 gap-1.5">
-        <button onclick="window.app.selectPaymentMethod('cash')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex flex-col items-center justify-center gap-1" data-method="cash">
-          <i data-lucide="banknote" class="w-4 h-4"></i>
-          <span>كاش</span>
-        </button>
-        <button onclick="window.app.selectPaymentMethod('instapay')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="instapay">
-          <i data-lucide="smartphone" class="w-4 h-4"></i>
-          <span>إنستاباي</span>
-        </button>
-        <button onclick="window.app.selectPaymentMethod('vodafone_cash')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="vodafone_cash">
-          <i data-lucide="phone-call" class="w-4 h-4 text-rose-500"></i>
-          <span>فودافون</span>
-        </button>
-        <button onclick="window.app.selectPaymentMethod('card')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="card">
-          <i data-lucide="credit-card" class="w-4 h-4"></i>
-          <span>فيزا</span>
-        </button>
-        <button onclick="window.app.selectPaymentMethod('delivery')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="delivery">
-          <i data-lucide="bike" class="w-4 h-4 text-emerald-500"></i>
-          <span>دليفري</span>
-        </button>
-      </div>
+      <!-- ==================== 2. DELIVERY PAYMENT MODE (COD vs PREPAID) ==================== -->
+      <div id="checkout-delivery-payment" class="hidden flex flex-col gap-2.5 p-3.5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200 dark:border-gray-600">
+        <label class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+          <i data-lucide="wallet" class="w-4 h-4 text-indigo-600"></i>
+          <span>طريقة دفع وتحصيل الفاتورة:</span>
+        </label>
 
-      <!-- Cash Calculation Fields -->
-      <div id="checkout-cash-fields" class="flex flex-col gap-3">
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">المبلغ المدفوع من العميل:</label>
-          <input type="number" id="checkout-cash-input" step="0.5" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-lg font-bold font-mono text-center">
+        <div class="grid grid-cols-2 gap-2">
+          <!-- Option 1: Cash On Delivery (Credit / COD) -->
+          <button type="button" onclick="window.app.setDeliveryPayMode('cod')" id="btn-delivmode-cod" class="p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex flex-col items-center justify-center gap-1 text-center transition shadow-xs">
+            <div class="flex items-center gap-1">
+              <i data-lucide="hand-coins" class="w-4 h-4 text-emerald-600"></i>
+              <span>تحصيل عند الاستلام</span>
+            </div>
+            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-normal">آجل (الطيار يحصل كاش من العميل)</span>
+          </button>
+
+          <!-- Option 2: Pre-paid -->
+          <button type="button" onclick="window.app.setDeliveryPayMode('prepaid')" id="btn-delivmode-prepaid" class="p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold flex flex-col items-center justify-center gap-1 text-center transition hover:bg-gray-100 dark:hover:bg-gray-700">
+            <div class="flex items-center gap-1">
+              <i data-lucide="check-circle" class="w-4 h-4 text-indigo-600"></i>
+              <span>مدفوعة مسبقاً (خالص)</span>
+            </div>
+            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-normal">إنستاباي / فودافون / فيزا / متجر</span>
+          </button>
         </div>
 
-        <!-- Quick Cash Buttons (+5, +10, +50, +100, Exact) -->
-        <div class="grid grid-cols-5 gap-1.5">
-          <button onclick="window.app.quickCashAdd(5)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+5</button>
-          <button onclick="window.app.quickCashAdd(10)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+10</button>
-          <button onclick="window.app.quickCashAdd(50)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+50</button>
-          <button onclick="window.app.quickCashAdd(100)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+100</button>
-          <button onclick="window.app.setExactCash()" class="py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 font-bold text-xs">المضبوط</button>
+        <!-- Prepaid Sub-Methods (shown only when Pre-paid is selected) -->
+        <div id="deliv-prepaid-details" class="hidden flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+          <span class="text-[11px] font-semibold text-gray-600 dark:text-gray-300">حدد وسيلة الدفع المسبق:</span>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button type="button" onclick="window.app.setDeliveryPrepaidMethod('instapay')" id="btn-prepaid-instapay" class="py-2 px-1 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs flex flex-col items-center gap-0.5">
+              <span>إنستاباي</span>
+            </button>
+            <button type="button" onclick="window.app.setDeliveryPrepaidMethod('vodafone_cash')" id="btn-prepaid-vodafone" class="py-2 px-1 rounded-xl text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 flex flex-col items-center gap-0.5">
+              <span>فودافون</span>
+            </button>
+            <button type="button" onclick="window.app.setDeliveryPrepaidMethod('card')" id="btn-prepaid-card" class="py-2 px-1 rounded-xl text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 flex flex-col items-center gap-0.5">
+              <span>فيزا</span>
+            </button>
+            <button type="button" onclick="window.app.setDeliveryPrepaidMethod('cash_store')" id="btn-prepaid-cash" class="py-2 px-1 rounded-xl text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 flex flex-col items-center gap-0.5">
+              <span>كاش مقدماً</span>
+            </button>
+          </div>
+
+          <!-- Reference input -->
+          <div class="mt-1">
+            <input type="text" id="deliv-prepaid-ref" oninput="window.app.onDeliveryPrepaidRefInput(this.value)" placeholder="رقم المرجع / المحفظة أو ملاحظات السداد (اختياري)..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-indigo-500">
+          </div>
         </div>
 
-        <!-- Change Amount Display -->
-        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
-          <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">المتبقي للعميل (الباقي):</span>
-          <span id="checkout-change-display" class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">0.00 ج.م</span>
+        <!-- Status Notice Banner -->
+        <div id="deliv-status-notice" class="p-2.5 rounded-xl text-xs flex items-center justify-between font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span id="deliv-status-notice-text">المطلوب تحصيله كاش بواسطة الطيار:</span>
+          </span>
+          <span id="deliv-status-notice-amount" class="font-mono text-sm">0.00 ج.م</span>
         </div>
       </div>
 
-      <!-- InstaPay Fields -->
-      <div id="checkout-instapay-fields" class="hidden flex flex-col gap-2">
-        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم مرجع إنستاباي (اختياري):</label>
-        <input type="text" oninput="window.cart.instapayRef = this.value" placeholder="مثال: IPN-98472910..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
-      </div>
+      <!-- ==================== 3. IN-STORE PAYMENT METHODS (HALL ONLY) ==================== -->
+      <div id="checkout-instore-payment" class="flex flex-col gap-3">
+        <!-- Payment Method Switcher (Cash, InstaPay, Vodafone Cash, Card) -->
+        <div class="grid grid-cols-4 gap-1.5">
+          <button onclick="window.app.selectPaymentMethod('cash')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex flex-col items-center justify-center gap-1" data-method="cash">
+            <i data-lucide="banknote" class="w-4 h-4"></i>
+            <span>كاش</span>
+          </button>
+          <button onclick="window.app.selectPaymentMethod('instapay')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="instapay">
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+            <span>إنستاباي</span>
+          </button>
+          <button onclick="window.app.selectPaymentMethod('vodafone_cash')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="vodafone_cash">
+            <i data-lucide="phone-call" class="w-4 h-4 text-rose-500"></i>
+            <span>فودافون</span>
+          </button>
+          <button onclick="window.app.selectPaymentMethod('card')" class="pay-method-btn py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1" data-method="card">
+            <i data-lucide="credit-card" class="w-4 h-4"></i>
+            <span>فيزا</span>
+          </button>
+        </div>
 
-      <!-- Vodafone Cash Fields -->
-      <div id="checkout-vodafone-fields" class="hidden flex flex-col gap-2">
-        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم محفظة فودافون كاش / مرجع التحويل (اختياري):</label>
-        <input type="text" oninput="window.cart.vodafoneRef = this.value" placeholder="مثال: 010xxxxxxxx أو رقم العملية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        <!-- Cash Calculation Fields -->
+        <div id="checkout-cash-fields" class="flex flex-col gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">المبلغ المدفوع من العميل:</label>
+            <input type="number" id="checkout-cash-input" step="0.5" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-lg font-bold font-mono text-center">
+          </div>
+
+          <!-- Quick Cash Buttons (+5, +10, +50, +100, Exact) -->
+          <div class="grid grid-cols-5 gap-1.5">
+            <button onclick="window.app.quickCashAdd(5)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+5</button>
+            <button onclick="window.app.quickCashAdd(10)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+10</button>
+            <button onclick="window.app.quickCashAdd(50)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+50</button>
+            <button onclick="window.app.quickCashAdd(100)" class="py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-bold hover:bg-gray-200">+100</button>
+            <button onclick="window.app.setExactCash()" class="py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 font-bold text-xs">المضبوط</button>
+          </div>
+
+          <!-- Change Amount Display -->
+          <div class="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">المتبقي للعميل (الباقي):</span>
+            <span id="checkout-change-display" class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">0.00 ج.م</span>
+          </div>
+        </div>
+
+        <!-- InstaPay Fields -->
+        <div id="checkout-instapay-fields" class="hidden flex flex-col gap-2">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم مرجع إنستاباي (اختياري):</label>
+          <input type="text" oninput="window.cart.instapayRef = this.value" placeholder="مثال: IPN-98472910..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+
+        <!-- Vodafone Cash Fields -->
+        <div id="checkout-vodafone-fields" class="hidden flex flex-col gap-2">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم محفظة فودافون كاش / مرجع التحويل (اختياري):</label>
+          <input type="text" oninput="window.cart.vodafoneRef = this.value" placeholder="مثال: 010xxxxxxxx أو رقم العملية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
       </div>
 
       <!-- Confirm Payment Button -->
-      <button id="btn-submit-payment" class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98">
+      <button id="btn-submit-payment" class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 shrink-0">
         <i data-lucide="check-circle-2" class="w-5 h-5"></i>
         <span>تأكيد وطباعة الفاتورة</span>
       </button>

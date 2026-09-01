@@ -578,29 +578,116 @@ class App {
     const btnHall = document.getElementById('btn-ordertype-hall');
     const btnDelivery = document.getElementById('btn-ordertype-delivery');
     const deliveryFields = document.getElementById('checkout-delivery-fields');
+    const deliveryPayment = document.getElementById('checkout-delivery-payment');
+    const inStorePayment = document.getElementById('checkout-instore-payment');
 
     if (type === 'delivery') {
       btnDelivery?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
       btnDelivery?.classList.remove('text-gray-600', 'dark:text-gray-300');
       btnHall?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
       btnHall?.classList.add('text-gray-600', 'dark:text-gray-300');
+
       deliveryFields?.classList.remove('hidden');
+      deliveryPayment?.classList.remove('hidden');
+      inStorePayment?.classList.add('hidden');
 
       if (!window.cart.deliveryFee) {
         window.cart.deliveryFee = 15;
         const feeInp = document.getElementById('checkout-delivery-fee');
         if (feeInp) feeInp.value = 15;
       }
+      this.updateDeliveryPaymentUI();
     } else {
       btnHall?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
       btnHall?.classList.remove('text-gray-600', 'dark:text-gray-300');
       btnDelivery?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
       btnDelivery?.classList.add('text-gray-600', 'dark:text-gray-300');
+
       deliveryFields?.classList.add('hidden');
+      deliveryPayment?.classList.add('hidden');
+      inStorePayment?.classList.remove('hidden');
+
+      this.selectPaymentMethod(window.cart.paymentMethod || 'cash');
     }
 
     this.updateCheckoutTotals();
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  setDeliveryPayMode(mode) {
+    window.cart.deliveryPayMode = mode;
+    this.updateDeliveryPaymentUI();
+  }
+
+  updateDeliveryPaymentUI() {
+    const isCOD = (window.cart.deliveryPayMode || 'cod') === 'cod';
+    const btnCOD = document.getElementById('btn-delivmode-cod');
+    const btnPrepaid = document.getElementById('btn-delivmode-prepaid');
+    const prepaidDetails = document.getElementById('deliv-prepaid-details');
+    const noticeBox = document.getElementById('deliv-status-notice');
+    const noticeText = document.getElementById('deliv-status-notice-text');
+    const noticeAmount = document.getElementById('deliv-status-notice-amount');
+    const total = window.cart.getTotal();
+
+    if (isCOD) {
+      btnCOD?.classList.add('border-2', 'border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/60', 'text-emerald-800', 'dark:text-emerald-300');
+      btnCOD?.classList.remove('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+      
+      btnPrepaid?.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-950/60', 'text-indigo-800', 'dark:text-indigo-300');
+      btnPrepaid?.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+
+      prepaidDetails?.classList.add('hidden');
+
+      if (noticeBox) {
+        noticeBox.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
+      }
+      if (noticeText) noticeText.textContent = 'المطلوب تحصيله كاش بواسطة الطيار:';
+      if (noticeAmount) noticeAmount.textContent = `${total.toFixed(2)} ج.م`;
+
+      window.cart.paidAmount = 0;
+    } else {
+      btnPrepaid?.classList.add('border-2', 'border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-950/60', 'text-indigo-800', 'dark:text-indigo-300');
+      btnPrepaid?.classList.remove('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+
+      btnCOD?.classList.remove('border-2', 'border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/60', 'text-emerald-800', 'dark:text-emerald-300');
+      btnCOD?.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+
+      prepaidDetails?.classList.remove('hidden');
+
+      if (noticeBox) {
+        noticeBox.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
+      }
+      if (noticeText) noticeText.textContent = 'الفاتورة مدفوعة مسبقاً بالكامل (خالص) ✅';
+      if (noticeAmount) noticeAmount.textContent = 'المطلوب: 0.00 ج.م';
+
+      window.cart.paidAmount = total;
+    }
+  }
+
+  setDeliveryPrepaidMethod(method) {
+    window.cart.deliveryPrepaidMethod = method;
+    const methods = ['instapay', 'vodafone_cash', 'card', 'cash_store'];
+    const ids = {
+      instapay: 'btn-prepaid-instapay',
+      vodafone_cash: 'btn-prepaid-vodafone',
+      card: 'btn-prepaid-card',
+      cash_store: 'btn-prepaid-cash'
+    };
+
+    methods.forEach(m => {
+      const el = document.getElementById(ids[m]);
+      if (m === method) {
+        el?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+        el?.classList.remove('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'border');
+      } else {
+        el?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+        el?.classList.add('bg-white', 'dark:bg-gray-800', 'border', 'border-gray-200', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
+      }
+    });
+  }
+
+  onDeliveryPrepaidRefInput(val) {
+    window.cart.deliveryPrepaidRef = val;
   }
 
   onDeliveryFeeChanged(val) {
@@ -620,20 +707,20 @@ class App {
     const modalTotal = document.getElementById('checkout-modal-total');
     if (modalTotal) modalTotal.textContent = `${total.toFixed(2)} ج.م`;
 
-    const cashInput = document.getElementById('checkout-cash-input');
-    if (cashInput) {
-      cashInput.value = total.toFixed(2);
-      window.cart.paidAmount = total;
+    if (window.cart.orderType === 'delivery') {
+      this.updateDeliveryPaymentUI();
+    } else {
+      const cashInput = document.getElementById('checkout-cash-input');
+      if (cashInput) {
+        cashInput.value = total.toFixed(2);
+        window.cart.paidAmount = total;
+      }
+      this.updateChangeCalculation();
     }
-    this.updateChangeCalculation();
   }
 
   selectPaymentMethod(method) {
     window.cart.paymentMethod = method;
-
-    if (method === 'delivery') {
-      this.setOrderType('delivery');
-    }
 
     const cashFields = document.getElementById('checkout-cash-fields');
     const instapayFields = document.getElementById('checkout-instapay-fields');
@@ -641,13 +728,13 @@ class App {
 
     document.querySelectorAll('.pay-method-btn').forEach(btn => {
       if (btn.getAttribute('data-method') === method) {
-        btn.className = 'pay-method-btn flex-1 py-3 px-1 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex flex-col items-center justify-center gap-1';
+        btn.className = 'pay-method-btn flex-1 py-3 px-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex flex-col items-center justify-center gap-1';
       } else {
-        btn.className = 'pay-method-btn flex-1 py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1';
+        btn.className = 'pay-method-btn flex-1 py-3 px-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1';
       }
     });
 
-    if (method === 'cash' || method === 'delivery') {
+    if (method === 'cash') {
       cashFields?.classList.remove('hidden');
       instapayFields?.classList.add('hidden');
       vodafoneFields?.classList.add('hidden');

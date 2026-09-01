@@ -487,6 +487,8 @@ class App {
 
     if (viewName === 'orders') {
       window.ordersController?.loadOrders('pending');
+    } else if (viewName === 'delivery') {
+      window.deliverySettlementController?.init();
     } else if (viewName === 'returns') {
       window.returnsController?.init();
     } else if (viewName === 'reports') {

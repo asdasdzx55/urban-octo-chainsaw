@@ -239,6 +239,13 @@ class SyrianHomeAPI {
   async settleDeliveryAccount(settlePayload) {
     return await this.post('settle_delivery_account', settlePayload);
   }
+
+  /**
+   * 22. Get Driver Orders & Stats (جلب أوردرات وإحصائيات طيار دليفري محدد)
+   */
+  async getDriverOrders(driverName, driverId = null) {
+    return await this.get('get_driver_orders', { driver_name: driverName, driver_id: driverId });
+  }
 }
 
 window.api = new SyrianHomeAPI();

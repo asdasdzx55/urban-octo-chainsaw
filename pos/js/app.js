@@ -19,6 +19,7 @@ class App {
     this.activeSubCategory = 'all';
     this.currentView = 'pos'; // 'pos', 'orders', 'returns', 'reports', 'settings'
     this.theme = localStorage.getItem('pos_theme') || 'light';
+    this.deliveryDrivers = [];
   }
 
   async init() {
@@ -535,33 +536,104 @@ class App {
     drawer.style.display = 'none';
   }
 
-  /* ==================== CHECKOUT MODAL LOGIC ==================== */
-  openCheckoutModal() {
+  /* ==================== CHECKOUT & DELIVERY MODAL LOGIC ==================== */
+  async openCheckoutModal() {
     if (window.cart.items.length === 0) {
       this.showToast('سلة المشتريات فارغة!', 'error');
       return;
     }
 
     const modal = document.getElementById('checkout-modal');
-    const total = window.cart.getTotal();
+    
+    // Load delivery drivers from API
+    this.loadDeliveryDrivers();
 
-    document.getElementById('checkout-modal-total').textContent = `${total.toFixed(2)} ج.م`;
-    document.getElementById('checkout-cash-input').value = total.toFixed(2);
-    window.cart.paidAmount = total;
-    this.updateChangeCalculation();
+    // Populate delivery fields from cart state
+    const custName = document.getElementById('checkout-delivery-customer-name');
+    const custPhone = document.getElementById('checkout-delivery-customer-phone');
+    const custAddr = document.getElementById('checkout-delivery-customer-address');
+    const feeInp = document.getElementById('checkout-delivery-fee');
 
-    // Default to cash
-    this.selectPaymentMethod('cash');
+    if (custName) custName.value = (window.cart.customerName === 'عميل نقدي' || window.cart.customerName === 'عميل دليفري') ? '' : window.cart.customerName;
+    if (custPhone) custPhone.value = window.cart.customerPhone || '';
+    if (custAddr) custAddr.value = window.cart.customerAddress || '';
+    if (feeInp) feeInp.value = window.cart.deliveryFee || 15;
+
+    // Apply Order Type (default: hall or current)
+    this.setOrderType(window.cart.orderType || 'hall');
+
+    // Default payment method
+    this.selectPaymentMethod(window.cart.paymentMethod || 'cash');
 
     modal?.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
   }
 
   closeCheckoutModal() {
     document.getElementById('checkout-modal')?.classList.add('hidden');
   }
 
+  setOrderType(type) {
+    window.cart.orderType = type;
+    const btnHall = document.getElementById('btn-ordertype-hall');
+    const btnDelivery = document.getElementById('btn-ordertype-delivery');
+    const deliveryFields = document.getElementById('checkout-delivery-fields');
+
+    if (type === 'delivery') {
+      btnDelivery?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnDelivery?.classList.remove('text-gray-600', 'dark:text-gray-300');
+      btnHall?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnHall?.classList.add('text-gray-600', 'dark:text-gray-300');
+      deliveryFields?.classList.remove('hidden');
+
+      if (!window.cart.deliveryFee) {
+        window.cart.deliveryFee = 15;
+        const feeInp = document.getElementById('checkout-delivery-fee');
+        if (feeInp) feeInp.value = 15;
+      }
+    } else {
+      btnHall?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnHall?.classList.remove('text-gray-600', 'dark:text-gray-300');
+      btnDelivery?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnDelivery?.classList.add('text-gray-600', 'dark:text-gray-300');
+      deliveryFields?.classList.add('hidden');
+    }
+
+    this.updateCheckoutTotals();
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  onDeliveryFeeChanged(val) {
+    window.cart.deliveryFee = parseFloat(val || 0);
+    this.updateCheckoutTotals();
+  }
+
+  setDeliveryFeePreset(val) {
+    window.cart.deliveryFee = parseFloat(val || 0);
+    const feeInp = document.getElementById('checkout-delivery-fee');
+    if (feeInp) feeInp.value = val;
+    this.updateCheckoutTotals();
+  }
+
+  updateCheckoutTotals() {
+    const total = window.cart.getTotal();
+    const modalTotal = document.getElementById('checkout-modal-total');
+    if (modalTotal) modalTotal.textContent = `${total.toFixed(2)} ج.م`;
+
+    const cashInput = document.getElementById('checkout-cash-input');
+    if (cashInput) {
+      cashInput.value = total.toFixed(2);
+      window.cart.paidAmount = total;
+    }
+    this.updateChangeCalculation();
+  }
+
   selectPaymentMethod(method) {
     window.cart.paymentMethod = method;
+
+    if (method === 'delivery') {
+      this.setOrderType('delivery');
+    }
 
     const cashFields = document.getElementById('checkout-cash-fields');
     const instapayFields = document.getElementById('checkout-instapay-fields');
@@ -569,13 +641,13 @@ class App {
 
     document.querySelectorAll('.pay-method-btn').forEach(btn => {
       if (btn.getAttribute('data-method') === method) {
-        btn.className = 'pay-method-btn flex-1 py-3 px-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center justify-center gap-1';
+        btn.className = 'pay-method-btn flex-1 py-3 px-1 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex flex-col items-center justify-center gap-1';
       } else {
-        btn.className = 'pay-method-btn flex-1 py-3 px-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1';
+        btn.className = 'pay-method-btn flex-1 py-3 px-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex flex-col items-center justify-center gap-1';
       }
     });
 
-    if (method === 'cash') {
+    if (method === 'cash' || method === 'delivery') {
       cashFields?.classList.remove('hidden');
       instapayFields?.classList.add('hidden');
       vodafoneFields?.classList.add('hidden');
@@ -591,6 +663,90 @@ class App {
       cashFields?.classList.add('hidden');
       instapayFields?.classList.add('hidden');
       vodafoneFields?.classList.add('hidden');
+    }
+  }
+
+  /* ==================== DELIVERY DRIVERS MANAGEMENT ==================== */
+  async loadDeliveryDrivers() {
+    try {
+      const res = await window.api.getDeliveryDrivers();
+      if (res && res.success && Array.isArray(res.drivers)) {
+        this.deliveryDrivers = res.drivers;
+        this.renderDeliveryDriversDropdown();
+      }
+    } catch (e) {
+      console.warn('Error loading delivery drivers:', e);
+    }
+  }
+
+  renderDeliveryDriversDropdown() {
+    const select = document.getElementById('checkout-delivery-driver-select');
+    if (!select) return;
+
+    let html = '<option value="">-- اختر طيار الدليفري --</option>';
+    this.deliveryDrivers.forEach(d => {
+      const bal = parseFloat(d.cash_balance || 0);
+      const isSelected = window.cart.deliveryPerson === d.name ? 'selected' : '';
+      html += `<option value="${d.name}" ${isSelected} data-id="${d.id}" data-phone="${d.phone || ''}">
+        🛵 ${d.name} ${d.phone ? `(${d.phone})` : ''} ${bal > 0 ? `• عهدة: ${bal.toFixed(2)} ج.م` : ''}
+      </option>`;
+    });
+    select.innerHTML = html;
+  }
+
+  openNewDriverModal() {
+    const modal = document.getElementById('new-driver-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      document.getElementById('new-driver-name')?.focus();
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  closeNewDriverModal() {
+    const modal = document.getElementById('new-driver-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+      const n = document.getElementById('new-driver-name');
+      const p = document.getElementById('new-driver-phone');
+      if (n) n.value = '';
+      if (p) p.value = '';
+    }
+  }
+
+  async saveNewDriver() {
+    const name = (document.getElementById('new-driver-name')?.value || '').trim();
+    const phone = (document.getElementById('new-driver-phone')?.value || '').trim();
+    const pin = (document.getElementById('new-driver-pin')?.value || '1234').trim();
+
+    if (!name) {
+      this.showToast('يرجى كتابة اسم الطيار!', 'error');
+      return;
+    }
+
+    try {
+      this.showLoading(true, 'جاري حفظ بيانات الطيار...');
+      const res = await window.api.syncDeliveryDriver({
+        name: name,
+        phone: phone,
+        pin_code: pin,
+        is_active: 1
+      });
+      this.showLoading(false);
+
+      if (res && res.success) {
+        this.showToast(`تمت إضافة الطيار (${name}) بنجاح!`, 'success');
+        window.cart.deliveryPerson = name;
+        await this.loadDeliveryDrivers();
+        this.closeNewDriverModal();
+      } else {
+        throw new Error(res.message || 'فشل حفظ الطيار');
+      }
+    } catch (e) {
+      this.showLoading(false);
+      this.showToast('خطأ: ' + e.message, 'error');
     }
   }
 

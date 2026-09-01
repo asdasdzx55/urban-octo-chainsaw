@@ -211,6 +211,34 @@ class SyrianHomeAPI {
   async getSuppliers() {
     return await this.get('get_suppliers');
   }
+
+  /**
+   * 18. Get Delivery Drivers List (جلب قائمة طياري الدليفري)
+   */
+  async getDeliveryDrivers() {
+    return await this.get('get_delivery_drivers');
+  }
+
+  /**
+   * 19. Sync / Add Delivery Driver (إضافة أو تعديل طيار دليفري)
+   */
+  async syncDeliveryDriver(driverPayload) {
+    return await this.post('sync_delivery_driver', driverPayload);
+  }
+
+  /**
+   * 20. Assign Order to Driver (إسناد طلب لطيار بالاسم)
+   */
+  async assignDeliveryDriver(assignPayload) {
+    return await this.post('assign_delivery_driver', assignPayload);
+  }
+
+  /**
+   * 21. Settle Delivery Account (تصفية عهدة طيار دليفري)
+   */
+  async settleDeliveryAccount(settlePayload) {
+    return await this.post('settle_delivery_account', settlePayload);
+  }
 }
 
 window.api = new SyrianHomeAPI();

@@ -31,6 +31,10 @@ class WebOrdersController {
         </div>
       `;
 
+      if (!window.app?.deliveryDrivers?.length) {
+        await window.app?.loadDeliveryDrivers();
+      }
+
       const res = await window.api.getWebOrders(status);
 
       if (res && res.success && Array.isArray(res.orders)) {
@@ -116,7 +120,7 @@ class WebOrdersController {
 
           <!-- Order Actions -->
           <div class="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center flex-wrap gap-2">
               <select onchange="window.ordersController.changeStatus(${ord.id}, this.value)" class="bg-gray-100 dark:bg-gray-700 border-none rounded-xl text-xs font-semibold px-3 py-1.5 text-gray-800 dark:text-gray-200">
                 <option value="pending" ${ord.status === 'pending' ? 'selected' : ''}>قيد الانتظار (Pending)</option>
                 <option value="processing" ${ord.status === 'processing' ? 'selected' : ''}>جاري التجهيز (Processing)</option>
@@ -124,6 +128,17 @@ class WebOrdersController {
                 <option value="delivered" ${ord.status === 'delivered' ? 'selected' : ''}>تم التسليم (Delivered)</option>
                 <option value="cancelled" ${ord.status === 'cancelled' ? 'selected' : ''}>ملغي (Cancelled)</option>
               </select>
+
+              <!-- Assign Delivery Driver Dropdown -->
+              <div class="flex items-center gap-1 bg-gray-50 dark:bg-gray-700/60 px-2 py-0.5 rounded-xl border border-gray-200/60 dark:border-gray-600/60">
+                <span class="text-[10px] font-bold text-gray-500">الطيار:</span>
+                <select onchange="window.ordersController.assignDriver(${ord.id}, '${ord.invoice_barcode || ''}', this.value)" class="bg-transparent border-none text-xs font-bold px-1 py-1 text-emerald-600 dark:text-emerald-400 focus:ring-0">
+                  <option value="">-- بدون تعيين --</option>
+                  ${(window.app?.deliveryDrivers || []).map(d => `
+                    <option value="${d.name}" ${ord.delivery_person === d.name ? 'selected' : ''}>🛵 ${d.name}</option>
+                  `).join('')}
+                </select>
+              </div>
             </div>
 
             <button onclick="window.ordersController.printDeliverySlip(${ord.id})" class="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center gap-1.5 transition">
@@ -137,6 +152,29 @@ class WebOrdersController {
     }).join('');
 
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  async assignDriver(orderId, invNumber, driverName) {
+    if (!driverName) return;
+    try {
+      window.app?.showLoading(true, 'جاري إسناد الطلب للطيار...');
+      const res = await window.api.assignDeliveryDriver({
+        order_id: orderId,
+        invoice_number: invNumber,
+        delivery_person: driverName
+      });
+      window.app?.showLoading(false);
+
+      if (res && res.success) {
+        window.app?.showToast(`✅ تم إسناد الأوردر للطيار (${driverName}) بنجاح!`, 'success');
+        this.loadOrders(this.currentStatusFilter);
+      } else {
+        throw new Error(res.message || 'فشل إسناد الطلب');
+      }
+    } catch(e) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ: ${e.message}`, 'error');
+    }
   }
 
   async changeStatus(orderId, newStatus) {
@@ -166,7 +204,12 @@ class WebOrdersController {
       invoice_barcode: `WEB-ORD-${order.id}`,
       created_at: new Date().toLocaleString('ar-EG'),
       cashier: 'أوردر أونلاين',
-      customer_name: `${order.customer_name} (${order.customer_phone || ''})`,
+      customer_name: order.customer_name || 'عميل المتجر',
+      customer_phone: order.customer_phone || '',
+      phone: order.customer_phone || '',
+      address: order.address || '',
+      delivery_person: order.delivery_person || '',
+      order_type: 'delivery',
       payment_method: order.payment_method,
       items: order.items || [],
       subtotal: parseFloat(order.total || 0),

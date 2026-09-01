@@ -8,12 +8,17 @@ class POSCart {
     this.items = [];
     this.discountAmount = 0;
     this.taxRate = 0; // Default 0% or customizable
-    this.paymentMethod = 'cash'; // 'cash', 'instapay', 'card'
+    this.paymentMethod = 'cash'; // 'cash', 'instapay', 'vodafone_cash', 'card', 'delivery'
+    this.orderType = 'hall'; // 'hall' (استلام بالمحل) or 'delivery' (توصيل منزلي)
     this.customerName = 'عميل نقدي';
     this.customerPhone = '';
+    this.customerAddress = '';
+    this.deliveryPerson = '';
+    this.deliveryFee = 0;
     this.cashierNotes = 'كاشير 1';
     this.paidAmount = 0;
     this.instapayRef = '';
+    this.vodafoneRef = '';
   }
 
   /* ==================== CART ITEM ACTIONS ==================== */
@@ -154,6 +159,12 @@ class POSCart {
     this.paidAmount = 0;
     this.instapayRef = '';
     this.vodafoneRef = '';
+    this.orderType = 'hall';
+    this.deliveryFee = 0;
+    this.deliveryPerson = '';
+    this.customerAddress = '';
+    this.customerPhone = '';
+    this.customerName = 'عميل نقدي';
     this.render();
   }
 
@@ -166,7 +177,8 @@ class POSCart {
     const subtotal = this.getSubtotal();
     const afterDiscount = Math.max(0, subtotal - this.discountAmount);
     const tax = afterDiscount * (this.taxRate / 100);
-    return afterDiscount + tax;
+    const delivery = this.orderType === 'delivery' ? parseFloat(this.deliveryFee || 0) : 0;
+    return afterDiscount + tax + delivery;
   }
 
   getTotalItemsCount() {
@@ -189,21 +201,32 @@ class POSCart {
 
     const total = this.getTotal();
 
-    const paymentMethodLabel = this.paymentMethod === 'vodafone_cash' ? 'فودافون كاش' : 
-                               this.paymentMethod === 'instapay' ? 'انستا باي' : 
-                               this.paymentMethod === 'card' ? 'فيزا' : 'كاش';
+    const isDelivery = this.orderType === 'delivery' || this.paymentMethod === 'delivery';
+    const deliveryFee = isDelivery ? parseFloat(this.deliveryFee || 0) : 0;
 
-    // Prepare Sale Payload according to Syrian Home REST API
+    let paymentMethodLabel = this.paymentMethod === 'vodafone_cash' ? 'فودافون كاش' : 
+                               this.paymentMethod === 'instapay' ? 'انستا باي' : 
+                               this.paymentMethod === 'card' ? 'فيزا' : 
+                               isDelivery ? 'دليفري / توصيل' : 'كاش';
+
+    // Prepare Sale Payload according to Syrian Home REST API & Delivery Spec
     const payload = {
-      customer_name: this.customerName || 'عميل نقدي',
-      customer_phone: this.customerPhone || '',
+      local_sale_id: Date.now(),
+      customer_name: (this.customerName || (isDelivery ? 'عميل دليفري' : 'عميل نقدي')).trim(),
+      customer_phone: (this.customerPhone || '').trim(),
+      phone: (this.customerPhone || '').trim(),
+      address: (this.customerAddress || '').trim(),
+      delivery_person: (this.deliveryPerson || '').trim(),
+      delivery_fee: deliveryFee,
+      order_type: isDelivery ? 'delivery' : 'hall',
       payment_method: paymentMethodLabel,
       instapay_ref: this.paymentMethod === 'instapay' ? this.instapayRef : (this.paymentMethod === 'vodafone_cash' ? this.vodafoneRef : ''),
       total: total,
+      total_amount: total,
       discount: this.discountAmount,
       tax: this.taxRate,
       cashier_notes: this.cashierNotes,
-      paid_amount: this.paidAmount,
+      paid_amount: this.paidAmount || total,
       items: this.items.map(item => ({
         product_id: item.product_id,
         name: item.name,
@@ -228,7 +251,13 @@ class POSCart {
           invoice_barcode: result.invoice_barcode || `INV-${result.order_id}`,
           created_at: new Date().toLocaleString('ar-EG'),
           cashier: this.cashierNotes,
-          customer_name: this.customerName,
+          customer_name: this.customerName || (isDelivery ? 'عميل دليفري' : 'عميل نقدي'),
+          customer_phone: this.customerPhone || '',
+          phone: this.customerPhone || '',
+          address: this.customerAddress || '',
+          delivery_person: this.deliveryPerson || '',
+          delivery_fee: deliveryFee,
+          order_type: isDelivery ? 'delivery' : 'hall',
           payment_method: paymentMethodLabel,
           items: [...this.items],
           subtotal: this.getSubtotal(),
@@ -274,7 +303,13 @@ class POSCart {
         invoice_barcode: `INV-${offlineOrderId}`,
         created_at: new Date().toLocaleString('ar-EG'),
         cashier: this.cashierNotes,
-        customer_name: this.customerName,
+        customer_name: this.customerName || (isDelivery ? 'عميل دليفري' : 'عميل نقدي'),
+        customer_phone: this.customerPhone || '',
+        phone: this.customerPhone || '',
+        address: this.customerAddress || '',
+        delivery_person: this.deliveryPerson || '',
+        delivery_fee: deliveryFee,
+        order_type: isDelivery ? 'delivery' : 'hall',
         payment_method: paymentMethodLabel,
         items: [...this.items],
         subtotal: this.getSubtotal(),
@@ -367,6 +402,20 @@ class POSCart {
           <span>العميل: ${inv.customer_name}</span>
           <span>طريقة الدفع: ${pmDisplay}</span>
         </div>
+        ${(inv.order_type === 'delivery' || inv.delivery_fee > 0 || inv.address) ? `
+          <div style="background:#f0fdf4; border:1px dashed #86efac; border-radius:8px; padding:6px; margin:6px 0; font-size:11px;">
+            <div style="font-weight:bold; color:#15803d; text-align:center; margin-bottom:4px;">🛵 فاتورة توصيل منزلي (دليفري)</div>
+            <div class="receipt-meta-row" style="margin:2px 0;">
+              <span>الهاتف: <b>${inv.customer_phone || inv.phone || '-'}</b></span>
+              <span>الطيار: <b>${inv.delivery_person || 'غير محدد'}</b></span>
+            </div>
+            ${inv.address ? `
+              <div style="margin-top:3px; color:#374151;">
+                <span>العنوان: <b>${inv.address}</b></span>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
       </div>
 
       <table class="receipt-items-table">
@@ -403,6 +452,12 @@ class POSCart {
           <div class="receipt-total-row" style="color: red;">
             <span>الخصم:</span>
             <span>-${inv.discount.toFixed(2)} ج.م</span>
+          </div>
+        ` : ''}
+        ${(inv.delivery_fee && parseFloat(inv.delivery_fee) > 0) ? `
+          <div class="receipt-total-row">
+            <span>خدمة التوصيل (دليفري):</span>
+            <span>+${parseFloat(inv.delivery_fee).toFixed(2)} ج.م</span>
           </div>
         ` : ''}
         <div class="receipt-total-row receipt-grand-total">

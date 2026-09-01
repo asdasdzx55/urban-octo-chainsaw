@@ -607,136 +607,140 @@
           </button>
         </div>
 
-        <!-- ==================== FORM 0: PURCHASE INVOICE (DEFAULT) ==================== -->
-        <div id="purchase-invoice-form" class="flex flex-col gap-4 p-5 sm:p-6 bg-gray-50 dark:bg-gray-900/60 rounded-3xl border border-gray-200 dark:border-gray-700">
+        <!-- ==================== FORM 0: PURCHASE INVOICE (POS STYLE REGISTER) ==================== -->
+        <div id="purchase-invoice-form" class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           
-          <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-indigo-600"></i>
-              <span>بيانات فاتورة الشراء من المورد (توريد بضاعة للمخزن)</span>
-            </h3>
-            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
-              تزيد رصيد المخزن تلقائياً 📦
-            </span>
-          </div>
-
-          <!-- Section 1: Supplier & Invoice Metadata -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <!-- Supplier Dropdown -->
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اسم المورد: <span class="text-rose-500">*</span></label>
-              <select id="purch-supplier-select" onchange="window.purchasesController.onSupplierSelectChanged()" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
-                <!-- Rendered dynamically -->
-              </select>
-              <div id="purch-supplier-bal-badge" class="hidden text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5"></div>
-            </div>
-
-            <!-- Custom Supplier Name & Phone (Shown when new supplier selected) -->
-            <div id="purch-new-supplier-box" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">اسم المورد الجديد: <span class="text-rose-500">*</span></label>
-                <input type="text" id="purch-supplier-name-custom" placeholder="مثال: شركة المراعي / مورد الأجبان..." class="w-full bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2 text-xs font-bold">
+          <!-- Left Column: Purchase Bill Cart & Supplier Checkout Panel (5 cols) -->
+          <div class="flex flex-col bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-200/80 dark:border-gray-700 shadow-md lg:col-span-5 h-[calc(100vh-8.5rem)] sticky top-20">
+            
+            <!-- Top Row: Title, Auto-Generated Invoice #, Clear Cart -->
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold">
+                  <i data-lucide="package-plus" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-black text-gray-900 dark:text-white leading-tight">فاتورة مشتريات وتوريد</h3>
+                  <span id="purch-auto-invoice-badge" class="text-[10px] font-mono text-gray-400">PUR-2026 • اليوم</span>
+                </div>
               </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">هاتف المورد (اختياري):</label>
-                <input type="text" id="purch-supplier-phone-custom" placeholder="01xxxxxxxxx" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
-              </div>
-            </div>
-
-            <!-- Invoice Number -->
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center justify-between">
-                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">رقم الفاتورة / السند:</label>
-                <button type="button" onclick="window.purchasesController.generateInvoiceNumber()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline">رقم تلقائي 🎲</button>
-              </div>
-              <input type="text" id="purch-inv-number" placeholder="PUR-..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-            </div>
-
-            <!-- Payment Method -->
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-indigo-600 dark:text-indigo-400">طريقة الدفع: <span class="text-rose-500">*</span></label>
-              <select id="purch-payment-method" onchange="window.purchasesController.onPaymentMethodChanged()" class="w-full bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                <option value="نقدي">💵 نقدي / كاش (من الدرج)</option>
-                <option value="آجل">⏳ آجل / على الحساب (يضاف لرصيد المورد)</option>
-                <option value="انستا باي">⚡ إنستاباي (InstaPay)</option>
-                <option value="فودافون كاش">📱 فودافون كاش (محفظة)</option>
-              </select>
-            </div>
-
-            <!-- Paid Amount (if partial/credit) -->
-            <div id="purch-paid-amount-box" class="hidden flex flex-col gap-1">
-              <label class="text-xs font-bold text-amber-600 dark:text-amber-400">المبلغ المدفوع مقدماً (ج.م):</label>
-              <input type="number" step="0.5" id="purch-paid-amount" placeholder="0.00" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold font-mono">
-            </div>
-
-            <!-- Invoice Date -->
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">تاريخ الفاتورة:</label>
-              <input type="datetime-local" id="purch-inv-date" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-mono">
-            </div>
-
-            <!-- Invoice Notes -->
-            <div class="sm:col-span-2 lg:col-span-4 flex flex-col gap-1">
-              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">ملاحظات الفاتورة:</label>
-              <input type="text" id="purch-notes" placeholder="ملاحظات إضافية، شروط التوريد، رقم الشحنة..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
-            </div>
-          </div>
-
-          <!-- Section 2: Items Table -->
-          <div class="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between">
-              <h4 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                <i data-lucide="boxes" class="w-4 h-4 text-indigo-600"></i>
-                <span>أصناف وبنود الفاتورة الموردة:</span>
-              </h4>
-              <button type="button" onclick="window.purchasesController.addItemRow()" class="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:bg-indigo-100 flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                <span>إضافة صنف آخر +</span>
+              
+              <button onclick="window.purchasesController.clearPurchaseCart()" class="text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1 transition">
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                تفريغ
               </button>
             </div>
 
-            <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <table class="w-full text-right border-collapse">
-                <thead>
-                  <tr class="bg-gray-100/70 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold text-gray-600 dark:text-gray-300">
-                    <th class="p-2 text-center w-8">#</th>
-                    <th class="p-2">الصنف والباركود</th>
-                    <th class="p-2">نوع الوحدة</th>
-                    <th class="p-2 text-center">الكمية</th>
-                    <th class="p-2 text-center">سعر الشراء (التكلفة)</th>
-                    <th class="p-2 text-center">سعر البيع للجمهور</th>
-                    <th class="p-2 text-center">إجمالي البند</th>
-                    <th class="p-2 text-center w-10">حذف</th>
-                  </tr>
-                </thead>
-                <tbody id="purch-items-tbody">
+            <!-- Supplier Selector & Payment Method -->
+            <div class="py-3 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2.5">
+              
+              <!-- Supplier Dropdown with small '+' button -->
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between">
+                  <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <i data-lucide="truck" class="w-3.5 h-3.5 text-indigo-600"></i>
+                    <span>المورد: <span class="text-rose-500">*</span></span>
+                  </label>
+                  <button type="button" onclick="window.purchasesController.openNewSupplierModal()" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800" title="إضافة مورد جديد">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    <span>مورد جديد</span>
+                  </button>
+                </div>
+
+                <select id="purch-supplier-select" onchange="window.purchasesController.onSupplierSelected(this.value)" class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
                   <!-- Rendered dynamically -->
-                </tbody>
-              </table>
+                </select>
+                <div id="purch-supplier-bal-badge" class="hidden text-[11px] font-bold text-amber-600 dark:text-amber-400 px-1"></div>
+              </div>
+
+              <!-- Payment Method Selector Pills -->
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300">طريقة وحالة الدفع:</label>
+                <div class="grid grid-cols-4 gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl">
+                  <button type="button" onclick="window.purchasesController.setPaymentMethod('نقدي')" class="purch-pm-btn py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 bg-indigo-600 text-white shadow-xs" data-pm="نقدي">
+                    💵 نقدي
+                  </button>
+                  <button type="button" onclick="window.purchasesController.setPaymentMethod('آجل')" class="purch-pm-btn py-1.5 rounded-lg text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-1" data-pm="آجل">
+                    ⏳ آجل
+                  </button>
+                  <button type="button" onclick="window.purchasesController.setPaymentMethod('انستا باي')" class="purch-pm-btn py-1.5 rounded-lg text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-1" data-pm="انستا باي">
+                    ⚡ إنستا
+                  </button>
+                  <button type="button" onclick="window.purchasesController.setPaymentMethod('فودافون كاش')" class="purch-pm-btn py-1.5 rounded-lg text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-1" data-pm="فودافون كاش">
+                    📱 فودافون
+                  </button>
+                </div>
+              </div>
+
+              <!-- Paid Amount if 'آجل' (Credit) -->
+              <div id="purch-credit-paid-box" class="hidden flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
+                <label class="text-[10px] font-bold text-amber-700 dark:text-amber-300 whitespace-nowrap">المدفوع مقدماً (ج.م):</label>
+                <input type="number" step="0.5" id="purch-paid-amount" placeholder="0.00" class="flex-1 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-lg px-2 py-1 text-xs font-bold font-mono">
+              </div>
+
             </div>
+
+            <!-- Purchase Cart Items Scrollable List -->
+            <div id="purch-cart-items-list" class="flex-1 overflow-y-auto py-2 flex flex-col gap-2 my-1">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Empty Notice -->
+            <div id="purch-empty-notice" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-gray-400">
+              <i data-lucide="package-open" class="w-12 h-12 mb-2 opacity-30"></i>
+              <p class="text-xs font-bold">فاتورة التوريد فارغة</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">امسح باركود المنتج أو اضغط على الأصناف لإضافتها للفاتورة</p>
+            </div>
+
+            <!-- Purchase Cart Summary & Save Button -->
+            <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2.5">
+              
+              <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                <span>عدد الأصناف والكميات:</span>
+                <span id="purch-cart-items-count-val" class="font-bold text-gray-800 dark:text-gray-200 font-mono">0 أصناف (0 كمية)</span>
+              </div>
+
+              <div class="flex justify-between items-center text-base sm:text-lg font-black text-gray-900 dark:text-white pt-1">
+                <span>إجمالي فاتورة الشراء:</span>
+                <span id="purch-cart-total-val" class="text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
+              </div>
+
+              <!-- Submit Purchase Invoice Button -->
+              <button onclick="window.purchasesController.submitPurchaseInvoice()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                <span>تأكيد وحفظ التوريد وزيادة المخزون 📦</span>
+              </button>
+
+            </div>
+
           </div>
 
-          <!-- Section 3: Summary Totals & Submit -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
-            <div class="flex items-center gap-6">
-              <div>
-                <span class="text-[10px] text-gray-500 font-bold block">إجمالي الأصناف:</span>
-                <span id="purch-total-items-count" class="text-xs font-black text-gray-800 dark:text-gray-200 font-mono">1 أصناف</span>
+          <!-- Right Column: Products Catalog & Search (7 cols) -->
+          <div class="col-span-1 lg:col-span-7 flex flex-col gap-3 sm:gap-4">
+            
+            <!-- Search Bar & Add Custom Product Button -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-3 border border-gray-200/80 dark:border-gray-700 shadow-sm flex items-center gap-2">
+              <div class="relative flex-1">
+                <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="purch-search-input" oninput="window.purchasesController.onSearchInput(this.value)" placeholder="ابحث باسم الصنف، كود الصنف، أو امسح الباركود للتوريد..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
               </div>
-              <div>
-                <span class="text-[10px] text-gray-500 font-bold block">إجمالي الكميات:</span>
-                <span id="purch-total-qty" class="text-xs font-black text-gray-800 dark:text-gray-200 font-mono">1</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold block">إجمالي الفاتورة المطلوب:</span>
-                <span id="purch-total-amount" class="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
-              </div>
+
+              <button type="button" onclick="window.purchasesController.openNewCustomProductModal()" class="px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:bg-indigo-100 transition flex items-center gap-1 shrink-0 border border-indigo-200 dark:border-indigo-800" title="إضافة صنف جديد غير موجود بالكتالوج">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">+ صنف غير مسجل</span>
+              </button>
             </div>
 
-            <button onclick="window.purchasesController.submitPurchaseInvoice()" class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition transform active:scale-95">
-              <i data-lucide="check-circle-2" class="w-5 h-5"></i>
-              <span>تأكيد وحفظ الفاتورة وتحديث المخزون ✅</span>
-            </button>
+            <!-- Categories Bar -->
+            <div id="purch-categories-bar" class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Products Catalog Grid -->
+            <div id="purch-products-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3 overflow-y-auto max-h-[calc(100vh-14rem)] p-0.5">
+              <!-- Rendered dynamically -->
+            </div>
+
           </div>
 
         </div>
@@ -1343,6 +1347,106 @@
         <span>طباعة الفاتورة الآن (Print)</span>
       </button>
 
+    </div>
+  </div>
+
+  <!-- ==================== NEW SUPPLIER MODAL ==================== -->
+  <div id="new-supplier-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 max-w-sm w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="truck" class="w-4 h-4 text-indigo-600"></i>
+          <span>إضافة مورد جديد ➕</span>
+        </h3>
+        <button onclick="window.purchasesController.closeNewSupplierModal()" class="p-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اسم المورد: <span class="text-rose-500">*</span></label>
+          <input type="text" id="new-supplier-name" placeholder="مثال: شركة المراعي / مورد الألبان..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم الهاتف (اختياري):</label>
+          <input type="text" id="new-supplier-phone" placeholder="01xxxxxxxxx" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الرصيد الافتتاحي المستحق للمورد (ج.م):</label>
+          <input type="number" step="1" id="new-supplier-initial-balance" placeholder="0.00" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <button type="button" onclick="window.purchasesController.closeNewSupplierModal()" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold">إلغاء</button>
+        <button type="button" onclick="window.purchasesController.saveNewSupplier()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-md">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>حفظ واختيار</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NEW CUSTOM PURCHASE PRODUCT MODAL ==================== -->
+  <div id="new-purchase-product-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 max-w-sm w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="box" class="w-4 h-4 text-indigo-600"></i>
+          <span>إضافة صنف غير مسجل للفاتورة</span>
+        </h3>
+        <button onclick="window.purchasesController.closeNewCustomProductModal()" class="p-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اسم الصنف: <span class="text-rose-500">*</span></label>
+          <input type="text" id="new-purch-item-name" placeholder="مثال: حلاوة طحينية 500 جم..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الباركود الدولي:</label>
+          <input type="text" id="new-purch-item-barcode" placeholder="امسح أو اكتب الباركود..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">نوع الوحدة:</label>
+            <select id="new-purch-item-unit-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+              <option value="piece">📦 قطعة</option>
+              <option value="weight">⚖️ كجم (وزن)</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الكمية الموردة:</label>
+            <input type="number" id="new-purch-item-qty" value="1" min="0.01" step="1" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-amber-600 dark:text-amber-400">سعر الشراء / التكلفة:</label>
+            <input type="number" id="new-purch-item-cost" value="0.00" min="0" step="0.5" class="w-full bg-gray-50 dark:bg-gray-700 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-amber-700 dark:text-amber-400">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-emerald-600 dark:text-emerald-400">سعر البيع للجمهور:</label>
+            <input type="number" id="new-purch-item-price" value="0.00" min="0" step="0.5" class="w-full bg-gray-50 dark:bg-gray-700 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-emerald-600 dark:text-emerald-400">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <button type="button" onclick="window.purchasesController.closeNewCustomProductModal()" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold">إلغاء</button>
+        <button type="button" onclick="window.purchasesController.saveNewCustomProductToCart()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-md">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+          <span>إضافة للفاتورة</span>
+        </button>
+      </div>
     </div>
   </div>
 

@@ -486,9 +486,12 @@ class App {
     });
 
     if (viewName === 'orders') {
-      window.ordersController?.loadOrders('pending');
-    } else if (viewName === 'delivery') {
-      window.deliverySettlementController?.init();
+      const isSettlement = document.getElementById('hub-panel-settlement')?.classList.contains('hidden') === false;
+      if (isSettlement) {
+        window.deliverySettlementController?.init();
+      } else {
+        window.ordersController?.loadOrders('pending');
+      }
     } else if (viewName === 'returns') {
       window.returnsController?.init();
     } else if (viewName === 'reports') {
@@ -501,6 +504,35 @@ class App {
 
     // Auto close mobile drawer menu if open
     this.closeDrawerMenu();
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  switchDeliveryHubSubTab(tab) {
+    const btnOrders = document.getElementById('hub-tab-orders');
+    const btnSettlement = document.getElementById('hub-tab-settlement');
+    const panelOrders = document.getElementById('hub-panel-orders');
+    const panelSettlement = document.getElementById('hub-panel-settlement');
+
+    if (tab === 'orders') {
+      btnOrders?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnOrders?.classList.remove('text-gray-600', 'dark:text-gray-300');
+      btnSettlement?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnSettlement?.classList.add('text-gray-600', 'dark:text-gray-300');
+
+      panelOrders?.classList.remove('hidden');
+      panelSettlement?.classList.add('hidden');
+      window.ordersController?.loadOrders('pending');
+    } else {
+      btnSettlement?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnSettlement?.classList.remove('text-gray-600', 'dark:text-gray-300');
+      btnOrders?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnOrders?.classList.add('text-gray-600', 'dark:text-gray-300');
+
+      panelSettlement?.classList.remove('hidden');
+      panelOrders?.classList.add('hidden');
+      window.deliverySettlementController?.init();
+    }
 
     if (window.lucide) window.lucide.createIcons();
   }

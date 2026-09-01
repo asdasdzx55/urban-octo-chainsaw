@@ -397,10 +397,10 @@ class POSScanner {
       return;
     }
 
-    // 2.5 If in purchases view -> immediately add/increment item in purchase cart!
+    // 2.5 If in purchases view -> route to purchasesController camera handler
     if (window.app && window.app.currentView === 'expenses' && window.expensesController?.currentMode === 'purchase') {
       if (this.autoCloseAfterScan) this.closeCameraModal();
-      window.purchasesController?.addProductByBarcode(parsed.isScale ? parsed.itemCode : barcode);
+      window.purchasesController?.handleCameraBarcodeScanned(parsed.isScale ? parsed.itemCode : barcode);
       return;
     }
 

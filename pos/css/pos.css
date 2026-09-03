@@ -59,15 +59,36 @@ h1, h2, h3, h4, h5, h6, p, span, div, td, th {
 
 /* Unified Product Card Styling */
 .product-card {
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   min-width: 0;
   overflow: hidden;
 }
 .product-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.14), 0 4px 8px -4px rgba(79, 70, 229, 0.08);
 }
 .product-card:active {
   transform: scale(0.97);
+}
+
+/* Category Pill Active Polish */
+.category-btn {
+  transition: all 0.15s ease;
+}
+.category-btn:hover:not(.bg-indigo-600) {
+  border-color: #818cf8;
+  color: #4f46e5;
+}
+
+/* Cart Item Hover Polish */
+.cart-item-highlight {
+  animation: flashGreen 0.6s ease-out;
+}
+.cart-item-row {
+  transition: all 0.15s ease;
+}
+.cart-item-row:hover {
+  background-color: rgba(99, 102, 241, 0.03);
 }
 
 /* Responsive Table Wrappers */

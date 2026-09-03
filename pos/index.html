@@ -116,8 +116,8 @@
         <span class="hidden sm:inline">تثبيت 📲</span>
       </button>
 
-      <!-- Camera Barcode Scanner Trigger -->
-      <button id="btn-open-scanner" class="h-9 px-2.5 sm:px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shadow-xs">
+      <!-- Camera Barcode Scanner Trigger (Mobile/Tablet Only - Hidden on Desktop) -->
+      <button id="btn-open-scanner" class="lg:hidden h-9 px-2.5 sm:px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shadow-xs">
         <i data-lucide="scan-barcode" class="w-4 h-4"></i>
         <span class="hidden sm:inline">مسح بالكاميرا</span>
       </button>
@@ -271,10 +271,16 @@
       <div class="col-span-1 lg:col-span-8 xl:col-span-8 2xl:col-span-8 flex flex-col gap-3 sm:gap-3.5">
         
         <!-- Search & Barcode Quick Input -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 sm:p-3 border border-gray-200/80 dark:border-gray-700 shadow-xs flex items-center gap-2">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 sm:p-3 border border-gray-200/80 dark:border-gray-700 shadow-xs flex items-center gap-2 sm:gap-3">
           <div class="relative flex-1">
             <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="product-search-input" placeholder="ابحث باسم المنتج، كود الصنف، أو امسح الباركود..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+            <input type="text" id="product-search-input" placeholder="ابحث باسم المنتج، كود الصنف، أو امسح الباركود بالسكنر..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <!-- Laser Scanner Status for Cashier PC -->
+          <div class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold shrink-0">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <i data-lucide="scan-barcode" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+            <span>سكنر الباركود جاهز</span>
           </div>
         </div>
 
@@ -480,7 +486,7 @@
             <i data-lucide="scan-barcode" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             <input type="text" id="return-search-input" onkeypress="if(event.key === 'Enter') window.returnsController.searchInvoice()" placeholder="أدخل رقم الفاتورة أو امسح الباركود (مثال: INV-4 أو 4)..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
           </div>
-          <button onclick="window.posScanner.openCameraModal()" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا لمسح باركود الفاتورة">
+          <button onclick="window.posScanner.openCameraModal()" class="lg:hidden p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا لمسح باركود الفاتورة">
             <i data-lucide="camera" class="w-4 h-4"></i>
           </button>
           <button id="btn-search-return" onclick="window.returnsController.searchInvoice()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">
@@ -548,7 +554,7 @@
             <i data-lucide="scan-barcode" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             <input type="text" id="inv-search-input" onkeypress="if(event.key === 'Enter') window.inventoryController.searchProductForAudit()" placeholder="امسح الباركود أو اكتب اسم الصنف للبحث..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2.5 text-xs sm:text-sm font-medium">
           </div>
-          <button onclick="window.posScanner.openCameraModal()" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا للمسح">
+          <button onclick="window.posScanner.openCameraModal()" class="lg:hidden p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="فتح الكاميرا للمسح">
             <i data-lucide="camera" class="w-4 h-4"></i>
           </button>
           <button onclick="window.inventoryController.searchProductForAudit()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">
@@ -676,7 +682,7 @@
                 </div>
                 <div class="flex items-center gap-1.5">
                   <input type="text" id="inv-prod-barcode" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-                  <button type="button" id="btn-scan-inv-barcode" onclick="window.inventoryController.scanBarcodeWithCamera()" class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shrink-0 flex items-center justify-center shadow-xs" title="فتح الكاميرا ومسح الباركود فوراً">
+                  <button type="button" id="btn-scan-inv-barcode" onclick="window.inventoryController.scanBarcodeWithCamera()" class="lg:hidden w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shrink-0 flex items-center justify-center shadow-xs" title="فتح الكاميرا ومسح الباركود فوراً">
                     <i data-lucide="camera" class="w-4 h-4"></i>
                   </button>
                 </div>
@@ -877,8 +883,8 @@
                 <input type="text" id="purch-search-input" oninput="window.purchasesController.onSearchInput(this.value)" placeholder="ابحث باسم الصنف، كوده، أو امسح الباركود..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
               </div>
 
-              <!-- Camera Scanner Button -->
-              <button type="button" onclick="window.purchasesController.openCameraScanner()" class="h-9 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:bg-indigo-100 transition flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 shrink-0" title="مسح باركود الصنف بكاميرا الهاتف">
+              <!-- Camera Scanner Button (Mobile only) -->
+              <button type="button" onclick="window.purchasesController.openCameraScanner()" class="lg:hidden h-9 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:bg-indigo-100 transition flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 shrink-0" title="مسح باركود الصنف بكاميرا الهاتف">
                 <i data-lucide="camera" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">مسح بالكاميرا</span>
               </button>
@@ -1862,7 +1868,7 @@
           <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الباركود الدولي:</label>
           <div class="flex items-center gap-1.5">
             <input type="text" id="new-purch-item-barcode" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
-            <button type="button" onclick="window.purchasesController.scanBarcodeForNewProduct()" class="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="مسح الباركود بكاميرا الهاتف">
+            <button type="button" onclick="window.purchasesController.scanBarcodeForNewProduct()" class="lg:hidden p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="مسح الباركود بكاميرا الهاتف">
               <i data-lucide="camera" class="w-4 h-4"></i>
             </button>
           </div>

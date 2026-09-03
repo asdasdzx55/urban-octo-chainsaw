@@ -122,13 +122,19 @@
         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
       </button>
 
+      <!-- Past Invoices Quick Button -->
+      <button type="button" onclick="window.cart?.openPastInvoicesModal()" class="h-9 px-2 sm:px-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-gray-600 dark:hover:text-indigo-400 transition flex items-center gap-1.5 cursor-pointer shadow-2xs" title="سجل الفواتير السابقة وإعادة الطباعة">
+        <i data-lucide="history" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+        <span class="text-xs font-bold hidden xl:inline">فواتير سابقة</span>
+      </button>
+
       <!-- Theme Switcher -->
-      <button id="btn-theme-toggle" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition flex items-center justify-center" title="تبديل المظهر">
+      <button id="btn-theme-toggle" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition flex items-center justify-center cursor-pointer" title="تبديل المظهر">
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
       </button>
 
       <!-- Settings Button -->
-      <button onclick="window.app.switchView('settings')" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center justify-center" title="إعدادات المتجر وبيانات الفاتورة">
+      <button onclick="window.app.switchView('settings')" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center justify-center cursor-pointer" title="إعدادات المتجر وبيانات الفاتورة">
         <i data-lucide="settings" class="w-4 h-4"></i>
       </button>
     </div>
@@ -216,10 +222,18 @@
             <span id="cart-badge-count" class="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">0</span>
           </div>
           
-          <button onclick="window.cart.clearCart()" class="text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1 transition">
-            <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-            تفريغ
-          </button>
+          <div class="flex items-center gap-1.5">
+            <!-- Past Invoices Button -->
+            <button type="button" onclick="window.cart?.openPastInvoicesModal()" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center gap-1 transition border border-indigo-200/80 dark:border-indigo-800/80 shadow-2xs cursor-pointer" title="عرض الفواتير السابقة وإعادة طباعتها">
+              <i data-lucide="history" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+              <span>فواتير سابقة 🧾</span>
+            </button>
+
+            <button onclick="window.cart.clearCart()" class="p-1 sm:px-2 sm:py-1 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center gap-1 transition cursor-pointer" title="تفريغ السلة">
+              <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">تفريغ</span>
+            </button>
+          </div>
         </div>
 
         <!-- Cart Items Scrollable List -->
@@ -1337,11 +1351,17 @@
       <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
         <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
           <i data-lucide="shopping-bag" class="w-4 h-4 text-indigo-600"></i>
-          سلة المشتريات
+          <span>سلة المشتريات</span>
         </h3>
-        <button onclick="window.app.toggleMobileCart()" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.cart?.openPastInvoicesModal()" class="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center gap-1 border border-indigo-200 dark:border-indigo-800" title="الفواتير السابقة">
+            <i data-lucide="history" class="w-3.5 h-3.5"></i>
+            <span>فواتير سابقة 🧾</span>
+          </button>
+          <button onclick="window.app.toggleMobileCart()" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Scrollable Items inside mobile drawer -->
@@ -1804,6 +1824,53 @@
       <div class="text-center pt-0.5">
         <button type="button" onclick="window.cart?.openReceiptInNewWindow()" class="text-[11px] font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 underline transition cursor-pointer">
           طباعة عبر نافذة مستقلة (في حال لم تفتح نافذة الطباعة) ↗️
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== PAST INVOICES MODAL ==================== -->
+  <div id="past-invoices-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-3xl p-4 sm:p-5 max-w-lg w-full flex flex-col gap-3.5 shadow-2xl max-h-[92vh] border border-gray-100 dark:border-gray-800 animate-scale-in">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-gray-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <i data-lucide="history" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white">سجل الفواتير السابقة</h3>
+            <p class="text-[11px] text-gray-500">إعادة طباعة أو معاينة أي فاتورة سابقة بنقرة واحدة</p>
+          </div>
+        </div>
+        <button onclick="window.cart?.closePastInvoicesModal()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition flex items-center justify-center cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Quick Search & Last Invoice Quick Print -->
+      <div class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" id="past-invoices-search" oninput="window.cart?.filterPastInvoices(this.value)" placeholder="ابحث برقم الفاتورة، اسم العميل..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl ps-8 pe-3 py-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <button onclick="window.cart?.reprintLastInvoice()" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer active:scale-95" title="إعادة طباعة آخر فاتورة تم إتمامها فوراً">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>آخر فاتورة 🖨️</span>
+        </button>
+      </div>
+
+      <!-- Invoices List Container -->
+      <div id="past-invoices-list" class="flex-1 overflow-y-auto max-h-[55vh] flex flex-col gap-2 p-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-800 text-center">
+        <button onclick="window.cart?.closePastInvoicesModal()" class="w-full py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition cursor-pointer">
+          إغلاق النافذة
         </button>
       </div>
 

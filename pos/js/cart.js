@@ -22,6 +22,11 @@ class POSCart {
     this.paidAmount = 0;
     this.instapayRef = '';
     this.vodafoneRef = '';
+    this.lastInvoice = null;
+    try {
+      const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+      if (completed.length > 0) this.lastInvoice = completed[0];
+    } catch(e) {}
   }
 
   /* ==================== CART ITEM ACTIONS ==================== */
@@ -877,30 +882,37 @@ class POSCart {
       const nextQty = isWeight ? parseFloat((item.qty + step).toFixed(3)) : item.qty + 1;
 
       return `
-        <div class="p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200 dark:border-gray-600/70 shadow-xs flex items-center justify-between gap-2.5 cart-item-highlight">
+        <div class="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200/90 dark:border-gray-600/70 shadow-2xs flex items-center justify-between gap-2 cart-item-highlight transition">
+          
+          <!-- Product Name & Unit Price -->
           <div class="flex-1 min-w-0">
-            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">${item.name}</h4>
-            <div class="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate" title="${item.name}">${item.name}</h4>
+            <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
               <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
               ${item.local_code ? `<span class="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-600 rounded text-[9px] font-mono font-bold">${item.local_code}</span>` : ''}
-              ${isWeight ? `<span class="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold">⚖️ وزن</span>` : ''}
             </div>
           </div>
 
-          <!-- Quantity Control -->
-          <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl p-1 shrink-0 border border-gray-200 dark:border-gray-600">
-            <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs shadow-xs hover:bg-gray-200">-</button>
-            <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-bold text-xs text-gray-900 dark:text-white font-mono ${isWeight ? 'cursor-pointer hover:text-indigo-600 hover:underline' : ''}">
-              ${isWeight ? parseFloat(item.qty).toFixed(3) + ' كجم' : item.qty}
-            </span>
-            <button onclick="window.cart.updateQty(${item.product_id}, ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs hover:bg-indigo-700">+</button>
+          <!-- Quantity / Weight Control -->
+          <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl p-0.5 shrink-0 border border-gray-200 dark:border-gray-600 shadow-2xs">
+            <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition" title="تقليل">-</button>
+            
+            <div onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center min-w-[48px] ${isWeight ? 'cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-md transition' : ''}" title="${isWeight ? 'اضغط لتعديل الوزن يدوياً' : ''}">
+              <span class="font-bold text-xs text-gray-900 dark:text-white font-mono block leading-none">
+                ${isWeight ? parseFloat(item.qty).toFixed(3) : item.qty}
+              </span>
+              ${isWeight ? '<span class="text-[9px] text-amber-600 dark:text-amber-400 font-bold block leading-none mt-0.5">كجم ⚖️</span>' : '<span class="text-[9px] text-gray-400 font-medium block leading-none mt-0.5">قطعة</span>'}
+            </div>
+
+            <button onclick="window.cart.updateQty(${item.product_id}, ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs active:scale-95 transition" title="زيادة">+</button>
           </div>
 
-          <!-- Item Total & Delete -->
+          <!-- Total & Remove -->
           <div class="text-left shrink-0 min-w-[55px]">
             <div class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${(item.price * item.qty).toFixed(2)}</div>
-            <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 font-bold hover:underline">حذف ✕</button>
+            <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline transition cursor-pointer">حذف ✕</button>
           </div>
+
         </div>
       `;
     }).join('');
@@ -915,6 +927,187 @@ class POSCart {
     if (emptyNotice) emptyNotice.classList.add('hidden');
     if (listContainer) listContainer.innerHTML = itemsHTML;
     if (mobileListContainer) mobileListContainer.innerHTML = itemsHTML;
+  }
+
+  /* ==================== PAST INVOICES MANAGEMENT ==================== */
+  openPastInvoicesModal() {
+    const modal = document.getElementById('past-invoices-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    const searchInput = document.getElementById('past-invoices-search');
+    if (searchInput) {
+      searchInput.value = '';
+      setTimeout(() => searchInput.focus(), 100);
+    }
+
+    const orders = this.getCompletedOrders();
+    this.renderPastInvoices(orders);
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closePastInvoicesModal() {
+    const modal = document.getElementById('past-invoices-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  getCompletedOrders() {
+    try {
+      return JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+    } catch(e) {
+      return [];
+    }
+  }
+
+  renderPastInvoices(orders) {
+    const list = document.getElementById('past-invoices-list');
+    if (!list) return;
+
+    if (!orders || orders.length === 0) {
+      list.innerHTML = `
+        <div class="py-12 text-center text-gray-400">
+          <i data-lucide="receipt" class="w-12 h-12 mx-auto mb-2 opacity-30"></i>
+          <p class="text-xs font-bold">لا توجد فواتير سابقة مسجلة على هذا الجهاز</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">تظهر هنا الفواتير فور إتمام عمليات البيع تلقائياً</p>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    list.innerHTML = orders.slice(0, 50).map(ord => {
+      const isDelivery = ord.order_type === 'delivery';
+      const itemCount = Array.isArray(ord.items) ? ord.items.length : 0;
+      const orderId = ord.order_id || ord.id || 'N/A';
+      const total = parseFloat(ord.total || 0).toFixed(2);
+      const dateStr = ord.created_at || '';
+      const customer = ord.customer_name || (isDelivery ? 'عميل دليفري' : 'عميل نقدي');
+
+      return `
+        <div class="p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition flex items-center justify-between gap-2.5 shadow-2xs">
+          
+          <!-- Order Info -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-xs text-indigo-600 dark:text-indigo-400 font-mono">#${orderId}</span>
+              <span class="text-[10px] text-gray-400 truncate">${dateStr}</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${isDelivery ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}">
+                ${isDelivery ? '🛵 دليفري' : '🛒 صالة'}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 mt-1 text-[11px] text-gray-600 dark:text-gray-300 truncate">
+              <span class="font-bold truncate">${customer}</span>
+              <span class="text-gray-400">• (${itemCount} صنف)</span>
+              <span class="text-gray-400 font-mono">• ${ord.payment_method || 'نقدي'}</span>
+            </div>
+          </div>
+
+          <!-- Total & Print Actions -->
+          <div class="shrink-0 flex items-center gap-1.5 text-left">
+            <div class="text-xs sm:text-sm font-black font-mono text-gray-900 dark:text-white ps-1">
+              ${total} ج.م
+            </div>
+
+            <!-- Preview Button -->
+            <button onclick="window.cart.previewInvoiceById('${orderId}')" class="p-1.5 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition cursor-pointer" title="معاينة الفاتورة">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <!-- Print Button -->
+            <button onclick="window.cart.reprintInvoiceById('${orderId}')" class="py-1.5 px-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 transition shadow-2xs cursor-pointer active:scale-95" title="طباعة فورية">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+              <span>طباعة</span>
+            </button>
+          </div>
+
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  filterPastInvoices(query) {
+    const orders = this.getCompletedOrders();
+    if (!query || !query.trim()) {
+      this.renderPastInvoices(orders);
+      return;
+    }
+    const q = query.trim().toLowerCase();
+    const filtered = orders.filter(ord => {
+      const oId = String(ord.order_id || ord.id || '').toLowerCase();
+      const cust = String(ord.customer_name || '').toLowerCase();
+      const phone = String(ord.customer_phone || ord.phone || '');
+      const barcode = String(ord.invoice_barcode || '').toLowerCase();
+      const total = String(ord.total || '');
+      return oId.includes(q) || cust.includes(q) || phone.includes(q) || barcode.includes(q) || total.includes(q);
+    });
+    this.renderPastInvoices(filtered);
+  }
+
+  reprintLastInvoice() {
+    let inv = this.lastInvoice;
+    if (!inv) {
+      const orders = this.getCompletedOrders();
+      if (orders.length > 0) inv = orders[0];
+    }
+
+    if (!inv) {
+      window.app?.showToast('لا توجد فواتير سابقة لطباعتها', 'warning');
+      return;
+    }
+
+    window.app?.showToast(`جاري طباعة آخر فاتورة #${inv.order_id}... 🖨️`, 'info');
+    this.printInvoice(inv);
+  }
+
+  reprintInvoiceById(orderId) {
+    const orders = this.getCompletedOrders();
+    const found = orders.find(o => String(o.order_id || o.id) === String(orderId));
+    if (found) {
+      window.app?.showToast(`جاري طباعة الفاتورة #${orderId}... 🖨️`, 'info');
+      this.printInvoice(found);
+      return;
+    }
+
+    // Fallback: search in server
+    window.app?.showLoading(true, 'جاري سحب الفاتورة للطباعة...');
+    window.api.getOrderDetails(orderId).then(res => {
+      window.app?.showLoading(false);
+      if (res && res.success && res.order) {
+        this.printInvoice(res.order);
+      } else {
+        window.app?.showToast('لم يتم العثور على الفاتورة', 'error');
+      }
+    }).catch(e => {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ في جلب الفاتورة: ${e.message}`, 'error');
+    });
+  }
+
+  previewInvoiceById(orderId) {
+    const orders = this.getCompletedOrders();
+    const found = orders.find(o => String(o.order_id || o.id) === String(orderId));
+    if (found) {
+      this.closePastInvoicesModal();
+      this.showReceiptModal(found);
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري سحب الفاتورة...');
+    window.api.getOrderDetails(orderId).then(res => {
+      window.app?.showLoading(false);
+      if (res && res.success && res.order) {
+        this.closePastInvoicesModal();
+        this.showReceiptModal(res.order);
+      } else {
+        window.app?.showToast('لم يتم العثور على الفاتورة', 'error');
+      }
+    }).catch(e => {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ: ${e.message}`, 'error');
+    });
   }
 }
 

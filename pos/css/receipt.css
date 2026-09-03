@@ -297,7 +297,7 @@
 
   /* Completely hide every element on page except the dedicated print area */
   header, main, nav, footer, #mobile-nav-drawer, #mobile-cart-drawer,
-  #checkout-modal, #receipt-modal, #new-supplier-modal,
+  #checkout-modal, #receipt-modal, #past-invoices-modal, #new-supplier-modal,
   #new-product-audit-modal, #new-custom-product-modal, #weight-modal,
   #global-loader, .no-print {
     display: none !important;

@@ -622,6 +622,10 @@ class POSCart {
   }
 
   printReceiptDirectly() {
+    if (this.isPrinting) return;
+    this.isPrinting = true;
+    setTimeout(() => { this.isPrinting = false; }, 2000);
+
     if (!this.lastInvoice) {
       window.print();
       return;
@@ -695,10 +699,7 @@ class POSCart {
 
   printInvoice(inv) {
     if (!inv && this.lastInvoice) inv = this.lastInvoice;
-    if (!inv) {
-      window.print();
-      return;
-    }
+    if (!inv) return;
 
     // 1. Get receipt content (from modal container if already rendered with SVG barcode)
     const container = document.getElementById('receipt-view-container');
@@ -744,20 +745,20 @@ class POSCart {
       `);
       frameDoc.close();
 
-      // Trigger print from the parent window via setTimeout
-      setTimeout(() => {
-        try {
-          printFrame.contentWindow.focus();
-          printFrame.contentWindow.print();
-        } catch(frameErr) {
-          console.warn('Iframe print error, falling back to window.print():', frameErr);
-          window.print();
-        }
-      }, 250);
+      // Trigger print ONCE cleanly after layout paint
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          try {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+          } catch(frameErr) {
+            console.warn('Iframe print error:', frameErr);
+          }
+        }, 250);
+      });
 
     } catch (e) {
-      console.warn('Iframe print initialization error, falling back to window.print():', e);
-      window.print();
+      console.warn('Iframe print initialization error:', e);
     }
   }
 

@@ -83,17 +83,20 @@ class App {
       const res = await window.api.ping();
       if (badge) {
         if (res && (res.status === 'online' || res.status === 'ok' || res.success !== false)) {
-          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متصل بالسيرفر`;
-          badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+          badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50 animate-pulse"></span>`;
+          badge.title = 'متصل بالسيرفر (Online)';
+          badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/15 border border-emerald-500/30 shrink-0';
         } else {
-          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> غير متصل`;
-          badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+          badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>`;
+          badge.title = 'غير متصل بالسيرفر (Offline)';
+          badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/15 border border-rose-500/30 shrink-0';
         }
       }
     } catch (e) {
       if (badge) {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> غير متصل`;
-        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+        badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>`;
+        badge.title = 'غير متصل بالسيرفر (Offline)';
+        badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/15 border border-rose-500/30 shrink-0';
       }
     }
   }

@@ -62,8 +62,8 @@
           سوبر ماركت المنزل السوري
         </h1>
         <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
-          <span id="server-status-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 truncate max-w-[150px]">
-            جاري الاتصال...
+          <span id="server-status-badge" class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" title="جاري الاتصال...">
+            <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
         </div>
@@ -1794,7 +1794,7 @@
           <span>واتساب 📲</span>
         </button>
 
-        <button id="btn-print-receipt" onclick="window.cart?.printReceiptDirectly()" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer">
+        <button id="btn-print-receipt" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer">
           <i data-lucide="printer" class="w-4 h-4"></i>
           <span>طباعة فورية 🖨️</span>
         </button>

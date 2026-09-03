@@ -326,36 +326,28 @@ class POSSyncManager {
     const pendingCount = this.getPendingCount();
 
     if (this.isSyncing) {
-      badge.innerHTML = `
-        <span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
-        <span>جاري المزامنة (${pendingCount})...</span>
-      `;
-      badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 transition shadow-2xs';
+      badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></span>`;
+      badge.title = `جاري المزامنة (${pendingCount} معلقة)...`;
+      badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/15 border border-blue-500/30 shrink-0';
       return;
     }
 
     if (this.isOnline) {
       if (pendingCount > 0) {
-        badge.innerHTML = `
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-          <span>متصل (${pendingCount} معلقة 🔄)</span>
-        `;
-        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 cursor-pointer shadow-2xs hover:bg-amber-100 transition';
+        badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>`;
+        badge.title = `متصل بالسيرفر (${pendingCount} معلقة - اضغط للمزامنة)`;
+        badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/15 border border-emerald-500/30 shrink-0 cursor-pointer';
         badge.onclick = () => this.processPendingQueues();
       } else {
-        badge.innerHTML = `
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>متصل أونلاين</span>
-        `;
-        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs';
+        badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>`;
+        badge.title = 'متصل بالسيرفر (Online)';
+        badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/15 border border-emerald-500/30 shrink-0';
         badge.onclick = null;
       }
     } else {
-      badge.innerHTML = `
-        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span>وضع أوفلاين ${pendingCount > 0 ? `(${pendingCount} معلقة)` : '(محلي)'}</span>
-      `;
-      badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs';
+      badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>`;
+      badge.title = `غير متصل بالسيرفر (Offline) ${pendingCount > 0 ? `(${pendingCount} معلقة)` : ''}`;
+      badge.className = 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/15 border border-rose-500/30 shrink-0';
       badge.onclick = null;
     }
   }

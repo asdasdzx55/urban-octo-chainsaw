@@ -36,9 +36,9 @@ class ExpensesController {
 
     document.querySelectorAll('.expense-mode-btn').forEach(btn => {
       if (btn.getAttribute('data-mode') === mode) {
-        btn.className = 'expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition';
+        btn.className = 'expense-mode-btn py-2.5 px-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition';
       } else {
-        btn.className = 'expense-mode-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center gap-1.5 transition';
+        btn.className = 'expense-mode-btn py-2.5 px-2.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition';
       }
     });
 

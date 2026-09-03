@@ -991,7 +991,7 @@ class App {
       document.getElementById('receipt-modal')?.classList.add('hidden');
     });
     document.getElementById('btn-print-receipt')?.addEventListener('click', () => {
-      window.print();
+      window.cart?.printReceiptDirectly();
     });
 
     // Cash calculation listener

@@ -405,26 +405,19 @@ class POSCart {
     } catch(e) {}
   }
 
-  /* ==================== THERMAL RECEIPT RENDERING ==================== */
-  showReceiptModal(inv) {
-    const modal = document.getElementById('receipt-modal');
-    const container = document.getElementById('receipt-view-container');
-    const printArea = document.getElementById('receipt-print-area');
-    if (!modal || !container) return;
+  /* ==================== NATURAL BLACK & WHITE RECEIPT RENDERING & PRINTING ==================== */
+  buildReceiptHTML(inv) {
+    if (!inv) return '';
 
-    this.lastInvoice = inv;
-
-    let badgeClass = 'receipt-badge-cash';
-    let pmDisplay = '💵 نقدي (كاش)';
+    let pmDisplay = 'نقدي (كاش)';
     if (inv.payment_method === 'فودافون كاش' || inv.payment_method === 'vodafone_cash') {
-      badgeClass = 'receipt-badge-vodafone';
-      pmDisplay = '📱 فودافون كاش';
+      pmDisplay = 'فودافون كاش';
     } else if (inv.payment_method === 'انستا باي' || inv.payment_method === 'instapay') {
-      badgeClass = 'receipt-badge-instapay';
-      pmDisplay = '⚡ إنستاباي';
+      pmDisplay = 'إنستاباي';
     } else if (inv.payment_method === 'فيزا' || inv.payment_method === 'card') {
-      badgeClass = 'receipt-badge-card';
-      pmDisplay = '💳 بطاقة بنكية';
+      pmDisplay = 'بطاقة بنكية';
+    } else if (inv.payment_method) {
+      pmDisplay = inv.payment_method;
     }
 
     const store = window.settingsController ? window.settingsController.getStoreInfo() : {
@@ -432,197 +425,289 @@ class POSCart {
       store_phone: '01000000000',
       store_phone2: '',
       store_address: 'القاهرة - مصر',
-      receipt_sub: 'أشهى المأكولات والمنتجات السورية الأصلية',
-      receipt_footer: 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاستبدال والاسترجاع خلال 14 يوماً'
+      receipt_sub: 'للمنتجات والمواد الغذائية السورية الأصلية',
+      receipt_footer: 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاستبدال والاسترجاع'
     };
 
     const phones = [store.store_phone, store.store_phone2].filter(Boolean);
     const phonesText = phones.join(' • ');
+    const totalQtyCount = inv.items ? inv.items.reduce((acc, itm) => acc + (parseFloat(itm.qty) || 1), 0) : 0;
+    const isDelivery = inv.order_type === 'delivery' || parseFloat(inv.delivery_fee) > 0 || !!inv.address;
+    const isPrepaid = inv.delivery_pay_mode === 'prepaid' || (parseFloat(inv.paid_amount) >= parseFloat(inv.total) && inv.amount_to_collect === 0);
 
-    const totalQtyCount = inv.items.reduce((acc, itm) => acc + (parseFloat(itm.qty) || 1), 0);
-
-    const receiptHTML = `
-      <div class="thermal-receipt">
+    return `
+      <div class="bw-receipt">
         
         <!-- Header -->
-        <div class="receipt-header">
-          <div class="receipt-store-logo">🏪</div>
-          <h2 class="receipt-store-title">${store.store_name}</h2>
-          ${store.receipt_sub ? `<div class="receipt-store-sub">${store.receipt_sub}</div>` : ''}
-          ${phonesText ? `<div class="receipt-store-info"><span>📞 هاتف:</span> <b style="font-family: monospace;">${phonesText}</b></div>` : ''}
-          ${store.store_address ? `<div class="receipt-store-info"><span>📍</span> <span>${store.store_address}</span></div>` : ''}
+        <div class="bw-header">
+          <h1 class="bw-title">${store.store_name}</h1>
+          <div class="bw-sub">${store.receipt_sub || 'للمنتجات والمواد الغذائية السورية'}</div>
+          ${phonesText ? `<div class="bw-info"><b>هاتف:</b> <span class="bw-mono">${phonesText}</span></div>` : ''}
+          ${store.store_address ? `<div class="bw-info"><b>العنوان:</b> ${store.store_address}</div>` : ''}
         </div>
 
-        <!-- Invoice Info Metadata Box -->
-        <div class="receipt-meta">
-          <div class="receipt-meta-row">
-            <span class="receipt-meta-label">رقم الفاتورة:</span>
-            <span class="receipt-meta-val" style="font-family: monospace; font-size: 13px;">#${inv.order_id}</span>
-          </div>
-          <div class="receipt-meta-row">
-            <span class="receipt-meta-label">التاريخ والوقت:</span>
-            <span class="receipt-meta-val" style="font-family: monospace; font-size: 10.5px;">${inv.created_at}</span>
-          </div>
-          <div class="receipt-meta-row">
-            <span class="receipt-meta-label">الكاشير / المنفذ:</span>
-            <span class="receipt-meta-val">${inv.cashier || 'كاشير 1'}</span>
-          </div>
-          <div class="receipt-meta-row">
-            <span class="receipt-meta-label">العميل:</span>
-            <span class="receipt-meta-val">${inv.customer_name || 'عميل نقدي'}</span>
-          </div>
-          <div class="receipt-meta-row" style="margin-top: 4px; padding-top: 3px; border-top: 1px dotted #e5e7eb;">
-            <span class="receipt-meta-label">طريقة الدفع:</span>
-            <span class="receipt-badge ${badgeClass}">${pmDisplay}</span>
-          </div>
+        <div class="bw-divider-double"></div>
 
-          ${(inv.order_type === 'delivery' || inv.delivery_fee > 0 || inv.address) ? `
-            <div style="background:#f0fdf4; border:1px dashed #86efac; border-radius:8px; padding:6px; margin-top:6px; font-size:11px;">
-              <div style="font-weight:bold; color:#15803d; text-align:center; margin-bottom:3px;">🛵 فاتورة توصيل منزلي (دليفري)</div>
-              <div class="receipt-meta-row" style="margin:2px 0;">
-                <span class="receipt-meta-label">الهاتف:</span>
-                <span class="receipt-meta-val" style="font-family:monospace;">${inv.customer_phone || inv.phone || '-'}</span>
-              </div>
-              <div class="receipt-meta-row" style="margin:2px 0;">
-                <span class="receipt-meta-label">الطيار:</span>
-                <span class="receipt-meta-val">${inv.delivery_person || 'غير محدد'}</span>
-              </div>
+        <!-- Invoice Details Table -->
+        <table class="bw-meta-table">
+          <tr>
+            <td style="width: 50%;"><b>رقم الفاتورة:</b> <span class="bw-mono">#${inv.order_id}</span></td>
+            <td style="width: 50%; text-align: left;"><b>التاريخ:</b> <span class="bw-mono">${inv.created_at || new Date().toLocaleString('ar-EG')}</span></td>
+          </tr>
+          <tr>
+            <td><b>الكاشير:</b> ${inv.cashier || 'كاشير 1'}</td>
+            <td style="text-align: left;"><b>العميل:</b> ${inv.customer_name || 'عميل نقدي'}</td>
+          </tr>
+          <tr>
+            <td colspan="2"><b>طريقة الدفع:</b> ${pmDisplay}</td>
+          </tr>
+        </table>
+
+        <!-- Delivery Box If Applicable -->
+        ${isDelivery ? `
+          <div class="bw-delivery-box">
+            <div class="bw-delivery-title">🛵 طلب توصيل منزلي (دليفري)</div>
+            <table class="bw-meta-table">
+              <tr>
+                <td><b>الهاتف:</b> <span class="bw-mono">${inv.customer_phone || inv.phone || '-'}</span></td>
+                <td style="text-align: left;"><b>الطيار:</b> ${inv.delivery_person || 'غير محدد'}</td>
+              </tr>
               ${inv.address ? `
-                <div style="margin-top:3px; color:#374151;">
-                  <span class="receipt-meta-label">العنوان:</span>
-                  <span class="receipt-meta-val" style="font-weight:bold;">${inv.address}</span>
-                </div>
+                <tr>
+                  <td colspan="2"><b>العنوان:</b> ${inv.address}</td>
+                </tr>
               ` : ''}
-              <div style="margin-top:4px; padding-top:4px; border-top:1px dashed #bbf7d0; text-align:center;">
-                ${(inv.delivery_pay_mode === 'prepaid' || (inv.paid_amount >= inv.total && inv.amount_to_collect === 0)) ? `
-                  <span style="font-weight:bold; color:#15803d;">✅ مدفوعة مسبقاً (${inv.payment_method}) - لا يُحصل أي مبلغ</span>
-                ` : `
-                  <span style="font-weight:bold; color:#b45309;">⏳ تحصيل عند الاستلام: <b>${parseFloat(inv.total).toFixed(2)} ج.م</b></span>
-                `}
-              </div>
-            </div>
-          ` : ''}
-        </div>
+              <tr>
+                <td colspan="2" style="text-align: center; font-weight: bold; padding-top: 3px; border-top: 1px dashed #000;">
+                  ${isPrepaid ? '✅ مدفوعة مسبقاً (لا يُحصل أي مبلغ)' : `⏳ تحصيل عند الاستلام: ${parseFloat(inv.total).toFixed(2)} ج.م`}
+                </td>
+              </tr>
+            </table>
+          </div>
+        ` : ''}
 
-        <!-- Items Table -->
-        <table class="receipt-items-table">
+        <div class="bw-divider-solid"></div>
+
+        <!-- Items Table (جدول الأصناف الأسود والأبيض المنسق) -->
+        <table class="bw-items-table">
           <thead>
             <tr>
-              <th style="width: 46%; text-align: right;">الصنف</th>
-              <th style="width: 20%; text-align: center;">الكمية</th>
-              <th style="width: 16%; text-align: center;">السعر</th>
-              <th style="width: 18%; text-align: left;">المجموع</th>
+              <th class="th-num">م</th>
+              <th class="th-name">الصنف والبيان</th>
+              <th class="th-qty">الكمية</th>
+              <th class="th-price">السعر</th>
+              <th class="th-total">المجموع</th>
             </tr>
           </thead>
           <tbody>
-            ${inv.items.map(item => {
+            ${inv.items && inv.items.map((item, idx) => {
               const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
-              const qtyDisplay = isWeight ? `${parseFloat(item.qty).toFixed(3)} كجم` : `${item.qty}`;
+              const qtyDisplay = isWeight ? `${parseFloat(item.qty).toFixed(3)} كجم` : `${item.qty} ق`;
               const lineTotal = (parseFloat(item.price) * parseFloat(item.qty)).toFixed(2);
               return `
-              <tr>
-                <td>
-                  <div class="receipt-item-name">${item.name}</div>
-                  <div class="receipt-item-details">${isWeight ? '⚖️ ميزان بالوزن' : '📦 بالقطعة'}</div>
-                </td>
-                <td style="text-align: center; font-family: monospace; font-weight: 700;">${qtyDisplay}</td>
-                <td style="text-align: center; font-family: monospace;">${parseFloat(item.price).toFixed(2)}</td>
-                <td style="text-align: left; font-family: monospace; font-weight: 800; color: #111827;">${lineTotal}</td>
-              </tr>
-            `;
+                <tr>
+                  <td class="td-num">${idx + 1}</td>
+                  <td class="td-name">
+                    <div class="item-title">${item.name}</div>
+                    ${item.local_code ? `<span class="item-code">كود: ${item.local_code}</span>` : ''}
+                  </td>
+                  <td class="td-qty">${qtyDisplay}</td>
+                  <td class="td-price">${parseFloat(item.price).toFixed(2)}</td>
+                  <td class="td-total">${lineTotal}</td>
+                </tr>
+              `;
             }).join('')}
           </tbody>
         </table>
 
-        <!-- Totals Section -->
-        <div class="receipt-totals">
-          <div class="receipt-total-row">
-            <span>المجموع الفرعي:</span>
-            <span style="font-family: monospace; font-weight: 700;">${parseFloat(inv.subtotal).toFixed(2)} ج.م</span>
-          </div>
+        <div class="bw-divider-solid"></div>
+
+        <!-- Totals & Payment Summary Table -->
+        <table class="bw-summary-table">
+          <tr>
+            <td>المجموع الفرعي:</td>
+            <td class="bw-val">${parseFloat(inv.subtotal || inv.total).toFixed(2)} ج.م</td>
+          </tr>
 
           ${parseFloat(inv.discount) > 0 ? `
-            <div class="receipt-total-row discount">
-              <span>الخصم الممنوح:</span>
-              <span style="font-family: monospace;">-${parseFloat(inv.discount).toFixed(2)} ج.م</span>
-            </div>
+            <tr>
+              <td>الخصم الممنوح:</td>
+              <td class="bw-val">-${parseFloat(inv.discount).toFixed(2)} ج.م</td>
+            </tr>
           ` : ''}
 
           ${(inv.delivery_fee && parseFloat(inv.delivery_fee) > 0) ? `
-            <div class="receipt-total-row">
-              <span>خدمة التوصيل (دليفري):</span>
-              <span style="font-family: monospace;">+${parseFloat(inv.delivery_fee).toFixed(2)} ج.م</span>
-            </div>
+            <tr>
+              <td>خدمة التوصيل (دليفري):</td>
+              <td class="bw-val">+${parseFloat(inv.delivery_fee).toFixed(2)} ج.م</td>
+            </tr>
           ` : ''}
 
-          <div class="receipt-total-row receipt-grand-total">
-            <span>الإجمالي الصافي المطلوب:</span>
-            <span class="total-val">${parseFloat(inv.total).toFixed(2)} ج.م</span>
-          </div>
+          <tr class="bw-grand-row">
+            <td>الإجمالي النهائي المطلوب:</td>
+            <td class="bw-grand-val">${parseFloat(inv.total).toFixed(2)} ج.م</td>
+          </tr>
 
-          ${inv.order_type === 'delivery' ? `
-            <div class="receipt-cash-breakdown">
-              <div class="receipt-total-row" style="font-weight:bold; font-size:12px; color:${(inv.delivery_pay_mode === 'prepaid' || inv.amount_to_collect === 0) ? '#15803d' : '#b45309'};">
-                <span>المطلوب تحصيله من العميل:</span>
-                <span style="font-family:monospace; font-size:13px;">${(inv.delivery_pay_mode === 'prepaid' || inv.amount_to_collect === 0) ? '0.00 ج.م (خالص)' : parseFloat(inv.total).toFixed(2) + ' ج.م'}</span>
-              </div>
-            </div>
-          ` : `
-            ${(inv.payment_method === 'cash' || inv.payment_method === 'نقدي' || !inv.payment_method) ? `
-              <div class="receipt-cash-breakdown">
-                <div class="receipt-total-row" style="margin-bottom: 2px;">
-                  <span>المبلغ المدفوع من العميل:</span>
-                  <span style="font-family: monospace;">${parseFloat(inv.paid_amount || inv.total).toFixed(2)} ج.م</span>
-                </div>
-                <div class="receipt-total-row" style="font-weight: 800; color: #059669;">
-                  <span>المتبقي للعميل (الباقي):</span>
-                  <span style="font-family: monospace; font-size: 13px;">${parseFloat(inv.change || 0).toFixed(2)} ج.م</span>
-                </div>
-              </div>
-            ` : ''}
-          `}
+          ${(!isDelivery && (inv.payment_method === 'cash' || inv.payment_method === 'نقدي' || !inv.payment_method)) ? `
+            <tr>
+              <td>المبلغ المدفوع نقداً:</td>
+              <td class="bw-val">${parseFloat(inv.paid_amount || inv.total).toFixed(2)} ج.م</td>
+            </tr>
+            <tr>
+              <td>المتبقي (الباقي للعميل):</td>
+              <td class="bw-val" style="font-weight: 900; font-size: 13px;">${parseFloat(inv.change || 0).toFixed(2)} ج.م</td>
+            </tr>
+          ` : ''}
 
-          <div style="font-size: 10px; color: #6b7280; text-align: center; margin-top: 6px; padding-top: 4px; border-top: 1px dotted #e5e7eb;">
-            إجمالي عدد الأصناف: <b>${inv.items.length}</b> صنف (<b>${totalQtyCount % 1 === 0 ? totalQtyCount : totalQtyCount.toFixed(3)}</b> كمية)
-          </div>
+          <tr>
+            <td colspan="2" style="text-align: center; font-size: 10px; padding-top: 4px; border-top: 1px dashed #000;">
+              عدد الأصناف: <b>${inv.items ? inv.items.length : 0}</b> صنف (<b>${totalQtyCount % 1 === 0 ? totalQtyCount : totalQtyCount.toFixed(3)}</b> كمية)
+            </td>
+          </tr>
+        </table>
+
+        <!-- Barcode Section -->
+        <div class="bw-barcode">
+          <svg class="receipt-svg-barcode" data-barcode="${inv.invoice_barcode || `INV-${inv.order_id}`}"></svg>
+          <div class="bw-barcode-text">${inv.invoice_barcode || `INV-${inv.order_id}`}</div>
         </div>
 
-        <!-- Barcode -->
-        <div class="receipt-barcode-container">
-          <svg id="receipt-svg-barcode"></svg>
-        </div>
+        <div class="bw-divider-double"></div>
 
-        <!-- Footer -->
-        <div class="receipt-footer">
+        <!-- Receipt Footer -->
+        <div class="bw-footer">
           <p><b>${store.receipt_footer || 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاسترجاع'}</b></p>
-          <p class="tax-note">الأسعار شاملة ضريبة القيمة المضافة • نظام كاشير المنزل السوري 2026</p>
+          <p style="font-size: 9.5px; margin-top: 2px;">الأسعار شاملة الضريبة • نظام كاشير المنزل السوري 2026</p>
         </div>
 
       </div>
     `;
+  }
+
+  renderBarcodes(inv) {
+    if (!window.JsBarcode) return;
+    try {
+      document.querySelectorAll(".receipt-svg-barcode").forEach(el => {
+        const code = el.getAttribute('data-barcode') || (inv ? (inv.invoice_barcode || `INV-${inv.order_id}`) : 'INV-0');
+        window.JsBarcode(el, code, {
+          format: "CODE128",
+          width: 1.5,
+          height: 36,
+          displayValue: false,
+          margin: 2
+        });
+      });
+    } catch (e) {
+      console.warn('JsBarcode render error:', e);
+    }
+  }
+
+  showReceiptModal(inv) {
+    const modal = document.getElementById('receipt-modal');
+    const container = document.getElementById('receipt-view-container');
+    const printArea = document.getElementById('receipt-print-area');
+    if (!modal || !container) return;
+
+    this.lastInvoice = inv;
+    const receiptHTML = this.buildReceiptHTML(inv);
 
     container.innerHTML = receiptHTML;
     if (printArea) printArea.innerHTML = receiptHTML;
 
-    // Render Barcode via JsBarcode
-    try {
-      if (window.JsBarcode) {
-        window.JsBarcode("#receipt-svg-barcode", inv.invoice_barcode || `INV-${inv.order_id}`, {
-          format: "CODE128",
-          width: 1.6,
-          height: 38,
-          displayValue: true,
-          fontSize: 11,
-          font: "monospace",
-          margin: 4
-        });
-      }
-    } catch (e) {
-      console.warn('Barcode render notice:', e);
-    }
+    // Render Barcodes on all SVG elements
+    this.renderBarcodes(inv);
 
     modal.classList.remove('hidden');
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  printReceiptDirectly() {
+    if (!this.lastInvoice) {
+      window.print();
+      return;
+    }
+    this.printInvoice(this.lastInvoice);
+  }
+
+  printInvoice(inv) {
+    if (!inv && this.lastInvoice) inv = this.lastInvoice;
+    if (!inv) {
+      window.print();
+      return;
+    }
+
+    // Update global print area for standard window.print()
+    const printArea = document.getElementById('receipt-print-area');
+    const receiptHTML = this.buildReceiptHTML(inv);
+    if (printArea) {
+      printArea.innerHTML = receiptHTML;
+      this.renderBarcodes(inv);
+    }
+
+    // Modern isolated printing using hidden iframe
+    try {
+      let printFrame = document.getElementById('receipt-hidden-print-frame');
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'receipt-hidden-print-frame';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        printFrame.style.visibility = 'hidden';
+        document.body.appendChild(printFrame);
+      }
+
+      const frameDoc = printFrame.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>فاتورة رقم #${inv.order_id}</title>
+          <link rel="stylesheet" href="css/receipt.css">
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            body { margin: 0; padding: 2mm 3mm; background: #fff !important; color: #000 !important; }
+            .bw-receipt { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+          </style>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+        </head>
+        <body>
+          ${receiptHTML}
+          <script>
+            window.onload = function() {
+              try {
+                if (window.JsBarcode) {
+                  document.querySelectorAll(".receipt-svg-barcode").forEach(function(el) {
+                    var code = el.getAttribute('data-barcode') || 'INV-${inv.order_id}';
+                    window.JsBarcode(el, code, {
+                      format: "CODE128",
+                      width: 1.5,
+                      height: 36,
+                      displayValue: false,
+                      margin: 2
+                    });
+                  });
+                }
+              } catch(e) {}
+              setTimeout(function() {
+                window.focus();
+                window.print();
+              }, 120);
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      frameDoc.close();
+    } catch (e) {
+      console.warn('Iframe print error, falling back to window.print():', e);
+      window.print();
+    }
   }
 
   shareReceiptWhatsApp() {

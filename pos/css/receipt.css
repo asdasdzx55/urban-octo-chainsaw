@@ -265,10 +265,21 @@
 
 /* ==================== PRINT MEDIA OVERRIDES ==================== */
 #receipt-print-area {
-  display: none;
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 76mm;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -9999;
 }
 
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
   /* Remove page limits and scroll containers */
   html, body {
     display: block !important;
@@ -285,6 +296,13 @@
   }
 
   /* Completely hide every element on page except the dedicated print area */
+  header, main, nav, footer, #mobile-nav-drawer, #mobile-cart-drawer,
+  #checkout-modal, #receipt-modal, #new-supplier-modal,
+  #new-product-audit-modal, #new-custom-product-modal, #weight-modal,
+  #global-loader, .no-print {
+    display: none !important;
+  }
+
   body > *:not(#receipt-print-area) {
     display: none !important;
   }
@@ -293,10 +311,13 @@
     display: block !important;
     visibility: visible !important;
     position: static !important;
+    left: auto !important;
+    top: auto !important;
+    opacity: 1 !important;
     width: 100% !important;
-    max-width: 80mm !important;
+    max-width: 76mm !important;
     margin: 0 auto !important;
-    padding: 2mm 3mm !important;
+    padding: 2mm 2mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-sizing: border-box !important;
@@ -314,12 +335,11 @@
     border-radius: 0 !important;
   }
 
-  .bw-items-table th {
-    background: #e8e8e8 !important;
+  .bw-items-table {
+    table-layout: fixed !important;
   }
 
-  @page {
-    size: 80mm auto;
-    margin: 0;
+  .bw-items-table th {
+    background: #e8e8e8 !important;
   }
 }

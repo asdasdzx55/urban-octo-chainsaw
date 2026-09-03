@@ -271,6 +271,7 @@
 @media print {
   /* Remove page limits and scroll containers */
   html, body {
+    display: block !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;

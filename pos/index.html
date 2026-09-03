@@ -101,11 +101,6 @@
         <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
         <span>التقارير</span>
       </button>
-
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="settings">
-        <i data-lucide="settings" class="w-3.5 h-3.5"></i>
-        <span>الإعدادات</span>
-      </button>
     </nav>
 
     <!-- Quick Action Controls -->
@@ -1799,9 +1794,16 @@
           <span>واتساب 📲</span>
         </button>
 
-        <button id="btn-print-receipt" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer">
+        <button id="btn-print-receipt" onclick="window.cart?.printReceiptDirectly()" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer">
           <i data-lucide="printer" class="w-4 h-4"></i>
           <span>طباعة فورية 🖨️</span>
+        </button>
+      </div>
+
+      <!-- Fallback Print Button in case browser blocks iframe printing -->
+      <div class="text-center pt-0.5">
+        <button type="button" onclick="window.cart?.openReceiptInNewWindow()" class="text-[11px] font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 underline transition cursor-pointer">
+          طباعة عبر نافذة مستقلة (في حال لم تفتح نافذة الطباعة) ↗️
         </button>
       </div>
 

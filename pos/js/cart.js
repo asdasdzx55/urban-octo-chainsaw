@@ -629,6 +629,66 @@ class POSCart {
     this.printInvoice(this.lastInvoice);
   }
 
+  getReceiptPrintStyles() {
+    return `
+      @page { size: 80mm auto; margin: 0; }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 2mm 3mm;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+        direction: rtl;
+        text-align: right;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bw-receipt {
+        width: 100%;
+        max-width: 80mm;
+        margin: 0 auto;
+        padding: 0;
+        background: #fff !important;
+        color: #000 !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .bw-header { text-align: center; margin-bottom: 6px; }
+      .bw-title { font-size: 19px; font-weight: 900; margin: 0 0 3px 0; color: #000 !important; }
+      .bw-sub { font-size: 11px; font-weight: 700; margin-bottom: 3px; color: #000 !important; }
+      .bw-info { font-size: 10.5px; margin: 1.5px 0; font-weight: 600; color: #000 !important; }
+      .bw-divider-double { border-top: 2.5px solid #000; margin: 6px 0; }
+      .bw-divider-solid { border-top: 1px solid #000; margin: 6px 0; }
+      .bw-divider-dashed { border-top: 1.5px dashed #000; margin: 6px 0; }
+      .bw-meta-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 3px 0; }
+      .bw-meta-table td { padding: 2.5px 2px; vertical-align: middle; color: #000 !important; }
+      .bw-mono { font-family: 'Courier New', monospace; font-weight: bold; }
+      .bw-delivery-box { border: 1.5px solid #000; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+      .bw-delivery-title { font-weight: 900; font-size: 12px; text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 4px; }
+      .bw-items-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 11px; border: 1.5px solid #000; }
+      .bw-items-table thead th { border: 1px solid #000; border-bottom: 2px solid #000; background: #e8e8e8 !important; color: #000 !important; font-weight: 900; padding: 4px 2px; text-align: center; font-size: 10.5px; }
+      .bw-items-table tbody td { border: 1px solid #000; padding: 4px 2px; vertical-align: middle; color: #000 !important; }
+      .bw-items-table .th-num, .bw-items-table .td-num { width: 7%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; }
+      .bw-items-table .th-name, .bw-items-table .td-name { width: 45%; text-align: right; }
+      .bw-items-table .item-title { font-weight: 800; line-height: 1.25; color: #000 !important; font-size: 11px; }
+      .bw-items-table .item-code { font-size: 9px; color: #333 !important; font-family: 'Courier New', monospace; display: block; }
+      .bw-items-table .th-qty, .bw-items-table .td-qty { width: 20%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; }
+      .bw-items-table .th-price, .bw-items-table .td-price { width: 14%; text-align: center; font-family: 'Courier New', monospace; }
+      .bw-items-table .th-total, .bw-items-table .td-total { width: 14%; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; }
+      .bw-summary-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 6px 0; }
+      .bw-summary-table td { padding: 3px 2px; color: #000 !important; }
+      .bw-summary-table .bw-val { text-align: left; font-family: 'Courier New', monospace; font-weight: 800; }
+      .bw-summary-table .bw-grand-row td { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 2px; font-size: 14px; font-weight: 900; }
+      .bw-summary-table .bw-grand-val { text-align: left; font-family: 'Courier New', monospace; font-size: 16px; font-weight: 900; }
+      .bw-barcode { text-align: center; margin: 8px 0 4px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .bw-barcode svg { max-width: 100%; height: 38px; }
+      .bw-barcode-text { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #000 !important; }
+      .bw-footer { text-align: center; font-size: 10px; color: #000 !important; line-height: 1.35; margin-top: 6px; }
+      .bw-footer p { margin: 2px 0; }
+    `;
+  }
+
   printInvoice(inv) {
     if (!inv && this.lastInvoice) inv = this.lastInvoice;
     if (!inv) {
@@ -636,29 +696,30 @@ class POSCart {
       return;
     }
 
-    // Update global print area for standard window.print()
+    // 1. Get receipt content (from modal container if already rendered with SVG barcode)
+    const container = document.getElementById('receipt-view-container');
     const printArea = document.getElementById('receipt-print-area');
-    const receiptHTML = this.buildReceiptHTML(inv);
+    let receiptContent = (container && container.innerHTML && container.innerHTML.includes('bw-receipt'))
+      ? container.innerHTML
+      : this.buildReceiptHTML(inv);
+
+    // 2. Always update in-page print area
     if (printArea) {
-      printArea.innerHTML = receiptHTML;
+      printArea.innerHTML = receiptContent;
       this.renderBarcodes(inv);
     }
 
-    // Modern isolated printing using hidden iframe
+    // 3. Reliable Iframe Print: must have positive dimensions and non-zero opacity so Chrome doesn't suppress it
     try {
       let printFrame = document.getElementById('receipt-hidden-print-frame');
-      if (!printFrame) {
-        printFrame = document.createElement('iframe');
-        printFrame.id = 'receipt-hidden-print-frame';
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '0';
-        printFrame.style.bottom = '0';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = '0';
-        printFrame.style.visibility = 'hidden';
-        document.body.appendChild(printFrame);
+      if (printFrame) {
+        printFrame.remove();
       }
+      printFrame = document.createElement('iframe');
+      printFrame.id = 'receipt-hidden-print-frame';
+      // Notice: width/height: 350px with opacity: 0.001 and zIndex: -9999 so it has a real render box in Chrome!
+      printFrame.setAttribute('style', 'position:fixed; right:0; bottom:0; width:350px; height:350px; border:0; opacity:0.001; z-index:-9999; pointer-events:none;');
+      document.body.appendChild(printFrame);
 
       const frameDoc = printFrame.contentWindow.document;
       frameDoc.open();
@@ -668,44 +729,72 @@ class POSCart {
         <head>
           <meta charset="UTF-8">
           <title>فاتورة رقم #${inv.order_id}</title>
-          <link rel="stylesheet" href="css/receipt.css">
           <style>
-            @page { size: 80mm auto; margin: 0; }
-            body { margin: 0; padding: 2mm 3mm; background: #fff !important; color: #000 !important; }
-            .bw-receipt { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+            ${this.getReceiptPrintStyles()}
           </style>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
         </head>
         <body>
-          ${receiptHTML}
-          <script>
-            window.onload = function() {
-              try {
-                if (window.JsBarcode) {
-                  document.querySelectorAll(".receipt-svg-barcode").forEach(function(el) {
-                    var code = el.getAttribute('data-barcode') || 'INV-${inv.order_id}';
-                    window.JsBarcode(el, code, {
-                      format: "CODE128",
-                      width: 1.5,
-                      height: 36,
-                      displayValue: false,
-                      margin: 2
-                    });
-                  });
-                }
-              } catch(e) {}
-              setTimeout(function() {
-                window.focus();
-                window.print();
-              }, 120);
-            };
-          <\/script>
+          ${receiptContent}
         </body>
         </html>
       `);
       frameDoc.close();
+
+      // Trigger print from the parent window via setTimeout
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch(frameErr) {
+          console.warn('Iframe print error, falling back to window.print():', frameErr);
+          window.print();
+        }
+      }, 150);
+
     } catch (e) {
-      console.warn('Iframe print error, falling back to window.print():', e);
+      console.warn('Iframe print initialization error, falling back to window.print():', e);
+      window.print();
+    }
+  }
+
+  openReceiptInNewWindow() {
+    if (!this.lastInvoice) {
+      window.app?.showToast('لا توجد فاتورة مفتوحة حالياً', 'warning');
+      return;
+    }
+    const inv = this.lastInvoice;
+    const container = document.getElementById('receipt-view-container');
+    const content = (container && container.innerHTML && container.innerHTML.includes('bw-receipt'))
+      ? container.innerHTML
+      : this.buildReceiptHTML(inv);
+
+    const printWin = window.open('', '_blank', 'width=450,height=720');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>فاتورة رقم #${inv.order_id}</title>
+          <style>
+            ${this.getReceiptPrintStyles()}
+          </style>
+        </head>
+        <body>
+          ${content}
+          <script>
+            setTimeout(function() {
+              window.focus();
+              window.print();
+            }, 250);
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWin.document.close();
+    } else {
+      window.app?.showToast('المتصفح حظر فتح النافذة، تم التحويل للطباعة المباشرة', 'info');
       window.print();
     }
   }

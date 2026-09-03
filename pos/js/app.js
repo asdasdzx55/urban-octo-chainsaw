@@ -309,16 +309,16 @@ class App {
       const isLowStock = stock <= (isWeight ? 2 : 3);
 
       return `
-        <div onclick="window.app.onProductCardClick(${p.id})" class="product-card p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer flex flex-col justify-between gap-2 select-none relative group">
+        <div onclick="window.app.onProductCardClick(${p.id})" class="product-card p-3 sm:p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-500/80 dark:hover:border-indigo-400 cursor-pointer flex flex-col justify-between gap-2 select-none relative group transition-all duration-150">
           
           <!-- Top Badges Row -->
           <div class="flex items-center justify-between gap-1 text-[10px]">
             ${isWeight 
-              ? `<span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold border border-amber-200/60 dark:border-amber-800/60">⚖️ ميزان</span>` 
-              : `<span class="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200/60 dark:border-indigo-800/60">📦 قطعة</span>`
+              ? `<span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1"><span>⚖️</span> <span>وزن / كجم</span></span>` 
+              : `<span class="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200/60 dark:border-indigo-800/60 flex items-center gap-1"><span>📦</span> <span>قطعة</span></span>`
             }
-            <span class="font-bold px-2 py-0.5 rounded-full ${isLowStock ? 'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'}">
-              ${stock} ${isWeight ? 'كجم' : 'ق'}
+            <span class="font-bold px-2 py-0.5 rounded-full font-mono ${isLowStock ? 'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'}">
+              ${isWeight ? parseFloat(stock).toFixed(2) + ' كجم' : stock + ' ق'}
             </span>
           </div>
 
@@ -326,9 +326,9 @@ class App {
           <div class="flex-1 flex flex-col justify-start my-0.5">
             <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 min-h-[2.4rem]">${p.name}</h4>
             ${p.local_code || p.sub_category ? `
-              <p class="text-[10px] text-gray-400 mt-1 font-mono flex items-center gap-1 flex-wrap">
-                ${p.sub_category ? `<span class="text-indigo-500 dark:text-indigo-400 font-sans">${p.sub_category}</span>` : ''}
-                ${p.local_code ? `<span class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.2 rounded font-bold text-gray-500">${p.local_code}</span>` : ''}
+              <p class="text-[10px] text-gray-400 mt-1 font-mono flex items-center gap-1.5 flex-wrap">
+                ${p.sub_category ? `<span class="text-indigo-500 dark:text-indigo-400 font-sans font-medium">${p.sub_category}</span>` : ''}
+                ${p.local_code ? `<span class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-bold text-gray-500">${p.local_code}</span>` : ''}
               </p>
             ` : ''}
           </div>
@@ -337,13 +337,13 @@ class App {
           <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/60 mt-auto">
             <div class="flex flex-col">
               <span class="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400 font-mono leading-tight">
-                ${price.toFixed(2)}
+                ${price.toFixed(2)} <span class="text-[10px] font-normal text-gray-500">ج.م</span>
               </span>
               <span class="text-[9px] text-gray-400 font-medium">
-                ${isWeight ? 'ج.م / كجم' : 'ج.م / قطعة'}
+                ${isWeight ? 'لكل 1 كجم' : 'لكل قطعة'}
               </span>
             </div>
-            <div class="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:bg-indigo-700 transition">
+            <div class="w-7 h-7 rounded-xl bg-indigo-600 group-hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-sm shadow-xs transition active:scale-95">
               +
             </div>
           </div>

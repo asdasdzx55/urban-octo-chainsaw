@@ -1,18 +1,261 @@
 /* ==========================================================================
-   Thermal Receipt Stylesheet for 80mm / 58mm POS Printers
+   Thermal Receipt Stylesheet - Syrian Home Supermarket POS
+   Supports 80mm / 58mm POS thermal printers & high-res on-screen preview
    ========================================================================== */
 
+/* ==================== ON-SCREEN RECEIPT STYLING ==================== */
+.thermal-receipt {
+  background: #ffffff;
+  color: #111827;
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  direction: rtl;
+  text-align: right;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 16px 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Header */
+.thermal-receipt .receipt-header {
+  text-align: center;
+  border-bottom: 2px dashed #374151;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.thermal-receipt .receipt-store-logo {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 6px auto;
+  border-radius: 12px;
+  background: #4f46e5;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.thermal-receipt .receipt-store-title {
+  font-size: 17px;
+  font-weight: 900;
+  color: #111827;
+  margin: 0 0 3px 0;
+  letter-spacing: -0.3px;
+}
+
+.thermal-receipt .receipt-store-sub {
+  font-size: 11px;
+  color: #4b5563;
+  margin: 0 0 3px 0;
+  font-weight: 600;
+}
+
+.thermal-receipt .receipt-store-info {
+  font-size: 10.5px;
+  color: #6b7280;
+  margin: 2px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Metadata Box */
+.thermal-receipt .receipt-meta {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px dashed #d1d5db;
+  font-size: 11px;
+}
+
+.thermal-receipt .receipt-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.thermal-receipt .receipt-meta-row:last-child {
+  margin-bottom: 0;
+}
+
+.thermal-receipt .receipt-meta-label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.thermal-receipt .receipt-meta-val {
+  color: #111827;
+  font-weight: 800;
+}
+
+.thermal-receipt .receipt-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.thermal-receipt .receipt-badge-cash {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.thermal-receipt .receipt-badge-instapay {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.thermal-receipt .receipt-badge-vodafone {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.thermal-receipt .receipt-badge-card {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+/* Items Table */
+.thermal-receipt .receipt-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+}
+
+.thermal-receipt .receipt-items-table th {
+  border-bottom: 2px dashed #374151;
+  padding: 5px 2px;
+  font-weight: 800;
+  color: #374151;
+  font-size: 11px;
+}
+
+.thermal-receipt .receipt-items-table td {
+  padding: 5px 2px;
+  vertical-align: top;
+  border-bottom: 1px dotted #e5e7eb;
+}
+
+.thermal-receipt .receipt-item-name {
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.thermal-receipt .receipt-item-details {
+  font-size: 10px;
+  color: #6b7280;
+  font-family: monospace;
+  margin-top: 1px;
+}
+
+/* Totals Box */
+.thermal-receipt .receipt-totals {
+  border-top: 2px dashed #374151;
+  border-bottom: 2px dashed #374151;
+  padding: 8px 0;
+  margin-bottom: 10px;
+}
+
+.thermal-receipt .receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.thermal-receipt .receipt-total-row.discount {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.thermal-receipt .receipt-grand-total {
+  font-size: 15px;
+  font-weight: 900;
+  color: #111827;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1.5px solid #111827;
+}
+
+.thermal-receipt .receipt-grand-total .total-val {
+  font-family: monospace;
+  font-size: 17px;
+  color: #4f46e5;
+}
+
+.thermal-receipt .receipt-cash-breakdown {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dotted #d1d5db;
+  font-size: 11px;
+}
+
+/* Barcode */
+.thermal-receipt .receipt-barcode-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+  padding: 4px 0;
+}
+
+.thermal-receipt .receipt-barcode-container svg {
+  max-width: 100%;
+  height: 40px;
+}
+
+/* Footer */
+.thermal-receipt .receipt-footer {
+  text-align: center;
+  font-size: 10.5px;
+  color: #6b7280;
+  line-height: 1.4;
+  padding-top: 6px;
+  border-top: 1px dashed #d1d5db;
+}
+
+.thermal-receipt .receipt-footer p {
+  margin: 2px 0;
+}
+
+.thermal-receipt .receipt-footer .tax-note {
+  font-size: 9.5px;
+  color: #9ca3af;
+  margin-top: 3px;
+}
+
+/* ==================== PRINT MEDIA STYLES (80mm / 58mm) ==================== */
 #receipt-print-area {
   display: none;
 }
 
 @media print {
-  /* Hide all app UI elements on print */
+  /* Hide whole document except print area */
   body * {
     visibility: hidden;
   }
 
-  /* Show only receipt */
   #receipt-print-area,
   #receipt-print-area * {
     visibility: visible;
@@ -28,7 +271,7 @@
     padding: 2mm 3mm;
     background: #ffffff;
     color: #000000;
-    font-family: 'Courier New', Courier, monospace, 'Cairo', sans-serif;
+    font-family: 'Cairo', 'Courier New', monospace, sans-serif;
     font-size: 12px;
     line-height: 1.35;
     direction: rtl;
@@ -39,93 +282,11 @@
     margin: 0;
   }
 
-  .receipt-header {
-    text-align: center;
-    border-bottom: 1px dashed #000;
-    padding-bottom: 5px;
-    margin-bottom: 6px;
-  }
-
-  .receipt-store-title {
-    font-size: 16px;
-    font-weight: 800;
-    margin: 0 0 3px 0;
-  }
-
-  .receipt-store-sub {
-    font-size: 11px;
-    margin: 0 0 2px 0;
-  }
-
-  .receipt-meta {
-    font-size: 11px;
-    margin-bottom: 6px;
-    border-bottom: 1px dashed #000;
-    padding-bottom: 5px;
-  }
-
-  .receipt-meta-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2px;
-  }
-
-  .receipt-items-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 6px;
-    font-size: 11px;
-  }
-
-  .receipt-items-table th {
-    border-bottom: 1px dashed #000;
-    padding: 3px 0;
-    text-align: right;
-    font-weight: bold;
-  }
-
-  .receipt-items-table td {
-    padding: 3px 0;
-    vertical-align: top;
-  }
-
-  .receipt-totals {
-    border-top: 1px dashed #000;
-    border-bottom: 1px dashed #000;
-    padding: 5px 0;
-    margin-bottom: 6px;
-  }
-
-  .receipt-total-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 3px;
-    font-size: 12px;
-  }
-
-  .receipt-grand-total {
-    font-size: 14px;
-    font-weight: bold;
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid #000;
-  }
-
-  .receipt-footer {
-    text-align: center;
-    font-size: 11px;
-    margin-top: 6px;
-  }
-
-  .receipt-barcode-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 6px 0;
-  }
-
-  .receipt-barcode-container svg {
-    max-width: 100%;
-    height: 40px;
+  .thermal-receipt {
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
   }
 }

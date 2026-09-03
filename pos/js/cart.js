@@ -174,6 +174,11 @@ class POSCart {
     this.render();
   }
 
+  setDiscount(amount) {
+    this.discountAmount = Math.max(0, parseFloat(amount || 0));
+    this.render();
+  }
+
   /* ==================== CALCULATIONS ==================== */
   getSubtotal() {
     return this.items.reduce((sum, item) => sum + (item.price * item.qty), 0);

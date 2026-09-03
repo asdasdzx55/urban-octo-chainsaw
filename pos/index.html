@@ -47,10 +47,10 @@
   <link rel="stylesheet" href="css/pos.css">
   <link rel="stylesheet" href="css/receipt.css">
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0 lg:h-screen lg:overflow-hidden">
 
   <!-- ==================== TOP NAVIGATION HEADER ==================== -->
-  <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 px-3 sm:px-6 flex items-center justify-between shadow-xs max-w-full overflow-hidden">
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 px-3 sm:px-6 flex items-center justify-between shadow-xs max-w-full overflow-hidden shrink-0">
     
     <!-- Brand / Supermarket Name -->
     <div class="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -205,16 +205,16 @@
   </div>
 
   <!-- ==================== MAIN APPLICATION CONTAINER ==================== -->
-  <main class="flex-1 w-full max-w-[1760px] mx-auto p-3 sm:p-5 flex flex-col">
+  <main class="flex-1 w-full max-w-[1760px] mx-auto p-3 sm:p-4 lg:p-4 flex flex-col lg:h-[calc(100vh-4rem)] lg:overflow-hidden min-h-0">
 
     <!-- ==================== VIEW 1: POS REGISTER ==================== -->
-    <section id="view-pos" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+    <section id="view-pos" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 h-full lg:overflow-hidden min-h-0">
       
-      <!-- Left Column: Cart & Billing Panel (4 cols on Desktop) -->
-      <div class="hidden lg:flex lg:col-span-4 xl:col-span-4 2xl:col-span-4 bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700 shadow-md flex-col justify-between h-[calc(100vh-6.5rem)] sticky top-20">
+      <!-- Left Column: Cart & Billing Panel (4 cols on Desktop - Locked to exact view height) -->
+      <div class="hidden lg:flex lg:col-span-4 xl:col-span-4 2xl:col-span-4 bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700 shadow-md flex-col justify-between h-full overflow-hidden min-h-0">
         
         <!-- Cart Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
           <div class="flex items-center gap-2">
             <i data-lucide="shopping-bag" class="w-5 h-5 text-indigo-600"></i>
             <h3 class="text-sm font-black text-gray-900 dark:text-white">سلة المشتريات</h3>
@@ -228,19 +228,19 @@
         </div>
 
         <!-- Cart Items Scrollable List -->
-        <div id="cart-items-list" class="flex-1 overflow-y-auto py-2.5 flex flex-col gap-2 my-1">
+        <div id="cart-items-list" class="flex-1 overflow-y-auto py-2.5 flex flex-col gap-2 my-1 min-h-0">
           <!-- Rendered dynamically -->
         </div>
 
         <!-- Empty Cart Notice -->
-        <div id="cart-empty-notice" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-gray-400">
+        <div id="cart-empty-notice" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-gray-400 min-h-0">
           <i data-lucide="shopping-cart" class="w-12 h-12 mb-2 opacity-30"></i>
           <p class="text-xs font-bold">السلة فارغة</p>
           <p class="text-[11px] text-gray-400 mt-0.5">امسح باركود المنتج أو اضغط على الأصناف لإضافتها</p>
         </div>
 
         <!-- Cart Summary & Checkout -->
-        <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2.5">
+        <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2.5 shrink-0">
           
           <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
             <span>المجموع الفرعي:</span>
@@ -248,7 +248,10 @@
           </div>
 
           <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-            <span>الخصم:</span>
+            <div class="flex items-center gap-1.5">
+              <span>الخصم:</span>
+              <button onclick="window.app.promptQuickDiscount()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline" title="إضافة خصم على الفاتورة">تعديل ✍️</button>
+            </div>
             <span id="cart-discount-val" class="font-bold text-rose-500 font-mono">-0.00 ج.م</span>
           </div>
 
@@ -267,11 +270,11 @@
 
       </div>
 
-      <!-- Right Column: Products Catalog & Search (8 cols on Desktop) -->
-      <div class="col-span-1 lg:col-span-8 xl:col-span-8 2xl:col-span-8 flex flex-col gap-3 sm:gap-3.5">
+      <!-- Right Column: Products Catalog & Search (8 cols on Desktop - Locked to exact view height) -->
+      <div class="col-span-1 lg:col-span-8 xl:col-span-8 2xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 h-full lg:overflow-hidden min-h-0">
         
         <!-- Search & Barcode Quick Input -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 sm:p-3 border border-gray-200/80 dark:border-gray-700 shadow-xs flex items-center gap-2 sm:gap-3">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 sm:p-3 border border-gray-200/80 dark:border-gray-700 shadow-xs flex items-center gap-2 sm:gap-3 shrink-0">
           <div class="relative flex-1">
             <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             <input type="text" id="product-search-input" placeholder="ابحث باسم المنتج، كود الصنف، أو امسح الباركود بالسكنر..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
@@ -285,17 +288,17 @@
         </div>
 
         <!-- Categories Slider Bar -->
-        <div id="categories-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+        <div id="categories-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 shrink-0">
           <!-- Categories render dynamically -->
         </div>
 
         <!-- Sub Categories Pill Bar -->
-        <div id="subcategories-bar" class="hidden">
+        <div id="subcategories-bar" class="hidden shrink-0">
           <!-- Subcategories render dynamically -->
         </div>
 
         <!-- Products Grid -->
-        <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3 flex-1 overflow-y-auto min-h-[440px] max-h-[calc(100vh-14rem)] p-0.5">
+        <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3 flex-1 overflow-y-auto min-h-0 p-0.5">
           <!-- Products render dynamically -->
         </div>
 
@@ -304,7 +307,7 @@
     </section>
 
     <!-- ==================== VIEW 2: DELIVERY & ONLINE ORDERS HUB (منظومة الدليفري والأونلاين) ==================== -->
-    <section id="view-orders" class="hidden flex flex-col gap-4 max-w-7xl mx-auto w-full">
+    <section id="view-orders" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
       <!-- Hub Top Switcher: Online Orders vs Delivery Settlement -->
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -471,7 +474,7 @@
     </section>
 
     <!-- ==================== VIEW 3: RETURNS & REFUNDS ==================== -->
-    <section id="view-returns" class="hidden flex flex-col gap-4">
+    <section id="view-returns" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -521,7 +524,7 @@
     </section>
 
     <!-- ==================== VIEW 4: INVENTORY & PRICE AUDIT ==================== -->
-    <section id="view-inventory" class="hidden flex flex-col gap-4">
+    <section id="view-inventory" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -719,7 +722,7 @@
     </section>
 
     <!-- ==================== VIEW 5: EXPENSES & SUPPLIERS ==================== -->
-    <section id="view-expenses" class="hidden flex flex-col gap-4">
+    <section id="view-expenses" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -1083,7 +1086,7 @@
     </section>
 
     <!-- ==================== VIEW 6: SHIFT REPORTS ==================== -->
-    <section id="view-reports" class="hidden flex flex-col gap-4">
+    <section id="view-reports" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -1167,7 +1170,7 @@
     </section>
 
     <!-- ==================== VIEW 7: STORE & RECEIPT SETTINGS ==================== -->
-    <section id="view-settings" class="hidden flex flex-col gap-4">
+    <section id="view-settings" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-6">
         

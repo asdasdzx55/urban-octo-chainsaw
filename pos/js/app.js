@@ -442,6 +442,20 @@ class App {
     this.openWeightModal(prod, item.qty);
   }
 
+  promptQuickDiscount() {
+    if (!window.cart || window.cart.items.length === 0) {
+      this.showToast('أضف أصنافاً أولاً لتطبيق الخصم', 'warning');
+      return;
+    }
+    const current = window.cart.discountAmount || 0;
+    const val = prompt('أدخل قيمة الخصم المباشر على الفاتورة بالجنيه (ج.م):', current > 0 ? current : '');
+    if (val !== null) {
+      const num = parseFloat(val) || 0;
+      window.cart.setDiscount(num);
+      this.showToast(num > 0 ? `تم تطبيق خصم بقيمة ${num.toFixed(2)} ج.م` : 'تم إلغاء الخصم', 'info');
+    }
+  }
+
   switchView(viewName) {
     this.currentView = viewName;
 

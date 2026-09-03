@@ -383,6 +383,18 @@ class POSScanner {
       : `✅ تم المسح: ${barcode}`;
     this.updateScanFeedback(feedbackText, true);
 
+    // 0. Auto-Detect Invoice Barcode (e.g. INV-14, INV-27, ORD-...) from ANY view
+    const upperCode = String(barcode).trim().toUpperCase();
+    if (upperCode.startsWith('INV-') || upperCode.startsWith('ORD-')) {
+      if (this.autoCloseAfterScan) this.closeCameraModal();
+      window.app?.showToast(`تم مسح باركود الفاتورة: ${barcode} 🧾`, 'info');
+      window.app?.switchView('returns');
+      setTimeout(() => {
+        window.returnsController?.searchInvoice(barcode);
+      }, 150);
+      return;
+    }
+
     // 1. If in returns/refunds mode -> look up invoice
     if (window.app && window.app.currentView === 'returns') {
       if (this.autoCloseAfterScan) this.closeCameraModal();

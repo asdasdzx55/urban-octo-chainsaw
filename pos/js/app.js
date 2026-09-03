@@ -41,6 +41,9 @@ class App {
     // Fetch fresh products from API in background and sync
     await this.fetchProducts();
 
+    // Sync completed orders from cloud for multi-device harmony
+    window.cart?.syncCompletedOrdersFromCloud();
+
     // Init Sync Manager status
     window.syncManager?.updateStatusBadge();
 
@@ -511,6 +514,9 @@ class App {
       }
     } else if (viewName === 'returns') {
       window.returnsController?.init();
+      window.cart?.syncCompletedOrdersFromCloud().then(() => {
+        window.returnsController?.renderRecentInvoicesList();
+      });
     } else if (viewName === 'reports') {
       window.reportsController?.loadReports('today');
     } else if (viewName === 'expenses') {

@@ -122,10 +122,17 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 4.5 Get completed POS orders from cloud for multi-device synchronization
+   */
+  async getCompletedOrders(limit = 100) {
+    return await this.get('get_completed_orders', { limit: limit });
+  }
+
+  /**
    * 5. Get invoice details by order_id or barcode
    */
   async getOrderDetails(orderId) {
-    return await this.get('get_order_details', { order_id: orderId });
+    return await this.get('get_order_details', { order_id: orderId, barcode: orderId, q: orderId });
   }
 
   /**

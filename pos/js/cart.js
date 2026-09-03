@@ -291,9 +291,12 @@ class POSCart {
         window.posScanner?.playSuccessBeep();
         
         // Prepare Completed Invoice Data for Printing
+        const realOrderId = result.order_id || result.remote_id || Date.now();
+        const realBarcode = result.invoice_barcode || `INV-${realOrderId}`;
         const invoiceData = {
-          order_id: result.order_id || Date.now(),
-          invoice_barcode: result.invoice_barcode || `INV-${result.order_id}`,
+          order_id: realOrderId,
+          id: realOrderId,
+          invoice_barcode: realBarcode,
           created_at: new Date().toLocaleString('ar-EG'),
           cashier: this.cashierNotes,
           customer_name: this.customerName || (isDelivery ? 'عميل دليفري' : 'عميل نقدي'),
@@ -936,10 +939,45 @@ class POSCart {
     }
   }
 
-  navigateInvoice(step) {
-    const orders = this.getCompletedOrders();
+  async syncCompletedOrdersFromCloud() {
+    try {
+      if (!window.api || !window.api.getCompletedOrders) return this.getCompletedOrders();
+      const res = await window.api.getCompletedOrders(100);
+      if (res && res.success && Array.isArray(res.orders) && res.orders.length > 0) {
+        const local = this.getCompletedOrders();
+        const map = new Map();
+        res.orders.forEach(o => map.set(String(o.order_id || o.id), o));
+        local.forEach(o => {
+          const id = String(o.order_id || o.id);
+          if (!map.has(id)) map.set(id, o);
+        });
+        const merged = Array.from(map.values()).sort((a, b) => {
+          const idA = parseInt(a.order_id || a.id || 0);
+          const idB = parseInt(b.order_id || b.id || 0);
+          return idB - idA;
+        });
+        localStorage.setItem('pos_completed_orders', JSON.stringify(merged.slice(0, 200)));
+        if (!this.lastInvoice && merged.length > 0) {
+          this.lastInvoice = merged[0];
+        }
+        return merged;
+      }
+    } catch(e) {
+      console.warn('Orders cloud sync error:', e);
+    }
+    return this.getCompletedOrders();
+  }
+
+  async navigateInvoice(step) {
+    let orders = this.getCompletedOrders();
     if (!orders || orders.length === 0) {
-      window.app?.showToast('لا توجد فواتير سابقة مسجلة على هذا الجهاز', 'info');
+      window.app?.showLoading(true, 'جاري مزامنة الفواتير من السحابة...');
+      orders = await this.syncCompletedOrdersFromCloud();
+      window.app?.showLoading(false);
+    }
+
+    if (!orders || orders.length === 0) {
+      window.app?.showToast('لا توجد فواتير سابقة مسجلة على هذا الجهاز أو السيرفر', 'info');
       return;
     }
 

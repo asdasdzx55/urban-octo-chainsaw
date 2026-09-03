@@ -100,14 +100,17 @@ class ReturnsController {
       order.total = parseFloat(order.total_price !== undefined ? order.total_price : (order.total || 0));
       
       const rawItems = (Array.isArray(data.items) && data.items.length > 0) ? data.items : (order.items || []);
-      items = rawItems.map(item => ({
-        product_id: item.product_id || item.id,
-        name: item.name,
-        qty: parseFloat(item.quantity !== undefined ? item.quantity : (item.qty || 1)),
-        price: parseFloat(item.price || 0),
-        returned_qty: parseFloat(item.returned_qty || 0),
-        barcode: item.barcode || ''
-      }));
+      items = rawItems.map(item => {
+        const matchedProd = window.app?.products?.find(p => p.name === item.name || (item.barcode && p.barcode === item.barcode));
+        return {
+          product_id: item.product_id || item.id || (matchedProd ? matchedProd.id : 0),
+          name: item.name,
+          qty: parseFloat(item.quantity !== undefined ? item.quantity : (item.qty || 1)),
+          price: parseFloat(item.price || 0),
+          returned_qty: parseFloat(item.returned_qty || 0),
+          barcode: item.barcode || (matchedProd ? matchedProd.barcode : '')
+        };
+      });
     }
 
     order.items = items;
@@ -239,12 +242,16 @@ class ReturnsController {
     const totalRefund = returnItems.reduce((sum, i) => sum + i.refund_amount, 0);
     const reason = document.getElementById('return-reason-input')?.value.trim() || 'رغبة العميل';
 
-    // Send payload matching both PHP backend expectations (`items` and `return_items`)
+    // Send payload matching PHP backend expectations
     const payload = {
       order_id: this.currentOrder.id,
       reason: reason,
       items: returnItems,
-      return_items: returnItems
+      return_items: returnItems,
+      returned_items: returnItems,
+      refund_amount: totalRefund,
+      total_refund: totalRefund,
+      cashier_name: window.app?.currentCashier || 'كاشير المحل'
     };
 
     try {
@@ -341,22 +348,9 @@ class ReturnsController {
     try {
       let completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
       
-      // If local cache is empty, fetch today's sales from server
-      if (completed.length === 0) {
-        try {
-          const reports = await window.api.getPosReports('today');
-          if (reports && Array.isArray(reports.recent_sales) && reports.recent_sales.length > 0) {
-            completed = reports.recent_sales.map(s => ({
-              order_id: s.id,
-              id: s.id,
-              invoice_barcode: `INV-${s.id}`,
-              created_at: s.created_at || 'اليوم',
-              customer_name: s.customer_name || 'نقدي',
-              payment_method: s.payment_method || 'كاش',
-              total: parseFloat(s.total_price || s.total || 0)
-            }));
-          }
-        } catch(err) {}
+      // If local cache is empty, fetch completed orders from cloud hub
+      if (completed.length === 0 && window.cart?.syncCompletedOrdersFromCloud) {
+        completed = await window.cart.syncCompletedOrdersFromCloud();
       }
 
       if (completed.length === 0) {

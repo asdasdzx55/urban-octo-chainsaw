@@ -381,7 +381,7 @@ class EmployeesController {
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        window.posScanner?.playSuccessBeep();
+        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
         window.app?.showToast(res.message || 'تم حفظ بيانات العامل بنجاح ✅', 'success');
         this.closeEmployeeModal();
         await this.loadEmployees();
@@ -531,7 +531,7 @@ class EmployeesController {
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        window.posScanner?.playSuccessBeep();
+        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
         window.app?.showToast(res.message || `تم تسجيل صرف ${type} بقيمة ${amount.toFixed(2)} ج.م بنجاح 💸`, 'success');
         this.closePayoutModal();
         this.loadEmployees();

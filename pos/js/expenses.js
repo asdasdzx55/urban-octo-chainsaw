@@ -129,7 +129,7 @@ class ExpensesController {
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        window.posScanner?.playSuccessBeep();
+        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
         window.app?.showToast(res.message || 'تم تسجيل المصروف بنجاح ✅', 'success');
 
         // Clear input
@@ -172,7 +172,7 @@ class ExpensesController {
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        window.posScanner?.playSuccessBeep();
+        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
         window.app?.showToast(res.message || 'تم سداد الدفعة وتحديث رصيد المورد بنجاح ✅', 'success');
 
         // Refresh metadata in background to get new balance

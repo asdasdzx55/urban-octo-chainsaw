@@ -1050,8 +1050,10 @@ class App {
     if (show) {
       if (msgEl) msgEl.textContent = message;
       loader.classList.remove('hidden');
+      loader.style.display = 'flex';
     } else {
       loader.classList.add('hidden');
+      loader.style.display = 'none';
     }
   }
 }

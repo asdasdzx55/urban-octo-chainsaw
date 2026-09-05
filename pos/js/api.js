@@ -5,7 +5,15 @@
 
 class SyrianHomeAPI {
   constructor() {
-    this.baseUrl = 'https://supermarkrt.almagd555.com/api_sync.php';
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      if (window.location.origin.includes('almagd555.com') || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        this.baseUrl = `${window.location.origin}/api_sync.php`;
+      } else {
+        this.baseUrl = 'https://supermarkrt.almagd555.com/api_sync.php';
+      }
+    } else {
+      this.baseUrl = 'https://supermarkrt.almagd555.com/api_sync.php';
+    }
     this.apiKey = 'syrian_home_pos_secret_token_2026';
     this.isOnline = true;
   }
@@ -14,7 +22,7 @@ class SyrianHomeAPI {
    * Helper method for GET requests with API Key
    */
   async get(action, params = {}) {
-    const url = new URL(this.baseUrl);
+    const url = new URL(this.baseUrl, typeof window !== 'undefined' && window.location ? window.location.href : 'https://supermarkrt.almagd555.com');
     url.searchParams.set('action', action);
     url.searchParams.set('api_key', this.apiKey);
 
@@ -29,7 +37,8 @@ class SyrianHomeAPI {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Authorization': `Bearer ${this.apiKey}`,
+          'X-API-KEY': this.apiKey
         }
       });
 
@@ -51,7 +60,7 @@ class SyrianHomeAPI {
    * Helper method for POST requests with API Key
    */
   async post(action, bodyData = {}) {
-    const url = new URL(this.baseUrl);
+    const url = new URL(this.baseUrl, typeof window !== 'undefined' && window.location ? window.location.href : 'https://supermarkrt.almagd555.com');
     url.searchParams.set('action', action);
     url.searchParams.set('api_key', this.apiKey);
 
@@ -61,7 +70,8 @@ class SyrianHomeAPI {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Authorization': `Bearer ${this.apiKey}`,
+          'X-API-KEY': this.apiKey
         },
         body: JSON.stringify(bodyData)
       });

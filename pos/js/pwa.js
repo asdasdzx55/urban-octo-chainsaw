@@ -18,9 +18,17 @@ class PWAManager {
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./sw.js?v=2.3.5')
           .then((reg) => {
             console.log('POS Service Worker registered successfully:', reg.scope);
+            // Check for updates immediately
+            reg.update().catch(() => {});
+
+            // Auto reload when a new service worker takes over
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              console.log('POS Service Worker updated and claimed clients. Reloading...');
+              window.location.reload();
+            });
           })
           .catch((err) => {
             console.warn('POS Service Worker registration failed:', err);

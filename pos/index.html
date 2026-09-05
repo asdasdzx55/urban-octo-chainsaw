@@ -44,8 +44,8 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css">
-  <link rel="stylesheet" href="css/receipt.css">
+  <link rel="stylesheet" href="css/pos.css?v=2.3.5">
+  <link rel="stylesheet" href="css/receipt.css?v=2.3.5">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0 lg:h-screen lg:overflow-hidden">
 
@@ -771,13 +771,19 @@
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
-        <div>
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-2 border border-indigo-200 dark:border-indigo-800">
-            <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
-            فواتير المشتريات والتوريد والمصروفات
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-2 border border-indigo-200 dark:border-indigo-800">
+              <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
+              فواتير المشتريات والتوريد والمصروفات
+            </div>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">تسجيل فواتير المشتريات من الموردين وزيادة المخزون والمصروفات</h2>
+            <p class="text-xs text-gray-500 mt-0.5">سجل بضائع التوريد الجديدة بطرق الدفع (كاش، آجل، إنستاباي، فودافون كاش) أو سجل المصروفات وسداد الموردين</p>
           </div>
-          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">تسجيل فواتير المشتريات من الموردين وزيادة المخزون والمصروفات</h2>
-          <p class="text-xs text-gray-500 mt-0.5">سجل بضائع التوريد الجديدة بطرق الدفع (كاش، آجل، إنستاباي، فودافون كاش) أو سجل المصروفات وسداد الموردين</p>
+          <button type="button" onclick="window.app.switchView('employees')" class="self-start sm:self-auto px-4 py-2.5 rounded-2xl bg-sky-50 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/60 font-bold text-xs flex items-center gap-2 border border-sky-200 dark:border-sky-800 transition cursor-pointer shadow-xs" title="الانتقال إلى شؤون العمال والرواتب والسلف">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>العمال والرواتب والسلف 👥</span>
+          </button>
         </div>
 
         <!-- Mode Tabs: Purchase Invoice, General Expense, Supplier Payment, Invoices History, Suppliers Reports -->
@@ -1170,20 +1176,25 @@
           </div>
 
           <!-- KPI Summary Cards for Suppliers -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-4 flex flex-col justify-between">
-              <span class="text-xs font-bold text-rose-700 dark:text-rose-300">إجمالي ديون الموردين (المستحق)</span>
-              <div id="sup-report-total-debt" class="text-lg font-black text-rose-600 dark:text-rose-400 font-mono mt-2">0.00 ج.م</div>
+              <span class="text-xs font-bold text-rose-700 dark:text-rose-300">إجمالي ديون الموردين</span>
+              <div id="sup-report-total-debt" class="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 font-mono mt-2">0.00 ج.م</div>
             </div>
 
             <div class="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl p-4 flex flex-col justify-between">
               <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">إجمالي البضاعة الموردة</span>
-              <div id="sup-report-total-supplied" class="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono mt-2">0.00 ج.م</div>
+              <div id="sup-report-total-supplied" class="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono mt-2">0.00 ج.م</div>
             </div>
 
             <div class="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-4 flex flex-col justify-between">
-              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">إجمالي المسدد للموردين</span>
-              <div id="sup-report-total-paid" class="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-2">0.00 ج.م</div>
+              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">إجمالي المسدد</span>
+              <div id="sup-report-total-paid" class="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-2">0.00 ج.م</div>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-2xl p-4 flex flex-col justify-between">
+              <span class="text-xs font-bold text-gray-700 dark:text-gray-300">عدد الموردين</span>
+              <div id="sup-report-count" class="text-base sm:text-lg font-black text-gray-800 dark:text-gray-200 font-mono mt-2">0</div>
             </div>
           </div>
 
@@ -2788,21 +2799,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.3.0"></script>
-  <script src="js/api.js?v=2.3.0"></script>
-  <script src="js/sync-manager.js?v=2.3.0"></script>
-  <script src="js/pos-scanner.js?v=2.3.0"></script>
-  <script src="js/settings.js?v=2.3.0"></script>
-  <script src="js/cart.js?v=2.3.0"></script>
-  <script src="js/inventory.js?v=2.3.0"></script>
-  <script src="js/purchases.js?v=2.3.0"></script>
-  <script src="js/expenses.js?v=2.3.0"></script>
-  <script src="js/orders.js?v=2.3.0"></script>
-  <script src="js/delivery-settlement.js?v=2.3.0"></script>
-  <script src="js/returns.js?v=2.3.0"></script>
-  <script src="js/reports.js?v=2.3.0"></script>
-  <script src="js/employees.js?v=2.3.0"></script>
-  <script src="js/pwa.js?v=2.3.0"></script>
-  <script src="js/app.js?v=2.3.0"></script>
+  <script src="js/barcode-parser.js?v=2.3.5"></script>
+  <script src="js/api.js?v=2.3.5"></script>
+  <script src="js/sync-manager.js?v=2.3.5"></script>
+  <script src="js/pos-scanner.js?v=2.3.5"></script>
+  <script src="js/settings.js?v=2.3.5"></script>
+  <script src="js/cart.js?v=2.3.5"></script>
+  <script src="js/inventory.js?v=2.3.5"></script>
+  <script src="js/purchases.js?v=2.3.5"></script>
+  <script src="js/expenses.js?v=2.3.5"></script>
+  <script src="js/orders.js?v=2.3.5"></script>
+  <script src="js/delivery-settlement.js?v=2.3.5"></script>
+  <script src="js/returns.js?v=2.3.5"></script>
+  <script src="js/reports.js?v=2.3.5"></script>
+  <script src="js/employees.js?v=2.3.5"></script>
+  <script src="js/pwa.js?v=2.3.5"></script>
+  <script src="js/app.js?v=2.3.5"></script>
 </body>
 </html>

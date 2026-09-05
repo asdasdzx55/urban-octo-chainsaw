@@ -579,12 +579,17 @@ class App {
     const drawer = document.getElementById('mobile-nav-drawer');
     if (!drawer) return;
     if (drawer.classList.contains('hidden') || drawer.style.display === 'none') {
-      drawer.classList.remove('hidden');
-      drawer.style.display = 'flex';
+      this.openDrawerMenu();
     } else {
-      drawer.classList.add('hidden');
-      drawer.style.display = 'none';
+      this.closeDrawerMenu();
     }
+  }
+
+  openDrawerMenu() {
+    const drawer = document.getElementById('mobile-nav-drawer');
+    if (!drawer) return;
+    drawer.classList.remove('hidden');
+    drawer.style.display = 'flex';
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -593,6 +598,12 @@ class App {
     if (!drawer) return;
     drawer.classList.add('hidden');
     drawer.style.display = 'none';
+  }
+
+  openSuppliersReport() {
+    this.switchView('expenses');
+    window.expensesController?.setMode('suppliers_report');
+    this.closeDrawerMenu();
   }
 
   /* ==================== CHECKOUT & DELIVERY MODAL LOGIC ==================== */

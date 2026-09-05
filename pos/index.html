@@ -44,8 +44,8 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.3.5">
-  <link rel="stylesheet" href="css/receipt.css?v=2.3.5">
+  <link rel="stylesheet" href="css/pos.css?v=2.3.6">
+  <link rel="stylesheet" href="css/receipt.css?v=2.3.6">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0 lg:h-screen lg:overflow-hidden">
 
@@ -132,14 +132,20 @@
         <i data-lucide="history" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
       </button>
 
-      <!-- Theme Switcher -->
-      <button id="btn-theme-toggle" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition flex items-center justify-center cursor-pointer" title="تبديل المظهر">
+      <!-- Theme Switcher (Desktop Only) -->
+      <button id="btn-theme-toggle" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition hidden lg:flex items-center justify-center cursor-pointer" title="تبديل المظهر">
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
       </button>
 
-      <!-- Settings Button -->
-      <button onclick="window.app.switchView('settings')" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center justify-center cursor-pointer" title="إعدادات المتجر وبيانات الفاتورة">
+      <!-- Settings Button (Desktop Only) -->
+      <button onclick="window.app.switchView('settings')" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition hidden lg:flex items-center justify-center cursor-pointer" title="إعدادات المتجر وبيانات الفاتورة">
         <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Mobile Navigation Drawer Toggle Button (Mobile / Tablet) -->
+      <button type="button" onclick="window.app.toggleDrawerMenu()" class="lg:hidden h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition transform active:scale-95 cursor-pointer" title="قائمة التنقل لجميع الصفحات">
+        <i data-lucide="menu" class="w-4 h-4"></i>
+        <span>القائمة</span>
       </button>
     </div>
 
@@ -147,68 +153,148 @@
 
   <!-- ==================== MOBILE / TABLET SLIDE-OUT DRAWER MENU ==================== -->
   <div id="mobile-nav-drawer" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden justify-start" onclick="if(event.target === this) window.app.closeDrawerMenu()">
-    <div class="bg-white dark:bg-gray-800 w-72 max-w-[85vw] h-full p-5 flex flex-col justify-between shadow-2xl animate-drawer-slide-right">
+    <div class="bg-white dark:bg-gray-800 w-80 max-w-[88vw] h-full p-4 sm:p-5 flex flex-col justify-between shadow-2xl animate-drawer-slide-right overflow-y-auto">
       
-      <!-- Drawer Header -->
-      <div class="flex flex-col gap-4">
+      <!-- Drawer Header & Links -->
+      <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold">
+            <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/30">
               <i data-lucide="store" class="w-4 h-4"></i>
             </div>
-            <h3 class="text-xs font-black text-gray-900 dark:text-white">المنزل السوري POS</h3>
+            <div>
+              <h3 class="text-xs font-black text-gray-900 dark:text-white leading-tight">سوبر ماركت المنزل السوري</h3>
+              <p class="text-[10px] text-gray-400 font-mono mt-0.5">نظام الكاشير ونقاط البيع v2.3.6</p>
+            </div>
           </div>
-          <button onclick="window.app.closeDrawerMenu()" class="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400">
+          <button type="button" onclick="window.app.closeDrawerMenu()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <!-- Menu Navigation Links -->
-        <nav class="flex flex-col gap-1.5">
-          <button onclick="window.app.switchView('pos')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="pos">
-            <i data-lucide="shopping-cart" class="w-4 h-4 text-indigo-500"></i>
-            <span>شاشة الكاشير والبيع</span>
+        <!-- Section 1: عمليات البيع والتشغيل -->
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-black text-indigo-600 dark:text-indigo-400 px-2 py-0.5 uppercase tracking-wider">عمليات البيع والتشغيل</span>
+          
+          <button onclick="window.app.switchView('pos')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-gray-700/70" data-view="pos">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+              </span>
+              <span>شاشة الكاشير والبيع</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 font-bold">الرئيسية</span>
           </button>
 
-          <button onclick="window.app.switchView('inventory')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="inventory">
-            <i data-lucide="boxes" class="w-4 h-4 text-amber-500"></i>
-            <span>جرد المخزون وتعديل الأسعار</span>
+          <button onclick="window.app.switchView('orders')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-700/70" data-view="orders">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <i data-lucide="bike" class="w-4 h-4"></i>
+              </span>
+              <span>الطلبات والدليفري وتقفيل العهد</span>
+            </div>
+            <span class="text-[10px] text-emerald-600 font-mono">🛵</span>
           </button>
 
-          <button onclick="window.app.switchView('expenses')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="expenses">
-            <i data-lucide="wallet" class="w-4 h-4 text-purple-500"></i>
-            <span>المصروفات وسداد الموردين</span>
+          <button onclick="window.app.switchView('returns')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-rose-50 dark:hover:bg-gray-700/70" data-view="returns">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              </span>
+              <span>شاشة المرتجعات واستعادة المخزون</span>
+            </div>
+            <span class="text-[10px] text-rose-500 font-mono">↩</span>
+          </button>
+        </div>
+
+        <!-- Section 2: إدارة المخزون والماليات والعمال -->
+        <div class="flex flex-col gap-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <span class="text-[10px] font-black text-amber-600 dark:text-amber-400 px-2 py-0.5 uppercase tracking-wider">الماليات والعمال والموردين</span>
+
+          <button onclick="window.app.switchView('employees')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-gray-700/70" data-view="employees">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                <i data-lucide="users" class="w-4 h-4"></i>
+              </span>
+              <span>شؤون العمال والرواتب والسلف</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-md bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 font-bold">جديد</span>
           </button>
 
-          <button onclick="window.app.switchView('employees')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="employees">
-            <i data-lucide="users" class="w-4 h-4 text-sky-500"></i>
-            <span>👷 شؤون العمال والرواتب والسلف</span>
+          <button onclick="window.app.switchView('expenses')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-gray-700/70" data-view="expenses">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+              </span>
+              <span>فواتير المشتريات والمصروفات</span>
+            </div>
           </button>
 
-          <button onclick="window.app.switchView('orders')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="orders">
-            <i data-lucide="bike" class="w-4 h-4 text-emerald-500"></i>
-            <span>🛵 الدليفري والطلبات الأونلاين</span>
+          <button onclick="window.app.openSuppliersReport()" class="w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-700/70">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              </span>
+              <span>كشوفات حسابات الموردين</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 font-bold">كشوفات</span>
           </button>
 
-          <button onclick="window.app.switchView('returns')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="returns">
-            <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-500"></i>
-            <span>شاشة المرتجعات</span>
+          <button onclick="window.app.switchView('inventory')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-gray-700/70" data-view="inventory">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <i data-lucide="boxes" class="w-4 h-4"></i>
+              </span>
+              <span>جرد المخزون وتعديل الأسعار</span>
+            </div>
           </button>
 
-          <button onclick="window.app.switchView('reports')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="reports">
-            <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-500"></i>
-            <span>تقارير الوردية (Z-Report)</span>
+          <button onclick="window.app.switchView('reports')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-gray-700/70" data-view="reports">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+              </span>
+              <span>تقارير الوردية (Z-Report)</span>
+            </div>
           </button>
-        </nav>
+        </div>
+
+        <!-- Section 3: أدوات وإعدادات التطبيق والمظهر -->
+        <div class="flex flex-col gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <span class="text-[10px] font-black text-gray-400 px-2 py-0.5 uppercase tracking-wider">الإعدادات والمظهر</span>
+
+          <button onclick="window.app.switchView('settings')" class="w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2.5 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/70">
+            <span class="w-7 h-7 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center">
+              <i data-lucide="settings" class="w-4 h-4"></i>
+            </span>
+            <span>إعدادات المتجر وبيانات الفاتورة</span>
+          </button>
+
+          <button type="button" onclick="window.app.toggleTheme()" class="w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/70">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center">
+                <i data-lucide="sun-moon" class="w-4 h-4"></i>
+              </span>
+              <span>تبديل الوضع (ليلي / فاتح)</span>
+            </div>
+            <span class="text-[10px] text-gray-400 font-bold">🌓</span>
+          </button>
+        </div>
       </div>
 
       <!-- Drawer Footer -->
-      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2">
-        <button onclick="window.app.fetchProducts()" class="w-full py-2.5 px-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-xs font-bold flex items-center justify-center gap-2 text-gray-700 dark:text-gray-200">
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2 mt-4">
+        <button onclick="window.app.fetchProducts()" class="w-full py-2.5 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition text-xs font-bold flex items-center justify-center gap-2 border border-indigo-200 dark:border-indigo-800 cursor-pointer">
           <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
           <span>تحديث الأصناف من السيرفر</span>
         </button>
-        <p class="text-[10px] text-gray-400 text-center">سوبر ماركت المنزل السوري • POS v2.0</p>
+
+        <button onclick="window.pwaManager?.promptInstall()" class="btn-pwa-install hidden w-full py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>تثبيت التطبيق على الموبايل 📲</span>
+        </button>
+
+        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.3.6</p>
       </div>
 
     </div>
@@ -1642,10 +1728,10 @@
       <span class="tab-indicator absolute bottom-0 w-6 h-0.5 bg-indigo-600 rounded-full transition-opacity opacity-0"></span>
     </button>
 
-    <!-- Tab 5: Reports -->
-    <button onclick="window.app.switchView('reports')" class="mobile-tab-btn flex-1 flex flex-col items-center justify-center gap-1 py-1 text-gray-400 dark:text-gray-500 font-medium transition-all relative" data-view="reports">
-      <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-      <span class="text-[10px] leading-tight">التقارير</span>
+    <!-- Tab 5: More / Menu -->
+    <button onclick="window.app.toggleDrawerMenu()" class="mobile-tab-btn flex-1 flex flex-col items-center justify-center gap-1 py-1 text-gray-400 dark:text-gray-500 font-medium transition-all relative" data-view="menu" title="فتح القائمة الرئيسية وكل الصفحات">
+      <i data-lucide="menu" class="w-5 h-5"></i>
+      <span class="text-[10px] leading-tight font-bold">المزيد ☰</span>
       <span class="tab-indicator absolute bottom-0 w-6 h-0.5 bg-indigo-600 rounded-full transition-opacity opacity-0"></span>
     </button>
 
@@ -2799,21 +2885,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.3.5"></script>
-  <script src="js/api.js?v=2.3.5"></script>
-  <script src="js/sync-manager.js?v=2.3.5"></script>
-  <script src="js/pos-scanner.js?v=2.3.5"></script>
-  <script src="js/settings.js?v=2.3.5"></script>
-  <script src="js/cart.js?v=2.3.5"></script>
-  <script src="js/inventory.js?v=2.3.5"></script>
-  <script src="js/purchases.js?v=2.3.5"></script>
-  <script src="js/expenses.js?v=2.3.5"></script>
-  <script src="js/orders.js?v=2.3.5"></script>
-  <script src="js/delivery-settlement.js?v=2.3.5"></script>
-  <script src="js/returns.js?v=2.3.5"></script>
-  <script src="js/reports.js?v=2.3.5"></script>
-  <script src="js/employees.js?v=2.3.5"></script>
-  <script src="js/pwa.js?v=2.3.5"></script>
-  <script src="js/app.js?v=2.3.5"></script>
+  <script src="js/barcode-parser.js?v=2.3.6"></script>
+  <script src="js/api.js?v=2.3.6"></script>
+  <script src="js/sync-manager.js?v=2.3.6"></script>
+  <script src="js/pos-scanner.js?v=2.3.6"></script>
+  <script src="js/settings.js?v=2.3.6"></script>
+  <script src="js/cart.js?v=2.3.6"></script>
+  <script src="js/inventory.js?v=2.3.6"></script>
+  <script src="js/purchases.js?v=2.3.6"></script>
+  <script src="js/expenses.js?v=2.3.6"></script>
+  <script src="js/orders.js?v=2.3.6"></script>
+  <script src="js/delivery-settlement.js?v=2.3.6"></script>
+  <script src="js/returns.js?v=2.3.6"></script>
+  <script src="js/reports.js?v=2.3.6"></script>
+  <script src="js/employees.js?v=2.3.6"></script>
+  <script src="js/pwa.js?v=2.3.6"></script>
+  <script src="js/app.js?v=2.3.6"></script>
 </body>
 </html>

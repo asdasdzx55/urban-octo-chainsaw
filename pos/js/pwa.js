@@ -18,7 +18,7 @@ class PWAManager {
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=2.3.5')
+        navigator.serviceWorker.register('./sw.js?v=2.3.6')
           .then((reg) => {
             console.log('POS Service Worker registered successfully:', reg.scope);
             // Check for updates immediately

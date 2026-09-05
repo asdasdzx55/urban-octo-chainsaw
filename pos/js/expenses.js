@@ -343,7 +343,26 @@ class ExpensesController {
     window.app?.showToast('تم تصدير تقرير الموردين بنجاح 📑', 'success');
   }
 
+  async ensureSuppliersLoaded() {
+    if (this.suppliers && this.suppliers.length > 0) return this.suppliers;
+    if (window.purchasesController?.suppliers && window.purchasesController.suppliers.length > 0) {
+      this.suppliers = window.purchasesController.suppliers;
+      return this.suppliers;
+    }
+    try {
+      const res = await window.api.getSuppliers();
+      if (res && res.success && Array.isArray(res.suppliers)) {
+        this.suppliers = res.suppliers;
+      }
+    } catch (e) {
+      console.warn('Could not fetch suppliers:', e);
+    }
+    return this.suppliers || [];
+  }
+
   async openSupplierLedger(supplierId = null, supplierName = '', fromDate = '', toDate = '') {
+    const allSuppliers = await this.ensureSuppliersLoaded();
+
     if (!supplierId && !supplierName) {
       const expSelect = document.getElementById('exp-supplier-select');
       const purchSelect = document.getElementById('purch-supplier-select');
@@ -353,11 +372,14 @@ class ExpensesController {
       } else if (purchSelect && purchSelect.value) {
         supplierId = parseInt(purchSelect.value, 10);
         supplierName = purchSelect.options[purchSelect.selectedIndex]?.getAttribute('data-name') || '';
+      } else if (allSuppliers.length > 0) {
+        supplierId = allSuppliers[0].id;
+        supplierName = allSuppliers[0].name;
       }
     }
 
     if (!supplierId && !supplierName) {
-      window.app?.showToast('يرجى اختيار المورد أولاً لعرض كشف حسابه!', 'warning');
+      window.app?.showToast('لا يوجد موردون مسجلون في النظام حالياً لعرض كشف الحساب!', 'warning');
       return;
     }
 
@@ -385,8 +407,18 @@ class ExpensesController {
       document.getElementById('sup-ledger-name').textContent = sup.name || supplierName;
       document.getElementById('sup-ledger-phone').textContent = sup.phone ? `هاتف: ${sup.phone}` : 'بدون رقم هاتف';
       
+      // Populate inside-modal supplier switcher
+      const switchSelect = document.getElementById('sup-ledger-switch-select');
+      if (switchSelect && allSuppliers.length > 0) {
+        switchSelect.innerHTML = allSuppliers.map(s => `
+          <option value="${s.id}" ${s.id == (sup.id || supplierId) ? 'selected' : ''}>
+            ${s.name} (${parseFloat(s.balance || 0).toFixed(0)} ج.م)
+          </option>
+        `).join('');
+      }
+
       const balEl = document.getElementById('sup-ledger-current-balance');
-      const curBal = parseFloat(summary.current_balance || sup.balance || 0);
+      const curBal = parseFloat(summary.current_balance !== undefined ? summary.current_balance : (sup.balance || 0));
       if (balEl) {
         balEl.textContent = curBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
         balEl.className = 'text-sm font-black font-mono mt-0.5 ' + (curBal > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400');
@@ -412,6 +444,13 @@ class ExpensesController {
       console.error('Error opening supplier ledger:', err);
       window.app?.showToast(`تعذر جلب كشف الحساب: ${err.message}`, 'error');
     }
+  }
+
+  onLedgerSupplierSwitched(newSupplierId) {
+    if (!newSupplierId) return;
+    const sup = (this.suppliers || []).find(s => s.id == newSupplierId);
+    const supName = sup ? sup.name : '';
+    this.openSupplierLedger(parseInt(newSupplierId, 10), supName);
   }
 
   filterLedger(type) {

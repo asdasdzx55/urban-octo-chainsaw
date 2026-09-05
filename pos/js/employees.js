@@ -294,55 +294,66 @@ class EmployeesController {
   }
 
   /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
+  /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
   openAddModal() {
-    document.getElementById('emp-modal-title').textContent = '➕ إضافة عامل جديد';
-    document.getElementById('emp-id').value = '';
-    document.getElementById('emp-name').value = '';
-    document.getElementById('emp-phone').value = '';
-    document.getElementById('emp-role').value = 'بائع أجبان وألبان';
-    document.getElementById('emp-salary-type').value = 'monthly';
-    document.getElementById('emp-base-salary').value = '5000';
-    document.getElementById('emp-hire-date').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('emp-notes').value = '';
-    document.getElementById('emp-active').checked = true;
-
     const modal = document.getElementById('employee-modal');
-    if (modal) modal.classList.remove('hidden');
-    document.getElementById('emp-name')?.focus();
+    if (!modal) return;
+    const titleEl = document.getElementById('emp-modal-title');
+    if (titleEl) titleEl.textContent = '➕ إضافة عامل جديد';
+    const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = '';
+    const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = '';
+    const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = '';
+    const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = 'بائع أجبان وألبان';
+    const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = 'monthly';
+    const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = '5000';
+    const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = new Date().toISOString().slice(0, 10);
+    const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = '';
+    const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = true;
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    setTimeout(() => nameEl?.focus(), 50);
   }
 
   openEditModal(id) {
     const emp = this.employees.find(e => e.id == id);
     if (!emp) return;
 
-    document.getElementById('emp-modal-title').textContent = '✏️ تعديل بيانات العامل';
-    document.getElementById('emp-id').value = emp.id;
-    document.getElementById('emp-name').value = emp.name || '';
-    document.getElementById('emp-phone').value = emp.phone || '';
-    document.getElementById('emp-role').value = emp.role || 'عامل';
-    document.getElementById('emp-salary-type').value = emp.salary_type || 'monthly';
-    document.getElementById('emp-base-salary').value = emp.base_salary || 0;
-    document.getElementById('emp-hire-date').value = emp.hire_date || new Date().toISOString().slice(0, 10);
-    document.getElementById('emp-notes').value = emp.notes || '';
-    document.getElementById('emp-active').checked = emp.is_active != 0;
-
     const modal = document.getElementById('employee-modal');
-    if (modal) modal.classList.remove('hidden');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('emp-modal-title');
+    if (titleEl) titleEl.textContent = '✏️ تعديل بيانات العامل';
+    const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = emp.id;
+    const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = emp.name || '';
+    const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = emp.phone || '';
+    const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = emp.role || 'عامل';
+    const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = emp.salary_type || 'monthly';
+    const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = emp.base_salary || 0;
+    const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = emp.hire_date || new Date().toISOString().slice(0, 10);
+    const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = emp.notes || '';
+    const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = emp.is_active != 0;
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
   }
 
   closeEmployeeModal() {
     const modal = document.getElementById('employee-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 
   async saveEmployee() {
     const id = document.getElementById('emp-id')?.value;
     const name = document.getElementById('emp-name')?.value.trim();
     const phone = document.getElementById('emp-phone')?.value.trim();
-    const role = document.getElementById('emp-role')?.value.trim();
-    const salaryType = document.getElementById('emp-salary-type')?.value;
-    const baseSalary = parseFloat(document.getElementById('emp-base-salary')?.value || 0);
-    const hireDate = document.getElementById('emp-hire-date')?.value;
+    const role = document.getElementById('emp-role')?.value.trim() || 'عامل';
+    const salaryType = document.getElementById('emp-salary-type')?.value || 'monthly';
+    const baseSalary = parseFloat(document.getElementById('emp-base-salary')?.value || 0) || 0;
+    const hireDate = document.getElementById('emp-hire-date')?.value || new Date().toISOString().slice(0, 10);
     const notes = document.getElementById('emp-notes')?.value.trim();
     const isActive = document.getElementById('emp-active')?.checked ? 1 : 0;
 
@@ -362,7 +373,7 @@ class EmployeesController {
       notes: notes,
       is_active: isActive
     };
-    if (id) payload.id = parseInt(id);
+    if (id) payload.id = parseInt(id, 10);
 
     try {
       window.app?.showLoading(true, 'جاري حفظ بيانات العامل...');
@@ -373,7 +384,7 @@ class EmployeesController {
         window.posScanner?.playSuccessBeep();
         window.app?.showToast(res.message || 'تم حفظ بيانات العامل بنجاح ✅', 'success');
         this.closeEmployeeModal();
-        this.loadEmployees();
+        await this.loadEmployees();
       } else {
         throw new Error(res?.error || 'فشل حفظ العامل');
       }
@@ -404,38 +415,58 @@ class EmployeesController {
   }
 
   /* ==================== SALARY & ADVANCE PAYOUT MODAL ==================== */
-  openPayoutModal(employeeId = null, defaultType = 'سلفة') {
+  async openPayoutModal(employeeId = null, defaultType = 'سلفة') {
+    const modal = document.getElementById('salary-payout-modal');
+    if (!modal) return;
+
+    // Auto-load employees if not loaded yet
+    if (!this.employees || this.employees.length === 0) {
+      window.app?.showLoading(true, 'جاري جلب قائمة العمال...');
+      await this.loadEmployees();
+      window.app?.showLoading(false);
+    }
+
     const select = document.getElementById('payout-employee-id');
     if (!select) return;
 
-    // Populate active employees in select
-    const activeEmployees = this.employees.filter(e => e.is_active != 0);
-    select.innerHTML = activeEmployees.map(e => `
-      <option value="${e.id}" ${e.id == employeeId ? 'selected' : ''}>
-        ${e.name} (${e.role || 'عامل'}) - متبقي: ${(parseFloat(e.net_remaining_salary || 0)).toFixed(0)} ج.م
-      </option>
-    `).join('');
-
-    if (activeEmployees.length === 0) {
-      window.app?.showToast('يرجى إضافة عمال نشطين أولاً لتسجيل صرف الرواتب والسلف', 'warning');
+    if (!this.employees || this.employees.length === 0) {
+      window.app?.showToast('لا يوجد عمال مسجلون حالياً. يرجى إضافة عامل أولاً!', 'warning');
+      this.openAddModal();
       return;
     }
 
-    document.getElementById('payout-type').value = defaultType;
-    document.getElementById('payout-amount').value = '';
-    document.getElementById('payout-method').value = 'كاش من الدرج';
-    document.getElementById('payout-notes').value = defaultType === 'سلفة' ? 'سلفة من الراتب' : '';
+    // Populate employees in select
+    select.innerHTML = this.employees.map(e => `
+      <option value="${e.id}" ${e.id == employeeId ? 'selected' : ''}>
+        ${e.name} (${e.role || 'عامل'})${e.is_active == 0 ? ' [متوقف]' : ''} - متبقي: ${(parseFloat(e.net_remaining_salary !== undefined ? e.net_remaining_salary : (e.base_salary || 0))).toFixed(0)} ج.م
+      </option>
+    `).join('');
+
+    const typeEl = document.getElementById('payout-type');
+    if (typeEl) typeEl.value = defaultType;
+
+    const amtEl = document.getElementById('payout-amount');
+    if (amtEl) amtEl.value = '';
+
+    const methEl = document.getElementById('payout-method');
+    if (methEl) methEl.value = 'كاش من الدرج';
+
+    const notesEl = document.getElementById('payout-notes');
+    if (notesEl) notesEl.value = defaultType === 'سلفة' ? 'سلفة من الراتب' : '';
 
     this.onPayoutEmployeeChange();
 
-    const modal = document.getElementById('salary-payout-modal');
-    if (modal) modal.classList.remove('hidden');
-    document.getElementById('payout-amount')?.focus();
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    setTimeout(() => amtEl?.focus(), 50);
   }
 
   closePayoutModal() {
     const modal = document.getElementById('salary-payout-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 
   onPayoutEmployeeChange() {
@@ -529,7 +560,10 @@ class EmployeesController {
         this.currentLedgerData = res;
         this.renderLedgerModal(res);
         const modal = document.getElementById('employee-ledger-modal');
-        if (modal) modal.classList.remove('hidden');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.style.display = 'flex';
+        }
       } else {
         throw new Error(res?.error || 'تعذر استخراج كشف الحساب');
       }
@@ -589,7 +623,10 @@ class EmployeesController {
 
   closeLedgerModal() {
     const modal = document.getElementById('employee-ledger-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 
   printLedger() {

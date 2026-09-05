@@ -2679,11 +2679,17 @@
             <i data-lucide="truck" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <span id="sup-ledger-name">المورد</span>
-              <span class="px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">كشف حساب معتمد</span>
-            </h3>
-            <p id="sup-ledger-phone" class="text-[11px] text-gray-400 font-mono">هاتف المورد</p>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <span id="sup-ledger-name">المورد</span>
+                <span class="px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">كشف حساب معتمد</span>
+              </h3>
+              <!-- In-modal supplier switcher -->
+              <select id="sup-ledger-switch-select" onchange="window.expensesController.onLedgerSupplierSwitched(this.value)" class="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 cursor-pointer" title="تبديل المورد">
+                <!-- Dynamically populated with all suppliers -->
+              </select>
+            </div>
+            <p id="sup-ledger-phone" class="text-[11px] text-gray-400 font-mono mt-0.5">هاتف المورد</p>
           </div>
         </div>
 
@@ -2782,21 +2788,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/sync-manager.js"></script>
-  <script src="js/pos-scanner.js"></script>
-  <script src="js/settings.js"></script>
-  <script src="js/cart.js"></script>
-  <script src="js/inventory.js"></script>
-  <script src="js/purchases.js"></script>
-  <script src="js/expenses.js"></script>
-  <script src="js/orders.js"></script>
-  <script src="js/delivery-settlement.js"></script>
-  <script src="js/returns.js"></script>
-  <script src="js/reports.js"></script>
-  <script src="js/employees.js"></script>
-  <script src="js/pwa.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/barcode-parser.js?v=2.3.0"></script>
+  <script src="js/api.js?v=2.3.0"></script>
+  <script src="js/sync-manager.js?v=2.3.0"></script>
+  <script src="js/pos-scanner.js?v=2.3.0"></script>
+  <script src="js/settings.js?v=2.3.0"></script>
+  <script src="js/cart.js?v=2.3.0"></script>
+  <script src="js/inventory.js?v=2.3.0"></script>
+  <script src="js/purchases.js?v=2.3.0"></script>
+  <script src="js/expenses.js?v=2.3.0"></script>
+  <script src="js/orders.js?v=2.3.0"></script>
+  <script src="js/delivery-settlement.js?v=2.3.0"></script>
+  <script src="js/returns.js?v=2.3.0"></script>
+  <script src="js/reports.js?v=2.3.0"></script>
+  <script src="js/employees.js?v=2.3.0"></script>
+  <script src="js/pwa.js?v=2.3.0"></script>
+  <script src="js/app.js?v=2.3.0"></script>
 </body>
 </html>

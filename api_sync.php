@@ -744,8 +744,13 @@ try {
                 $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
             }
 
+            if (!$supplier && empty($sup_name) && $sup_id <= 0) {
+                $stmt = $pdo->query("SELECT * FROM suppliers ORDER BY id ASC LIMIT 1");
+                $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
             if (!$supplier) {
-                echo json_encode(['success' => false, 'error' => 'لم يتم العثور على المورد المحدد!'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['success' => false, 'error' => 'لم يتم العثور على أي مورد مسجل في النظام بعد!'], JSON_UNESCAPED_UNICODE);
                 break;
             }
 

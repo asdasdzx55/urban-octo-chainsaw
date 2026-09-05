@@ -193,32 +193,81 @@ try {
             }
             $details_str = implode("\n", $items_text);
             
-            // تحديد الحالة الأولية للأوردر
-            $order_status = (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') ? 'بانتظار الطيار' : 'مكتمل';
+            // تحديد نوع الطلب وحالته
+            $req_order_type = trim($data['order_type'] ?? '');
+            $deliv_pay_mode = trim($data['delivery_pay_mode'] ?? '');
+            $is_delivery_order = ($req_order_type === 'delivery') || ($source === 'delivery') || ($delivery_fee > 0) || (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)');
+            $actual_order_type = $is_delivery_order ? 'delivery' : 'hall';
+
+            if ($is_delivery_order) {
+                // أوردر توصيل دليفري (سواء تم تحديد طيار أو بدون تحديد طيار بعد)
+                $order_status = 'بانتظار الطيار';
+                $order_payment_status = ($deliv_pay_mode === 'cod') ? 'غير مدفوع' : 'مدفوع';
+            } else {
+                $order_status = 'مكتمل';
+                $order_payment_status = 'مدفوع';
+            }
 
             // حفظ الفاتورة في جدول orders
             $stmt = $pdo->prepare("INSERT INTO orders (
                 customer_name, customer_phone, customer_address, order_details, 
                 total_price, discount_amount, shipping_cost, payment_method, payment_status, 
                 status, source, cashier_name, delivery_person, delivery_fee, created_at, synced
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'مدفوع', ?, ?, ?, ?, ?, ?, 1)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
             
             $stmt->execute([
                 $customer, $phone, $address, $details_str,
                 $total, $discount, $delivery_fee, $payment_method,
+                $order_payment_status,
                 $order_status,
                 $source, $cashier, $delivery_person, $delivery_fee, $date
             ]);
             $remote_order_id = $pdo->lastInsertId();
             
-            // التأكد من وجود أعمدة items_json و invoice_barcode في جدول orders وحفظها
+            // التأكد من وجود أعمدة items_json و invoice_barcode و order_type في جدول orders وحفظها
             $inv_barcode = "INV-" . $remote_order_id;
             try { $pdo->exec("ALTER TABLE orders ADD COLUMN items_json LONGTEXT DEFAULT NULL"); } catch (Exception $e) {}
             try { $pdo->exec("ALTER TABLE orders ADD COLUMN invoice_barcode VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
+            try { $pdo->exec("ALTER TABLE orders ADD COLUMN order_type VARCHAR(50) DEFAULT 'hall'"); } catch (Exception $e) {}
             try {
-                $upd_bc = $pdo->prepare("UPDATE orders SET items_json = ?, invoice_barcode = ? WHERE id = ?");
-                $upd_bc->execute([json_encode($items, JSON_UNESCAPED_UNICODE), $inv_barcode, $remote_order_id]);
+                $upd_bc = $pdo->prepare("UPDATE orders SET items_json = ?, invoice_barcode = ?, order_type = ? WHERE id = ?");
+                $upd_bc->execute([json_encode($items, JSON_UNESCAPED_UNICODE), $inv_barcode, $actual_order_type, $remote_order_id]);
             } catch (Exception $e) {}
+
+            // حفظ أو تحديث بيانات العميل في جدول customers للاسترجاع التلقائي بالهاتف
+            if (!empty($phone) && strlen($phone) >= 7) {
+                try {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL,
+                        phone VARCHAR(50) NOT NULL UNIQUE,
+                        address TEXT DEFAULT NULL,
+                        notes TEXT DEFAULT NULL,
+                        total_orders INT DEFAULT 1,
+                        total_spent DECIMAL(10,2) DEFAULT 0.00,
+                        last_order_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                    $c_valid_name = (!empty($customer) && !in_array($customer, ['عميل نقدي', 'عميل كاشير', 'عميل دليفري'])) ? $customer : '';
+                    $clean_phone = preg_replace('/[^0-9]/', '', $phone);
+
+                    $chk_c = $pdo->prepare("SELECT id, name, address FROM customers WHERE phone = ? LIMIT 1");
+                    $chk_c->execute([$clean_phone]);
+                    $existing_c = $chk_c->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existing_c) {
+                        $fn_name = !empty($c_valid_name) ? $c_valid_name : $existing_c['name'];
+                        $fn_addr = !empty($address) ? $address : $existing_c['address'];
+                        $pdo->prepare("UPDATE customers SET name = ?, address = ?, total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_at = ? WHERE id = ?")
+                            ->execute([$fn_name, $fn_addr, $total, $date, $existing_c['id']]);
+                    } else {
+                        $fn_name = !empty($c_valid_name) ? $c_valid_name : ('عميل ' . substr($clean_phone, -4));
+                        $pdo->prepare("INSERT INTO customers (name, phone, address, total_orders, total_spent, last_order_at) VALUES (?, ?, ?, 1, ?, ?)")
+                            ->execute([$fn_name, $clean_phone, $address, $total, $date]);
+                    }
+                } catch (Exception $e) {}
+            }
 
             // تسجيل إشعار بنظام الإدارة
             try {
@@ -1048,6 +1097,199 @@ try {
                 'success' => true,
                 'message' => '✅ تم تصفية عهدة الطيار بنجاح.'
             ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.13 جلب أوردرات الدليفري بدون طيار / قيد الانتظار (Get Unassigned Orders)
+        // ============================================================
+        case 'get_unassigned_delivery_orders':
+        case 'get_pending_deliveries':
+            try { $pdo->exec("ALTER TABLE orders ADD COLUMN order_type VARCHAR(50) DEFAULT 'hall'"); } catch (Exception $e) {}
+            try { $pdo->exec("ALTER TABLE orders ADD COLUMN invoice_barcode VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
+            try { $pdo->exec("ALTER TABLE orders ADD COLUMN items_json LONGTEXT DEFAULT NULL"); } catch (Exception $e) {}
+
+            $limit = min(100, max(1, (int)($_GET['limit'] ?? 50)));
+
+            // استعلام الطلبات المصنفة كتوصيل ولم يُسند إليها طيار دائم ولم تكتمل بعد
+            $stmt = $pdo->prepare("SELECT * FROM orders 
+                WHERE (order_type = 'delivery' OR source = 'delivery' OR delivery_fee > 0 OR shipping_cost > 0)
+                  AND (delivery_person IS NULL OR delivery_person = '' OR delivery_person = 'غير محدد' OR delivery_person = 'بدون توصيل (تيك أواي)' OR delivery_person LIKE 'توصيل مؤقت:%')
+                  AND status NOT IN ('تم التسليم', 'تم التوصيل', 'مكتمل', 'مكتملة', 'ملغي', 'تم الإلغاء')
+                ORDER BY id DESC LIMIT ?");
+            $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $raw_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $formatted_unassigned = [];
+            foreach ($raw_orders as $o) {
+                $items = [];
+                if (!empty($o['items_json'])) {
+                    $items = json_decode($o['items_json'], true) ?: [];
+                }
+                $formatted_unassigned[] = [
+                    'id' => (int)$o['id'],
+                    'order_id' => (int)$o['id'],
+                    'invoice_barcode' => $o['invoice_barcode'] ?: ("INV-" . $o['id']),
+                    'customer_name' => $o['customer_name'] ?: 'عميل دليفري',
+                    'customer_phone' => $o['customer_phone'] ?? '',
+                    'customer_address' => $o['customer_address'] ?? '',
+                    'total_price' => (float)$o['total_price'],
+                    'total' => (float)$o['total_price'],
+                    'delivery_fee' => (float)($o['delivery_fee'] ?? $o['shipping_cost'] ?? 0),
+                    'payment_method' => $o['payment_method'] ?: 'كاش',
+                    'payment_status' => $o['payment_status'] ?: 'غير مدفوع',
+                    'status' => $o['status'] ?: 'بانتظار الطيار',
+                    'delivery_person' => $o['delivery_person'] ?? '',
+                    'is_adhoc' => (strpos($o['delivery_person'] ?? '', 'توصيل مؤقت:') !== false),
+                    'cashier' => $o['cashier_name'] ?? 'كاشير 1',
+                    'created_at' => $o['created_at'],
+                    'items' => $items
+                ];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($formatted_unassigned),
+                'orders' => $formatted_unassigned
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.14 تقفيل أوردر دليفري مؤقت / خارجي بملاحظة وتوريد النقدية (Settle Ad-hoc)
+        // ============================================================
+        case 'settle_adhoc_delivery':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $order_id = (int)($data['order_id'] ?? 0);
+            $inv_num = trim($data['invoice_number'] ?? '');
+            $driver_note = trim($data['driver_note'] ?? $data['notes'] ?? 'توصيل مؤقت');
+            $collected_amount = (float)($data['amount'] ?? $data['collected_amount'] ?? 0);
+            $payment_method = trim($data['payment_method'] ?? 'كاش');
+            $cashier = trim($data['cashier'] ?? 'كاشير 1');
+
+            if ($order_id <= 0 && !empty($inv_num)) {
+                $order_id = (int)preg_replace('/[^0-9]/', '', $inv_num);
+            }
+
+            if ($order_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'يرجى تحديد رقم الطلب المراد تقفيله!']);
+                break;
+            }
+
+            // فحص وجود الأوردر
+            $chk = $pdo->prepare("SELECT id, customer_name, customer_phone, total_price, payment_method FROM orders WHERE id = ? LIMIT 1");
+            $chk->execute([$order_id]);
+            $order = $chk->fetch(PDO::FETCH_ASSOC);
+
+            if (!$order) {
+                echo json_encode(['success' => false, 'error' => 'الأوردر غير موجود أو تم حذفه']);
+                break;
+            }
+
+            if ($collected_amount <= 0) {
+                $collected_amount = (float)$order['total_price'];
+            }
+
+            $delivery_tag = 'توصيل مؤقت: ' . $driver_note;
+
+            // تحديث الأوردر إلى تم التسليم ومدفوع
+            $upd = $pdo->prepare("UPDATE orders SET 
+                status = 'تم التسليم', 
+                delivery_person = ?, 
+                payment_status = 'مدفوع', 
+                payment_method = ? 
+                WHERE id = ?");
+            $upd->execute([$delivery_tag, $payment_method, $order_id]);
+
+            // تسجيل حركة التوريد النقدي في جدول المصروفات / الخزينة
+            try {
+                $exp_note = "توريد نقدية دليفري مؤقت أوردر #{$order_id} ({$order['customer_name']}) - [{$driver_note}]";
+                $pdo->prepare("INSERT INTO expenses (category, amount, note, date, partner_name, payment_method) 
+                    VALUES ('توريد دليفري مؤقت', ?, ?, ?, ?, ?)")
+                    ->execute([$collected_amount, $exp_note, date('Y-m-d H:i:s'), $driver_note, $payment_method]);
+            } catch (Exception $e) {}
+
+            echo json_encode([
+                'success' => true,
+                'message' => "✅ تم تقفيل الأوردر رقم #{$order_id} وتوريد ({$collected_amount} ج.م) للخزينة بنجاح.",
+                'order_id' => $order_id,
+                'driver_note' => $driver_note,
+                'collected_amount' => $collected_amount,
+                'date' => date('Y-m-d H:i:s')
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.14.1 جلب بيانات وسجل العميل بالهاتف للملء التلقائي (Get Customer by Phone)
+        // ============================================================
+        case 'get_customer_by_phone':
+            $phone = trim($_GET['phone'] ?? $json_payload['phone'] ?? '');
+            $clean_phone = preg_replace('/[^0-9]/', '', $phone);
+
+            if (empty($clean_phone) || strlen($clean_phone) < 7) {
+                echo json_encode(['success' => false, 'found' => false, 'error' => 'رقم الهاتف قصير جداً أو غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $search_suffix = substr($clean_phone, -9);
+            $customer = null;
+
+            // 1. البحث في جدول customers
+            try {
+                $c_stmt = $pdo->prepare("SELECT name, phone, address, notes, total_orders, total_spent, last_order_at FROM customers WHERE phone = ? OR phone LIKE ? LIMIT 1");
+                $c_stmt->execute([$clean_phone, '%' . $search_suffix]);
+                $customer = $c_stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
+            // 2. إذا لم يتم العثور عليه أو كان العنوان فارغاً، البحث في جدول orders
+            if (!$customer || empty($customer['address'])) {
+                try {
+                    $o_stmt = $pdo->prepare("SELECT customer_name, customer_phone, customer_address, total_price, created_at FROM orders WHERE (customer_phone = ? OR customer_phone LIKE ?) AND customer_name NOT IN ('عميل نقدي', 'عميل كاشير', 'عميل دليفري', '') AND customer_address IS NOT NULL AND customer_address != '' ORDER BY id DESC LIMIT 1");
+                    $o_stmt->execute([$clean_phone, '%' . $search_suffix]);
+                    $last_ord = $o_stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($last_ord) {
+                        if (!$customer) {
+                            $cnt_stmt = $pdo->prepare("SELECT COUNT(*), SUM(total_price) FROM orders WHERE customer_phone = ? OR customer_phone LIKE ?");
+                            $cnt_stmt->execute([$clean_phone, '%' . $search_suffix]);
+                            $c_row = $cnt_stmt->fetch(PDO::FETCH_NUM);
+
+                            $customer = [
+                                'name' => $last_ord['customer_name'],
+                                'phone' => $last_ord['customer_phone'] ?: $clean_phone,
+                                'address' => $last_ord['customer_address'],
+                                'notes' => '',
+                                'total_orders' => (int)($c_row[0] ?? 1),
+                                'total_spent' => (float)($c_row[1] ?? $last_ord['total_price']),
+                                'last_order_at' => $last_ord['created_at']
+                            ];
+                        } elseif (empty($customer['address']) && !empty($last_ord['customer_address'])) {
+                            $customer['address'] = $last_ord['customer_address'];
+                        }
+                    }
+                } catch (Exception $e) {}
+            }
+
+            if ($customer && (!empty($customer['name']) || !empty($customer['address']))) {
+                echo json_encode([
+                    'success' => true,
+                    'found' => true,
+                    'customer' => [
+                        'name' => $customer['name'],
+                        'phone' => $customer['phone'] ?? $clean_phone,
+                        'address' => $customer['address'] ?? '',
+                        'notes' => $customer['notes'] ?? '',
+                        'total_orders' => (int)($customer['total_orders'] ?? 1),
+                        'total_spent' => (float)($customer['total_spent'] ?? 0),
+                        'last_order_at' => $customer['last_order_at'] ?? ''
+                    ]
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'found' => false,
+                    'message' => 'لم يتم العثور على بيانات سابقة لهذا العميل'
+                ], JSON_UNESCAPED_UNICODE);
+            }
             break;
 
         // ============================================================
@@ -2266,7 +2508,7 @@ try {
                     'address' => $o['customer_address'] ?? '',
                     'delivery_person' => $o['delivery_person'] ?? '',
                     'delivery_fee' => (float)($o['delivery_fee'] ?? $o['shipping_cost'] ?? 0),
-                    'order_type' => (!empty($o['delivery_person']) && $o['delivery_person'] !== 'بدون توصيل (تيك أواي)') ? 'delivery' : 'hall',
+                    'order_type' => ((!empty($o['delivery_person']) && $o['delivery_person'] !== 'بدون توصيل (تيك أواي)') || ($o['order_type'] ?? '') === 'delivery' || ($o['source'] ?? '') === 'delivery' || ((float)($o['delivery_fee'] ?? $o['shipping_cost'] ?? 0) > 0)) ? 'delivery' : 'hall',
                     'payment_method' => $o['payment_method'] ?: 'كاش',
                     'payment_status' => $o['payment_status'] ?: 'مدفوع',
                     'status' => $o['status'] ?: 'مكتمل',
@@ -2359,7 +2601,7 @@ try {
                 'address' => $o['customer_address'] ?? '',
                 'delivery_person' => $o['delivery_person'] ?? '',
                 'delivery_fee' => (float)($o['delivery_fee'] ?? $o['shipping_cost'] ?? 0),
-                'order_type' => (!empty($o['delivery_person']) && $o['delivery_person'] !== 'بدون توصيل (تيك أواي)') ? 'delivery' : 'hall',
+                'order_type' => ((!empty($o['delivery_person']) && $o['delivery_person'] !== 'بدون توصيل (تيك أواي)') || ($o['order_type'] ?? '') === 'delivery' || ($o['source'] ?? '') === 'delivery' || ((float)($o['delivery_fee'] ?? $o['shipping_cost'] ?? 0) > 0)) ? 'delivery' : 'hall',
                 'payment_method' => $o['payment_method'] ?: 'كاش',
                 'payment_status' => $o['payment_status'] ?: 'مدفوع',
                 'status' => $o['status'] ?: 'مكتمل',

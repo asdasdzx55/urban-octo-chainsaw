@@ -208,6 +208,98 @@ class POSCart {
     return Math.max(0, paid - total);
   }
 
+  /* ==================== CUSTOMER AUTOFILL BY PHONE ==================== */
+  onCustomerPhoneInput(phone) {
+    this.customerPhone = (phone || '').trim();
+    if (this._phoneLookupTimer) clearTimeout(this._phoneLookupTimer);
+
+    const clean = this.customerPhone.replace(/[^0-9]/g, '');
+    const infoBanner = document.getElementById('checkout-customer-info-banner');
+
+    if (clean.length < 8) {
+      if (infoBanner) infoBanner.classList.add('hidden');
+      return;
+    }
+
+    // Debounce lookup by 250ms
+    this._phoneLookupTimer = setTimeout(() => {
+      this.lookupCustomerByPhone(clean);
+    }, 250);
+  }
+
+  async lookupCustomerByPhone(cleanPhone) {
+    // 1. Fast lookup from local completed orders (instant match)
+    try {
+      const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
+      const match = completed.find(o => {
+        const p = (o.customer_phone || o.phone || '').replace(/[^0-9]/g, '');
+        return p && (p === cleanPhone || p.endsWith(cleanPhone.slice(-9)) || cleanPhone.endsWith(p.slice(-9)));
+      });
+
+      if (match && (match.customer_name || match.address || match.customer_address)) {
+        this.applyCustomerData({
+          name: match.customer_name,
+          phone: cleanPhone,
+          address: match.address || match.customer_address || '',
+          total_orders: 1,
+          is_local: true
+        });
+      }
+    } catch (e) {}
+
+    // 2. Lookup from Central Backend Database
+    try {
+      const res = await window.api.getCustomerByPhone(cleanPhone);
+      if (res && res.success && res.found && res.customer) {
+        this.applyCustomerData(res.customer);
+      }
+    } catch (e) {
+      console.warn('Backend customer phone lookup notice:', e);
+    }
+  }
+
+  applyCustomerData(customer) {
+    const infoBanner = document.getElementById('checkout-customer-info-banner');
+    const infoText = document.getElementById('checkout-customer-info-text');
+    const nameInput = document.getElementById('checkout-delivery-customer-name');
+    const addrInput = document.getElementById('checkout-delivery-customer-address');
+
+    const validName = customer.name && !['عميل نقدي', 'عميل كاشير', 'عميل دليفري'].includes(customer.name) ? customer.name : '';
+    const validAddr = customer.address || '';
+
+    if (validName && nameInput && (!nameInput.value || nameInput.value === 'عميل دليفري')) {
+      nameInput.value = validName;
+      this.customerName = validName;
+      nameInput.classList.add('ring-2', 'ring-emerald-500');
+      setTimeout(() => nameInput.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+    }
+
+    if (validAddr && addrInput && !addrInput.value) {
+      addrInput.value = validAddr;
+      this.customerAddress = validAddr;
+      addrInput.classList.add('ring-2', 'ring-emerald-500');
+      setTimeout(() => addrInput.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+    }
+
+    if (infoBanner && infoText && (validName || validAddr)) {
+      infoText.innerHTML = `✨ <b>عميل سابق:</b> ${validName || 'بيانات محفوظة'} ${customer.total_orders ? `(${customer.total_orders} طلبات سابقة)` : ''} - تم استرجاع العنوان والاسم تلقائياً`;
+      infoBanner.classList.remove('hidden');
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  clearCustomerAutofill() {
+    const nameInput = document.getElementById('checkout-delivery-customer-name');
+    const addrInput = document.getElementById('checkout-delivery-customer-address');
+    const infoBanner = document.getElementById('checkout-customer-info-banner');
+
+    if (nameInput) nameInput.value = '';
+    if (addrInput) addrInput.value = '';
+    this.customerName = 'عميل دليفري';
+    this.customerAddress = '';
+    if (infoBanner) infoBanner.classList.add('hidden');
+  }
+
   /* ==================== CHECKOUT & SUBMIT SALE ==================== */
   async checkout() {
     if (this.items.length === 0) {

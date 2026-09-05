@@ -447,6 +447,11 @@
               <i data-lucide="bike" class="w-3.5 h-3.5"></i>
               <span>حسابات وعهد الطيارين</span>
             </button>
+            <button id="ds-tab-unassigned" onclick="window.deliverySettlementController.switchTab('unassigned')" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center gap-1.5 relative">
+              <i data-lucide="package-search" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>طلبات بدون طيار / مؤقت</span>
+              <span id="ds-unassigned-badge" class="hidden px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-mono font-bold leading-none">0</span>
+            </button>
             <button id="ds-tab-history" onclick="window.deliverySettlementController.switchTab('history')" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center gap-1.5">
               <i data-lucide="history" class="w-3.5 h-3.5"></i>
               <span>سجل عمليات التقفيل</span>
@@ -469,6 +474,13 @@
         <!-- Panel 1: Drivers Grid -->
         <div id="ds-panel-drivers" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div id="ds-drivers-grid" class="contents">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Panel 1.5: Unassigned & Ad-hoc Delivery Orders Grid -->
+        <div id="ds-panel-unassigned" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div id="ds-unassigned-grid" class="contents">
             <!-- Rendered dynamically -->
           </div>
         </div>
@@ -1779,7 +1791,7 @@
           <!-- Customer Phone -->
           <div class="flex flex-col gap-1">
             <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300">رقم هاتف العميل: <span class="text-rose-500">*</span></label>
-            <input type="tel" id="checkout-delivery-customer-phone" oninput="window.cart.customerPhone = this.value" placeholder="01xxxxxxxxx" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500">
+            <input type="tel" id="checkout-delivery-customer-phone" oninput="window.cart.onCustomerPhoneInput(this.value)" placeholder="01xxxxxxxxx" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500">
           </div>
 
           <!-- Customer Name -->
@@ -1787,6 +1799,15 @@
             <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300">اسم العميل:</label>
             <input type="text" id="checkout-delivery-customer-name" oninput="window.cart.customerName = this.value" placeholder="مثال: أحمد محمود..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500">
           </div>
+        </div>
+
+        <!-- Customer Auto-fetch info banner -->
+        <div id="checkout-customer-info-banner" class="hidden p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs flex items-center justify-between text-emerald-800 dark:text-emerald-300 transition">
+          <div class="flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span id="checkout-customer-info-text">✨ عميل مسجل: تم استرجاع العنوان والاسم تلقائياً</span>
+          </div>
+          <button type="button" onclick="window.cart.clearCustomerAutofill()" class="text-[10px] text-gray-500 hover:text-rose-500 underline font-bold">تعديل/مسح</button>
         </div>
 
         <!-- Customer Address -->
@@ -2011,6 +2032,130 @@
       <button onclick="window.deliverySettlementController.submitSettlement()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 shrink-0">
         <i data-lucide="check-circle-2" class="w-5 h-5"></i>
         <span>تأكيد التقفيل وتوريد النقدية للخزينة</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ==================== ASSIGN DRIVER TO ORDER MODAL ==================== -->
+  <div id="assign-driver-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-md w-full flex flex-col gap-4 shadow-2xl border border-gray-200 dark:border-gray-700 animate-scale-in">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center font-bold">
+            <i data-lucide="bike" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white">إسناد الأوردر لطيار دليفري</h3>
+            <p class="text-xs text-gray-500">تحويل الطلب لحساب وعهدة الطيار</p>
+          </div>
+        </div>
+        <button onclick="window.deliverySettlementController.closeAssignModal()" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-700 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Order Summary Card -->
+      <div class="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200/80 dark:border-gray-600 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="adm-order-id" class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">#0</span>
+            <span id="adm-cust-name" class="font-bold text-xs text-gray-800 dark:text-gray-200">عميل دليفري</span>
+          </div>
+          <p id="adm-cust-phone" class="text-[11px] text-gray-500 font-mono mt-0.5">-</p>
+        </div>
+        <span id="adm-order-total" class="text-base font-black font-mono text-gray-900 dark:text-white">0.00 ج.م</span>
+      </div>
+
+      <!-- Driver Selection -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اختر طيار الدليفري (المندوب): <span class="text-rose-500">*</span></label>
+        <select id="adm-driver-select" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+          <option value="">-- جاري التحميل... --</option>
+        </select>
+      </div>
+
+      <!-- Submit Button -->
+      <button onclick="window.deliverySettlementController.submitAssignDriver()" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 transition">
+        <i data-lucide="check-circle" class="w-4 h-4"></i>
+        <span>تأكيد إسناد الأوردر</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ==================== AD-HOC DELIVERY SETTLEMENT MODAL (تقفيل بملاحظة) ==================== -->
+  <div id="adhoc-settle-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-md w-full flex flex-col gap-4 shadow-2xl border border-gray-200 dark:border-gray-700 animate-scale-in">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center font-bold">
+            <i data-lucide="hand-coins" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white">تقفيل توصيل بملاحظة (دليفري مؤقت)</h3>
+            <p class="text-xs text-gray-500">لأوردرات الجيران، المندوبين المؤقتين، والاستلام الشخصي</p>
+          </div>
+        </div>
+        <button onclick="window.deliverySettlementController.closeAdhocSettleModal()" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-700 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Order Details Card -->
+      <div class="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="asm-order-id" class="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400">#0</span>
+            <span id="asm-cust-name" class="font-bold text-xs text-gray-900 dark:text-white">عميل دليفري</span>
+          </div>
+          <p id="asm-cust-phone" class="text-[11px] text-gray-500 font-mono mt-0.5">-</p>
+        </div>
+        <div class="text-left">
+          <span class="text-[10px] text-gray-400 block">المبلغ المطلوب:</span>
+          <span id="asm-order-total" class="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">0.00 ج.م</span>
+        </div>
+      </div>
+
+      <!-- Quick Preset Tags for Delivery Note -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-bold text-gray-700 dark:text-gray-300">ملاحظة التوصيل / القائم بالتسليم: <span class="text-rose-500">*</span></label>
+        <div class="flex flex-wrap gap-1 mb-1">
+          <button type="button" onclick="window.deliverySettlementController.setAdhocNotePreset('تسليم مع الجار')" class="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-[10px] font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">تسليم مع الجار</button>
+          <button type="button" onclick="window.deliverySettlementController.setAdhocNotePreset('استلم العميل بنفسه')" class="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-[10px] font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">استلم العميل بنفسه</button>
+          <button type="button" onclick="window.deliverySettlementController.setAdhocNotePreset('تاكسي خارجي')" class="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-[10px] font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">تاكسي خارجي</button>
+          <button type="button" onclick="window.deliverySettlementController.setAdhocNotePreset('دليفري تطبيق خارجي')" class="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-[10px] font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">دليفري تطبيق خارجي</button>
+        </div>
+        <input type="text" id="asm-driver-note" placeholder="اكتب الملاحظة (مثال: تسليم مع جار الدور الرابع أ/محمود)..." class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <!-- Collected Amount -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ المحصل (ج.م): <span class="text-rose-500">*</span></label>
+          <input type="number" step="0.5" id="asm-collected-amount" class="w-full bg-white dark:bg-gray-800 border border-emerald-500 rounded-xl px-3 py-2 text-sm font-black font-mono text-center text-emerald-600 focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Payment Method -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">طريقة التوريد للخزينة:</label>
+          <select id="asm-payment-method" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500">
+            <option value="كاش">💵 كاش (درج الخزينة)</option>
+            <option value="انستا باي">⚡ إنستاباي</option>
+            <option value="فودافون كاش">📱 فودافون كاش</option>
+            <option value="فيزا">💳 فيزا / بطاقة</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button onclick="window.deliverySettlementController.submitAdhocSettlement()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 transition">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        <span>تأكيد تقفيل الأوردر وتوريد النقدية</span>
       </button>
 
     </div>

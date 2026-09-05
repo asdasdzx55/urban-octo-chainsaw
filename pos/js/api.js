@@ -280,6 +280,27 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 22.1 Get Unassigned Delivery Orders (جلب طلبات التوصيل المعلقة وبدون طيار)
+   */
+  async getUnassignedDeliveryOrders() {
+    return await this.get('get_unassigned_delivery_orders');
+  }
+
+  /**
+   * 22.2 Settle Ad-hoc / Temporary Delivery (تقفيل أوردر دليفري مؤقت بملاحظة وتوريد النقدية)
+   */
+  async settleAdhocDelivery(settlePayload) {
+    return await this.post('settle_adhoc_delivery', settlePayload);
+  }
+
+  /**
+   * 22.3 Get Customer Info by Phone (جلب بيانات العميل المسجل بالهاتف تلقائياً)
+   */
+  async getCustomerByPhone(phone) {
+    return await this.get('get_customer_by_phone', { phone: phone });
+  }
+
+  /**
    * 23. Get Employees List (جلب قائمة العمال والموظفين مع ملخص الرواتب والسلف)
    */
   async getEmployees(activeOnly = false) {

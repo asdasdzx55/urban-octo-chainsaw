@@ -618,6 +618,9 @@ class App {
     if (custAddr) custAddr.value = window.cart.customerAddress || '';
     if (feeInp) feeInp.value = window.cart.deliveryFee || 15;
 
+    const banner = document.getElementById('checkout-customer-info-banner');
+    if (banner) banner.classList.add('hidden');
+
     // Apply Order Type (default: hall or current)
     this.setOrderType(window.cart.orderType || 'hall');
 

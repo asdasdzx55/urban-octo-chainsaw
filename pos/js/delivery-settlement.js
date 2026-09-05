@@ -9,14 +9,43 @@ class DeliverySettlementController {
     this.selectedDriver = null;
     this.driverOrdersData = null;
     this.settlementHistory = [];
-    this.activeTab = 'drivers'; // 'drivers' | 'history'
+    this.unassignedOrders = [];
+    this.assigningOrderId = null;
+    this.adhocOrder = null;
+    this.activeTab = 'drivers'; // 'drivers' | 'unassigned' | 'history'
   }
 
   async init() {
     this.loadSettlementHistory();
-    await this.loadDrivers();
+    await Promise.all([this.loadDrivers(), this.loadUnassignedOrders()]);
     this.renderKPIs();
     this.renderActiveTab();
+  }
+
+  async loadUnassignedOrders() {
+    try {
+      const res = await window.api.getUnassignedDeliveryOrders();
+      if (res && res.success && Array.isArray(res.orders)) {
+        this.unassignedOrders = res.orders;
+      }
+    } catch (e) {
+      console.warn('Error loading unassigned delivery orders:', e);
+      this.unassignedOrders = [];
+    }
+    this.updateUnassignedBadge();
+  }
+
+  updateUnassignedBadge() {
+    const badge = document.getElementById('ds-unassigned-badge');
+    const count = this.unassignedOrders.length;
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
   }
 
   loadSettlementHistory() {
@@ -87,25 +116,32 @@ class DeliverySettlementController {
     this.activeTab = tab;
     const btnDrivers = document.getElementById('ds-tab-drivers');
     const btnHistory = document.getElementById('ds-tab-history');
+    const btnUnassigned = document.getElementById('ds-tab-unassigned');
     const panelDrivers = document.getElementById('ds-panel-drivers');
     const panelHistory = document.getElementById('ds-panel-history');
+    const panelUnassigned = document.getElementById('ds-panel-unassigned');
+
+    const allBtns = [btnDrivers, btnHistory, btnUnassigned];
+    const allPanels = [panelDrivers, panelHistory, panelUnassigned];
+
+    allBtns.forEach(b => {
+      b?.classList.remove('bg-emerald-600', 'text-white', 'shadow-xs');
+      b?.classList.add('text-gray-600', 'dark:text-gray-300');
+    });
+    allPanels.forEach(p => p?.classList.add('hidden'));
 
     if (tab === 'drivers') {
       btnDrivers?.classList.add('bg-emerald-600', 'text-white', 'shadow-xs');
       btnDrivers?.classList.remove('text-gray-600', 'dark:text-gray-300');
-      btnHistory?.classList.remove('bg-emerald-600', 'text-white', 'shadow-xs');
-      btnHistory?.classList.add('text-gray-600', 'dark:text-gray-300');
-
       panelDrivers?.classList.remove('hidden');
-      panelHistory?.classList.add('hidden');
+    } else if (tab === 'unassigned') {
+      btnUnassigned?.classList.add('bg-emerald-600', 'text-white', 'shadow-xs');
+      btnUnassigned?.classList.remove('text-gray-600', 'dark:text-gray-300');
+      panelUnassigned?.classList.remove('hidden');
     } else {
       btnHistory?.classList.add('bg-emerald-600', 'text-white', 'shadow-xs');
       btnHistory?.classList.remove('text-gray-600', 'dark:text-gray-300');
-      btnDrivers?.classList.remove('bg-emerald-600', 'text-white', 'shadow-xs');
-      btnDrivers?.classList.add('text-gray-600', 'dark:text-gray-300');
-
       panelHistory?.classList.remove('hidden');
-      panelDrivers?.classList.add('hidden');
     }
 
     this.renderActiveTab();
@@ -115,6 +151,8 @@ class DeliverySettlementController {
   renderActiveTab() {
     if (this.activeTab === 'drivers') {
       this.renderDriversList();
+    } else if (this.activeTab === 'unassigned') {
+      this.renderUnassignedOrders();
     } else {
       this.renderHistoryList();
     }
@@ -555,6 +593,358 @@ class DeliverySettlementController {
   /* ==================== QUICK NEW DRIVER MODAL ==================== */
   openNewDriverModal() {
     window.app?.openNewDriverModal();
+  }
+
+  /* ==================== UNASSIGNED / AD-HOC DELIVERY ORDERS ==================== */
+  renderUnassignedOrders() {
+    const container = document.getElementById('ds-unassigned-grid');
+    if (!container) return;
+
+    if (this.unassignedOrders.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full p-10 text-center bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="check-check" class="w-7 h-7"></i>
+          </div>
+          <h4 class="text-sm font-black text-gray-900 dark:text-white">لا توجد طلبات دليفري معلقة بدون طيار</h4>
+          <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+            جميع طلبات التوصيل مسندة لطيارين أو تم تقفيلها وتسليمها بالكامل.
+          </p>
+          <button onclick="window.deliverySettlementController.loadUnassignedOrders().then(() => window.deliverySettlementController.renderActiveTab())" class="mt-4 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 mx-auto">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>تحديث القائمة</span>
+          </button>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = this.unassignedOrders.map(order => {
+      const isAdhoc = order.is_adhoc || (order.delivery_person && order.delivery_person.startsWith('توصيل مؤقت:'));
+      const isCod = order.payment_status !== 'مدفوع' || (order.payment_method || '').includes('استلام') || (order.payment_method || '').includes('كاش');
+      const timeStr = order.created_at ? new Date(order.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : '-';
+
+      return `
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-amber-200/80 dark:border-amber-900/50 shadow-xs hover:shadow-md transition flex flex-col justify-between gap-4 relative overflow-hidden">
+          <!-- Top Badge Bar -->
+          <div class="flex items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700/60 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl ${isAdhoc ? 'bg-purple-100 dark:bg-purple-950 text-purple-600' : 'bg-amber-100 dark:bg-amber-950 text-amber-600'} flex items-center justify-center font-bold text-xs">
+                ${isAdhoc ? '📝' : '🛵'}
+              </span>
+              <div>
+                <span class="font-mono font-bold text-xs text-gray-900 dark:text-white">#${order.id}</span>
+                <span class="text-[10px] text-gray-400 font-mono block">${timeStr}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isAdhoc ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:border-purple-800' : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800'}">
+                ${isAdhoc ? (order.delivery_person || 'توصيل مؤقت') : 'بانتظار الإسناد'}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isCod ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'}">
+                ${isCod ? '💵 مطلوب تحصيل' : '✅ مدفوع'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Customer Info Box -->
+          <div class="flex flex-col gap-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h4 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-gray-400"></i>
+                  <span>${order.customer_name || 'عميل دليفري'}</span>
+                </h4>
+                <p class="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5 flex items-center gap-1">
+                  <i data-lucide="phone" class="w-3 h-3"></i>
+                  <span>${order.customer_phone || 'بدون رقم'}</span>
+                </p>
+              </div>
+
+              <div class="text-left">
+                <span class="text-xs text-gray-400 block">إجمالي الطلب:</span>
+                <span class="text-base font-black font-mono text-indigo-600 dark:text-indigo-400">
+                  ${parseFloat(order.total_price || 0).toFixed(2)} ج.م
+                </span>
+                ${order.delivery_fee > 0 ? `<span class="text-[10px] text-gray-400 block font-mono">شامل توصيل: ${parseFloat(order.delivery_fee).toFixed(0)} ج.م</span>` : ''}
+              </div>
+            </div>
+
+            <!-- Address -->
+            <div class="p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-700 flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5"></i>
+              <span class="line-clamp-2">${order.customer_address || 'لم يتم تسجيل عنوان تفصيلي'}</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <!-- Option 1: Assign to permanent driver -->
+            <button onclick="window.deliverySettlementController.openAssignModal(${order.id})" class="py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-1.5 transition border border-indigo-200 dark:border-indigo-800/60">
+              <i data-lucide="bike" class="w-3.5 h-3.5"></i>
+              <span>إسناد لطيار</span>
+            </button>
+
+            <!-- Option 2: Settle ad-hoc with note (Neighbor / casual courier / pickup) -->
+            <button onclick="window.deliverySettlementController.openAdhocSettleModal(${order.id})" class="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs">
+              <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
+              <span>تقفيل بملاحظة</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  /* ==================== ASSIGN DRIVER TO ORDER ==================== */
+  openAssignModal(orderId) {
+    const order = this.unassignedOrders.find(o => o.id == orderId);
+    if (!order) return;
+
+    this.assigningOrderId = orderId;
+    const modal = document.getElementById('assign-driver-modal');
+    if (!modal) return;
+
+    document.getElementById('adm-order-id').textContent = `#${order.id}`;
+    document.getElementById('adm-cust-name').textContent = order.customer_name || 'عميل دليفري';
+    document.getElementById('adm-cust-phone').textContent = order.customer_phone || '-';
+    document.getElementById('adm-order-total').textContent = `${parseFloat(order.total_price || 0).toFixed(2)} ج.م`;
+
+    const select = document.getElementById('adm-driver-select');
+    if (select) {
+      let html = '<option value="">-- اختر طيار الدليفري --</option>';
+      this.drivers.filter(d => d.is_active != 0).forEach(d => {
+        html += `<option value="${d.name}" data-id="${d.id}">🛵 ${d.name} (${d.phone || 'بدون هاتف'})</option>`;
+      });
+      select.innerHTML = html;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeAssignModal() {
+    const modal = document.getElementById('assign-driver-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    this.assigningOrderId = null;
+  }
+
+  async submitAssignDriver() {
+    if (!this.assigningOrderId) return;
+    const select = document.getElementById('adm-driver-select');
+    const driverName = (select?.value || '').trim();
+
+    if (!driverName) {
+      window.app?.showToast('يرجى اختيار طيار للإسناد', 'error');
+      return;
+    }
+
+    try {
+      window.app?.showLoading(true, 'جاري إسناد الأوردر للطيار...');
+      const res = await window.api.assignDeliveryDriver({
+        order_id: this.assigningOrderId,
+        delivery_person: driverName
+      });
+      window.app?.showLoading(false);
+
+      if (res && res.success) {
+        window.app?.showToast(`✅ تم إسناد الأوردر للطيار (${driverName}) بنجاح!`, 'success');
+        this.closeAssignModal();
+        await Promise.all([this.loadDrivers(), this.loadUnassignedOrders()]);
+        this.renderKPIs();
+        this.renderActiveTab();
+      } else {
+        throw new Error(res?.error || 'فشل إسناد الأوردر');
+      }
+    } catch (e) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ في الإسناد: ${e.message}`, 'error');
+    }
+  }
+
+  /* ==================== AD-HOC DELIVERY SETTLEMENT (بملاحظة بدل اسم الدليفري) ==================== */
+  openAdhocSettleModal(orderId) {
+    const order = this.unassignedOrders.find(o => o.id == orderId);
+    if (!order) return;
+
+    this.adhocOrder = order;
+    const modal = document.getElementById('adhoc-settle-modal');
+    if (!modal) return;
+
+    document.getElementById('asm-order-id').textContent = `#${order.id}`;
+    document.getElementById('asm-cust-name').textContent = order.customer_name || 'عميل دليفري';
+    document.getElementById('asm-cust-phone').textContent = order.customer_phone || '-';
+    document.getElementById('asm-order-total').textContent = `${parseFloat(order.total_price || 0).toFixed(2)} ج.م`;
+
+    const amountInput = document.getElementById('asm-collected-amount');
+    if (amountInput) {
+      amountInput.value = parseFloat(order.total_price || 0).toFixed(2);
+    }
+
+    const noteInput = document.getElementById('asm-driver-note');
+    if (noteInput) {
+      noteInput.value = '';
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeAdhocSettleModal() {
+    const modal = document.getElementById('adhoc-settle-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    this.adhocOrder = null;
+  }
+
+  setAdhocNotePreset(note) {
+    const noteInput = document.getElementById('asm-driver-note');
+    if (noteInput) {
+      noteInput.value = note;
+    }
+  }
+
+  async submitAdhocSettlement() {
+    if (!this.adhocOrder) return;
+
+    const noteInput = document.getElementById('asm-driver-note');
+    const amountInput = document.getElementById('asm-collected-amount');
+    const methodSelect = document.getElementById('asm-payment-method');
+
+    const note = (noteInput?.value || 'توصيل بمعرفة الجار / مندوب مؤقت').trim();
+    const amount = parseFloat(amountInput?.value || this.adhocOrder.total_price || 0);
+    const paymentMethod = methodSelect?.value || 'كاش';
+
+    if (isNaN(amount) || amount < 0) {
+      window.app?.showToast('يرجى إدخال مبلغ تحصيل صحيح', 'error');
+      return;
+    }
+
+    try {
+      window.app?.showLoading(true, 'جاري تقفيل الأوردر وتوريد النقدية...');
+      const res = await window.api.settleAdhocDelivery({
+        order_id: this.adhocOrder.id,
+        driver_note: note,
+        amount: amount,
+        payment_method: paymentMethod,
+        cashier: window.cart?.cashierNotes || 'كاشير 1'
+      });
+      window.app?.showLoading(false);
+
+      if (res && res.success) {
+        // Record in settlement history
+        const settlement = {
+          id: `ADHOC-${Date.now().toString().slice(-6)}`,
+          order_id: this.adhocOrder.id,
+          driver_name: `مؤقت: ${note}`,
+          driver_phone: this.adhocOrder.customer_phone || '-',
+          cashier: window.cart?.cashierNotes || 'كاشير 1',
+          settled_amount: amount,
+          previous_balance: amount,
+          remaining_balance: 0,
+          payment_method: paymentMethod,
+          notes: `توصيل مؤقت - أوردر #${this.adhocOrder.id} [${note}]`,
+          date: new Date().toLocaleString('ar-EG'),
+          timestamp: Date.now(),
+          is_adhoc: true
+        };
+
+        this.settlementHistory.unshift(settlement);
+        this.saveSettlementHistory();
+
+        window.posScanner?.playSuccessBeep();
+        window.app?.showToast(`✅ تم تقفيل الأوردر وتوريد (${amount.toFixed(2)} ج.م) للخزينة بملاحظة (${note})`, 'success');
+
+        this.closeAdhocSettleModal();
+        await Promise.all([this.loadDrivers(), this.loadUnassignedOrders()]);
+        this.renderKPIs();
+        this.renderActiveTab();
+
+        // Print slip
+        this.printAdhocSettlementSlip(settlement, this.adhocOrder);
+      } else {
+        throw new Error(res?.error || 'فشل التقفيل');
+      }
+    } catch (e) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ أثناء التقفيل: ${e.message}`, 'error');
+    }
+  }
+
+  printAdhocSettlementSlip(settlement, order) {
+    const store = window.cart?.storeMeta || {
+      store_name: 'سوبر ماركت البيت السوري',
+      store_address: 'العنوان: شارع السوق التجاري',
+      phone_numbers: ['01000000000']
+    };
+
+    const slipHtml = `
+      <div class="receipt-header">
+        <h2 class="receipt-store-title">${store.store_name}</h2>
+        <div class="receipt-store-sub">🛵 إيصال تقفيل وتوريد دليفري مؤقت / خارجي</div>
+        <div class="receipt-store-sub">📍 ${store.store_address || ''}</div>
+      </div>
+
+      <div class="receipt-meta">
+        <div class="receipt-meta-row">
+          <span>رقم الإيصال: <b>#${settlement.id}</b></span>
+          <span>التاريخ: ${settlement.date}</span>
+        </div>
+        <div class="receipt-meta-row">
+          <span>رقم الأوردر: <b>#${settlement.order_id || '-'}</b></span>
+          <span>طريقة الدفع: <b>${settlement.payment_method || 'كاش'}</b></span>
+        </div>
+        <div class="receipt-meta-row">
+          <span>القائم بالتسليم / الملاحظة: <b>${settlement.driver_name}</b></span>
+        </div>
+        <div class="receipt-meta-row">
+          <span>الكاشير المستلم: <b>${settlement.cashier}</b></span>
+        </div>
+      </div>
+
+      <div class="receipt-totals" style="margin: 12px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0;">
+        <div class="receipt-total-row receipt-grand-total" style="font-size: 14px; margin: 4px 0;">
+          <span>المبلغ المورد للخزينة:</span>
+          <span>${parseFloat(settlement.settled_amount).toFixed(2)} ج.م (خالص ✅)</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 15px; font-size: 10px; display: flex; justify-content: space-between; text-align: center;">
+        <div style="width: 45%; border-top: 1px solid #333; padding-top: 4px;">
+          <span>توقيع المستلم / القائم بالتوصيل</span>
+        </div>
+        <div style="width: 45%; border-top: 1px solid #333; padding-top: 4px;">
+          <span>توقيع الكاشير</span>
+        </div>
+      </div>
+
+      <div class="receipt-footer" style="margin-top: 15px;">
+        <p>تم استلام النقدية وتوريدها إلى الخزينة وتسوية الأوردر بنجاح</p>
+      </div>
+    `;
+
+    const container = document.getElementById('receipt-view-container');
+    const printArea = document.getElementById('receipt-print-area');
+    const modal = document.getElementById('receipt-modal');
+
+    if (container) container.innerHTML = slipHtml;
+    if (printArea) printArea.innerHTML = slipHtml;
+    modal?.classList.remove('hidden');
+
+    setTimeout(() => {
+      window.print();
+    }, 400);
   }
 }
 

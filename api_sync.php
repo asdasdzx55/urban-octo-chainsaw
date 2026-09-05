@@ -39,12 +39,115 @@ function verify_api_auth() {
     return false;
 }
 
+// دالة لتوحيد وتوليد كل الصيغ المحتملة لرقم الهاتف المصري (010..., 201..., 1...)
+if (!function_exists('normalize_egypt_phone_variants')) {
+    function normalize_egypt_phone_variants($raw_phone) {
+        $digits = preg_replace('/[^\d]/', '', (string)$raw_phone);
+        if (empty($digits)) return [];
+        $variants = [$digits];
+        
+        if (strpos($digits, '0020') === 0) {
+            $base = substr($digits, 4);
+            $variants[] = '0' . $base;
+            $variants[] = $base;
+            $variants[] = '20' . $base;
+        } elseif (strpos($digits, '20') === 0 && strlen($digits) >= 11) {
+            $base = substr($digits, 2);
+            $variants[] = '0' . $base;
+            $variants[] = $base;
+            $variants[] = '20' . $base;
+        } elseif (strpos($digits, '0') === 0) {
+            $base = substr($digits, 1);
+            $variants[] = $base;
+            $variants[] = '20' . $base;
+            $variants[] = $digits;
+        } else {
+            $variants[] = '0' . $digits;
+            $variants[] = '20' . $digits;
+        }
+        return array_values(array_unique(array_filter($variants)));
+    }
+}
+
+// دالة لضمان وجود وترقية جداول وأعمدة العملاء والطلبات تلقائياً وبشكل ذاتي
+if (!function_exists('ensure_customers_schema')) {
+    function ensure_customers_schema($pdo) {
+        static $done = false;
+        if ($done) return;
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                phone VARCHAR(50) NOT NULL UNIQUE,
+                phone2 VARCHAR(50) DEFAULT NULL,
+                address TEXT DEFAULT NULL,
+                governorate VARCHAR(100) DEFAULT 'القاهرة',
+                delivery_lat VARCHAR(50) DEFAULT NULL,
+                delivery_lng VARCHAR(50) DEFAULT NULL,
+                delivery_distance_km DECIMAL(10,2) DEFAULT NULL,
+                email VARCHAR(255) DEFAULT NULL,
+                notes TEXT DEFAULT NULL,
+                total_orders INT DEFAULT 0,
+                total_spent DECIMAL(10,2) DEFAULT 0.00,
+                last_order_date DATETIME DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } catch (Exception $e) {
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(150) NOT NULL,
+                    phone VARCHAR(50) NOT NULL UNIQUE,
+                    phone2 VARCHAR(50) DEFAULT NULL,
+                    address TEXT DEFAULT NULL,
+                    governorate VARCHAR(100) DEFAULT 'القاهرة',
+                    delivery_lat VARCHAR(50) DEFAULT NULL,
+                    delivery_lng VARCHAR(50) DEFAULT NULL,
+                    delivery_distance_km DECIMAL(10,2) DEFAULT NULL,
+                    email VARCHAR(255) DEFAULT NULL,
+                    notes TEXT DEFAULT NULL,
+                    total_orders INTEGER DEFAULT 0,
+                    total_spent DECIMAL(10,2) DEFAULT 0.00,
+                    last_order_date VARCHAR(50) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+            } catch (Exception $e2) {}
+        }
+
+        // ترقية أعمدة جدول العملاء لضمان وجود كافة الحقول
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN phone2 VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN address TEXT DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN governorate VARCHAR(100) DEFAULT 'القاهرة'"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN delivery_lat VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN delivery_lng VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN delivery_distance_km DECIMAL(10,2) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN email VARCHAR(255) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN notes TEXT DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN total_orders INT DEFAULT 0"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN total_spent DECIMAL(10,2) DEFAULT 0.00"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN last_order_date DATETIME DEFAULT NULL"); } catch (Exception $e) {}
+
+        // ترقية أعمدة جدول الطلبات لضمان عدم وجود أخطاء عند القراءة
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN governorate VARCHAR(100) DEFAULT 'القاهرة'"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN customer_address TEXT DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN customer_email VARCHAR(255) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN delivery_lat VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN delivery_lng VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN delivery_distance_km DECIMAL(10,2) DEFAULT NULL"); } catch (Exception $e) {}
+        $done = true;
+    }
+}
+
 $action = $_GET['action'] ?? $_POST['action'] ?? 'ping';
 
 // إتاحة ping للفحص السريع
 if ($action === 'ping') {
     $prods_count = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
     $orders_count = (int)$pdo->query("SELECT COUNT(*) FROM orders")->fetchColumn();
+    $cust_count = 0;
+    try {
+        $cust_count = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
+    } catch (Exception $e) {}
     
     echo json_encode([
         'success' => true,
@@ -54,7 +157,8 @@ if ($action === 'ping') {
         'server_time' => date('Y-m-d H:i:s'),
         'total_products' => $prods_count,
         'total_orders' => $orders_count,
-        'api_version' => '2.0-HybridHub'
+        'total_customers' => $cust_count,
+        'api_version' => '2.2-UnifiedHub'
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
@@ -237,34 +341,25 @@ try {
             // حفظ أو تحديث بيانات العميل في جدول customers للاسترجاع التلقائي بالهاتف
             if (!empty($phone) && strlen($phone) >= 7) {
                 try {
-                    $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(150) NOT NULL,
-                        phone VARCHAR(50) NOT NULL UNIQUE,
-                        address TEXT DEFAULT NULL,
-                        notes TEXT DEFAULT NULL,
-                        total_orders INT DEFAULT 1,
-                        total_spent DECIMAL(10,2) DEFAULT 0.00,
-                        last_order_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                    ensure_customers_schema($pdo);
 
                     $c_valid_name = (!empty($customer) && !in_array($customer, ['عميل نقدي', 'عميل كاشير', 'عميل دليفري'])) ? $customer : '';
-                    $clean_phone = preg_replace('/[^0-9]/', '', $phone);
+                    $variants = normalize_egypt_phone_variants($phone);
+                    $in_ph = implode(',', array_fill(0, count($variants), '?'));
 
-                    $chk_c = $pdo->prepare("SELECT id, name, address FROM customers WHERE phone = ? LIMIT 1");
-                    $chk_c->execute([$clean_phone]);
+                    $chk_c = $pdo->prepare("SELECT id, name, address, governorate FROM customers WHERE phone IN ($in_ph) OR phone2 IN ($in_ph) LIMIT 1");
+                    $chk_c->execute(array_merge($variants, $variants));
                     $existing_c = $chk_c->fetch(PDO::FETCH_ASSOC);
 
                     if ($existing_c) {
                         $fn_name = !empty($c_valid_name) ? $c_valid_name : $existing_c['name'];
                         $fn_addr = !empty($address) ? $address : $existing_c['address'];
-                        $pdo->prepare("UPDATE customers SET name = ?, address = ?, total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_at = ? WHERE id = ?")
+                        $pdo->prepare("UPDATE customers SET name = ?, address = ?, total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_date = ? WHERE id = ?")
                             ->execute([$fn_name, $fn_addr, $total, $date, $existing_c['id']]);
                     } else {
-                        $fn_name = !empty($c_valid_name) ? $c_valid_name : ('عميل ' . substr($clean_phone, -4));
-                        $pdo->prepare("INSERT INTO customers (name, phone, address, total_orders, total_spent, last_order_at) VALUES (?, ?, ?, 1, ?, ?)")
-                            ->execute([$fn_name, $clean_phone, $address, $total, $date]);
+                        $fn_name = !empty($c_valid_name) ? $c_valid_name : ('عميل ' . substr($phone, -4));
+                        $pdo->prepare("INSERT INTO customers (name, phone, address, governorate, total_orders, total_spent, last_order_date) VALUES (?, ?, ?, 'القاهرة', 1, ?, ?)")
+                            ->execute([$fn_name, $phone, $address, $total, $date]);
                     }
                 } catch (Exception $e) {}
             }
@@ -2689,6 +2784,326 @@ try {
                 'refund_amount' => $refund_amount,
                 'restored_items_count' => $restored_count
             ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 21. إدارة واستعلام بيانات العملاء للكاشير والويب (Customer API)
+        // ============================================================
+
+        // أ) استعلام وجلب بيانات العميل بالهاتف (للكاشير الويب وسرعة الإدخال)
+        case 'lookup_customer':
+        case 'get_customer_by_phone':
+            ensure_customers_schema($pdo);
+
+            $raw_phone = trim($json_payload['phone'] ?? $_GET['phone'] ?? $_POST['phone'] ?? $_REQUEST['phone'] ?? '');
+            if (empty($raw_phone)) {
+                echo json_encode(['success' => false, 'error' => 'رقم الهاتف مطلوب للبحث'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $variants = normalize_egypt_phone_variants($raw_phone);
+            if (empty($variants)) {
+                echo json_encode(['success' => false, 'error' => 'صيغة رقم الهاتف غير صالحة'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $in_placeholders = implode(',', array_fill(0, count($variants), '?'));
+
+            // 1. البحث في جدول العملاء الرئيسي
+            $customer = null;
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM customers WHERE phone IN ($in_placeholders) OR phone2 IN ($in_placeholders) LIMIT 1");
+                $stmt->execute(array_merge($variants, $variants));
+                $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
+            // 2. البحث عن آخر طلب من جدول الطلبات orders
+            $last_order = null;
+            $order_stats = null;
+            try {
+                $stmt_last_order = $pdo->prepare("SELECT * FROM orders WHERE customer_phone IN ($in_placeholders) ORDER BY id DESC LIMIT 1");
+                $stmt_last_order->execute($variants);
+                $last_order = $stmt_last_order->fetch(PDO::FETCH_ASSOC);
+
+                $stmt_stats = $pdo->prepare("SELECT COUNT(id) as total_orders, COALESCE(SUM(total_price), 0) as total_spent, MAX(created_at) as last_order_date FROM orders WHERE customer_phone IN ($in_placeholders)");
+                $stmt_stats->execute($variants);
+                $order_stats = $stmt_stats->fetch(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
+            // 3. البحث في المستخدمين المسجلين إذا لم نجد العميل
+            $user_rec = null;
+            if (!$customer && !$last_order) {
+                try {
+                    $stmt_u = $pdo->prepare("SELECT * FROM users WHERE username IN ($in_placeholders) OR email IN ($in_placeholders) LIMIT 1");
+                    $stmt_u->execute(array_merge($variants, $variants));
+                    $user_rec = $stmt_u->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) {}
+            }
+
+            // إذا لم يتم العثور على أي معلومات
+            if (!$customer && !$last_order && !$user_rec) {
+                echo json_encode([
+                    'success' => true,
+                    'found' => false,
+                    'message' => 'لم يتم العثور على عميل مسجل بهذا الرقم مسبقاً.'
+                ], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            // تجميع وتوحيد أفضل البيانات المتاحة
+            $best_name = !empty($customer['name']) ? $customer['name'] : (!empty($last_order['customer_name']) ? $last_order['customer_name'] : ($user_rec['username'] ?? 'عميل جديد'));
+            $best_phone = !empty($customer['phone']) ? $customer['phone'] : (!empty($last_order['customer_phone']) ? $last_order['customer_phone'] : $raw_phone);
+            $best_address = !empty($customer['address']) ? $customer['address'] : ($last_order['customer_address'] ?? '');
+            $best_gov = !empty($customer['governorate']) ? $customer['governorate'] : ($last_order['governorate'] ?? 'القاهرة');
+            $best_lat = !empty($customer['delivery_lat']) ? $customer['delivery_lat'] : ($last_order['delivery_lat'] ?? null);
+            $best_lng = !empty($customer['delivery_lng']) ? $customer['delivery_lng'] : ($last_order['delivery_lng'] ?? null);
+            $best_dist = !empty($customer['delivery_distance_km']) ? (float)$customer['delivery_distance_km'] : (!empty($last_order['delivery_distance_km']) ? (float)$last_order['delivery_distance_km'] : null);
+            $best_email = !empty($customer['email']) ? $customer['email'] : ($last_order['customer_email'] ?? ($user_rec['email'] ?? ''));
+
+            $calc_orders = max((int)($customer['total_orders'] ?? 0), (int)($order_stats['total_orders'] ?? 0));
+            $calc_spent = max((float)($customer['total_spent'] ?? 0), (float)($order_stats['total_spent'] ?? 0));
+            $last_date = !empty($customer['last_order_date']) ? $customer['last_order_date'] : ($order_stats['last_order_date'] ?? null);
+
+            // حفظ أو تحديث في جدول customers لضمان الفهرسة الدائمة
+            $cust_id = (int)($customer['id'] ?? 0);
+            if ($cust_id === 0) {
+                try {
+                    $ins = $pdo->prepare("INSERT INTO customers (name, phone, address, governorate, delivery_lat, delivery_lng, delivery_distance_km, email, total_orders, total_spent, last_order_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$best_name, $best_phone, $best_address, $best_gov, $best_lat, $best_lng, $best_dist, $best_email, $calc_orders, $calc_spent, $last_date]);
+                    $cust_id = (int)$pdo->lastInsertId();
+                } catch (Exception $e) {}
+            } else {
+                try {
+                    $pdo->prepare("UPDATE customers SET total_orders = ?, total_spent = ?, last_order_date = COALESCE(?, last_order_date) WHERE id = ?")
+                        ->execute([$calc_orders, $calc_spent, $last_date, $cust_id]);
+                } catch (Exception $e) {}
+            }
+
+            // جلب آخر طلبات سابقة للعميل (لعرض مشترياته السابقة للكاشير)
+            $recent_orders = [];
+            try {
+                $stmt_rec = $pdo->prepare("SELECT id, order_details, total_price, status, created_at FROM orders WHERE customer_phone IN ($in_placeholders) ORDER BY id DESC LIMIT 5");
+                $stmt_rec->execute($variants);
+                $recent_orders = $stmt_rec->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
+            $map_url = (!empty($best_lat) && !empty($best_lng)) ? "https://www.google.com/maps?q={$best_lat},{$best_lng}" : '';
+
+            echo json_encode([
+                'success' => true,
+                'found' => true,
+                'customer' => [
+                    'id' => $cust_id,
+                    'name' => $best_name,
+                    'phone' => $best_phone,
+                    'phone2' => $customer['phone2'] ?? '',
+                    'address' => $best_address,
+                    'governorate' => $best_gov,
+                    'delivery_lat' => $best_lat,
+                    'delivery_lng' => $best_lng,
+                    'delivery_distance_km' => $best_dist,
+                    'map_url' => $map_url,
+                    'email' => $best_email,
+                    'notes' => $customer['notes'] ?? '',
+                    'total_orders' => $calc_orders,
+                    'total_spent' => $calc_spent,
+                    'last_order_date' => $last_date,
+                    'source' => $customer ? 'customers_db' : ($last_order ? 'orders_history' : 'user_account')
+                ],
+                'recent_orders' => $recent_orders
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ب) بحث وسرد العملاء مع التصفح
+        case 'search_customers':
+        case 'get_customers':
+            ensure_customers_schema($pdo);
+            $q = trim($json_payload['q'] ?? $json_payload['query'] ?? $_GET['q'] ?? $_GET['query'] ?? $_POST['q'] ?? $_POST['query'] ?? $_REQUEST['q'] ?? $_REQUEST['query'] ?? '');
+            $limit = min(200, max(1, (int)($json_payload['limit'] ?? $_GET['limit'] ?? $_POST['limit'] ?? $_REQUEST['limit'] ?? 50)));
+            $page = max(1, (int)($json_payload['page'] ?? $_GET['page'] ?? $_POST['page'] ?? $_REQUEST['page'] ?? 1));
+            $offset = ($page - 1) * $limit;
+
+            if ($q !== '') {
+                $search_term = "%$q%";
+                $cnt = $pdo->prepare("SELECT COUNT(*) FROM customers WHERE name LIKE ? OR phone LIKE ? OR phone2 LIKE ? OR address LIKE ? OR governorate LIKE ?");
+                $cnt->execute([$search_term, $search_term, $search_term, $search_term, $search_term]);
+                $total_count = (int)$cnt->fetchColumn();
+
+                $stmt = $pdo->prepare("SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ? OR phone2 LIKE ? OR address LIKE ? OR governorate LIKE ? ORDER BY total_orders DESC, id DESC LIMIT ? OFFSET ?");
+                $stmt->bindValue(1, $search_term, PDO::PARAM_STR);
+                $stmt->bindValue(2, $search_term, PDO::PARAM_STR);
+                $stmt->bindValue(3, $search_term, PDO::PARAM_STR);
+                $stmt->bindValue(4, $search_term, PDO::PARAM_STR);
+                $stmt->bindValue(5, $search_term, PDO::PARAM_STR);
+                $stmt->bindValue(6, (int)$limit, PDO::PARAM_INT);
+                $stmt->bindValue(7, (int)$offset, PDO::PARAM_INT);
+                $stmt->execute();
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $total_count = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
+                $stmt = $pdo->prepare("SELECT * FROM customers ORDER BY total_orders DESC, id DESC LIMIT ? OFFSET ?");
+                $stmt->bindValue(1, (int)$limit, PDO::PARAM_INT);
+                $stmt->bindValue(2, (int)$offset, PDO::PARAM_INT);
+                $stmt->execute();
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            foreach ($rows as &$r) {
+                $r['map_url'] = (!empty($r['delivery_lat']) && !empty($r['delivery_lng'])) ? "https://www.google.com/maps?q={$r['delivery_lat']},{$r['delivery_lng']}" : '';
+            }
+
+            echo json_encode([
+                'success' => true,
+                'total' => $total_count,
+                'page' => $page,
+                'limit' => $limit,
+                'customers' => $rows
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ج) استخراج وتجميع كافة بيانات العملاء من الموقع (أرشيف الطلبات وحسابات المستخدمين)
+        case 'sync_all_web_customers':
+        case 'aggregate_web_customers':
+            ensure_customers_schema($pdo);
+
+            // 1. تجميع الهواتف من جدول الطلبات
+            $orders_groups = $pdo->query("
+                SELECT customer_phone, COUNT(id) as total_orders, COALESCE(SUM(total_price), 0) as total_spent, MAX(created_at) as last_order_date
+                FROM orders
+                WHERE customer_phone IS NOT NULL AND TRIM(customer_phone) != ''
+                GROUP BY customer_phone
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            $imported = 0;
+            $updated = 0;
+
+            foreach ($orders_groups as $og) {
+                $ph = trim($og['customer_phone']);
+                if (empty($ph)) continue;
+
+                // أحدث بيانات طلب لهذا الهاتف
+                $last_o_stmt = $pdo->prepare("SELECT * FROM orders WHERE customer_phone = ? ORDER BY id DESC LIMIT 1");
+                $last_o_stmt->execute([$ph]);
+                $last_o = $last_o_stmt->fetch(PDO::FETCH_ASSOC);
+
+                $variants = normalize_egypt_phone_variants($ph);
+                $in_ph = implode(',', array_fill(0, count($variants), '?'));
+
+                $chk = $pdo->prepare("SELECT id, name, address, governorate, delivery_lat, delivery_lng, total_orders, total_spent FROM customers WHERE phone IN ($in_ph) LIMIT 1");
+                $chk->execute($variants);
+                $exist = $chk->fetch(PDO::FETCH_ASSOC);
+
+                $name = !empty($exist['name']) ? $exist['name'] : ($last_o['customer_name'] ?? 'عميل متجر');
+                $addr = !empty($exist['address']) ? $exist['address'] : ($last_o['customer_address'] ?? '');
+                $gov = !empty($exist['governorate']) ? $exist['governorate'] : ($last_o['governorate'] ?? 'القاهرة');
+                $lat = !empty($exist['delivery_lat']) ? $exist['delivery_lat'] : ($last_o['delivery_lat'] ?? null);
+                $lng = !empty($exist['delivery_lng']) ? $exist['delivery_lng'] : ($last_o['delivery_lng'] ?? null);
+                $dist = !empty($last_o['delivery_distance_km']) ? (float)$last_o['delivery_distance_km'] : null;
+                $email = $last_o['customer_email'] ?? null;
+                $tot_orders = max((int)($exist['total_orders'] ?? 0), (int)$og['total_orders']);
+                $tot_spent = max((float)($exist['total_spent'] ?? 0), (float)$og['total_spent']);
+                $last_date = $og['last_order_date'];
+
+                if ($exist) {
+                    $pdo->prepare("UPDATE customers SET name = ?, address = ?, governorate = ?, email = COALESCE(NULLIF(?, ''), email), delivery_lat = COALESCE(NULLIF(?, ''), delivery_lat), delivery_lng = COALESCE(NULLIF(?, ''), delivery_lng), delivery_distance_km = COALESCE(?, delivery_distance_km), total_orders = ?, total_spent = ?, last_order_date = ? WHERE id = ?")
+                        ->execute([$name, $addr, $gov, $email, $lat, $lng, $dist, $tot_orders, $tot_spent, $last_date, $exist['id']]);
+                    $updated++;
+                } else {
+                    $pdo->prepare("INSERT INTO customers (name, phone, address, governorate, email, delivery_lat, delivery_lng, delivery_distance_km, total_orders, total_spent, last_order_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                        ->execute([$name, $ph, $addr, $gov, $email, $lat, $lng, $dist, $tot_orders, $tot_spent, $last_date]);
+                    $imported++;
+                }
+            }
+
+            // فحص المسجلين في جدول المستخدمين users
+            try {
+                $users = $pdo->query("SELECT id, username, email FROM users WHERE username IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($users as $u) {
+                    $u_name = trim($u['username']);
+                    if (preg_match('/^01[0-2,5]{1}[0-9]{8}$/', $u_name)) {
+                        $u_variants = normalize_egypt_phone_variants($u_name);
+                        $u_in = implode(',', array_fill(0, count($u_variants), '?'));
+                        $c_chk = $pdo->prepare("SELECT id FROM customers WHERE phone IN ($u_in) LIMIT 1");
+                        $c_chk->execute($u_variants);
+                        if (!$c_chk->fetch()) {
+                            $pdo->prepare("INSERT INTO customers (name, phone, email, governorate, total_orders, total_spent) VALUES (?, ?, ?, 'القاهرة', 0, 0)")
+                                ->execute(['مستخدم مسجل: ' . $u_name, $u_name, $u['email'] ?? null]);
+                            $imported++;
+                        }
+                    }
+                }
+            } catch (Exception $e) {}
+
+            $total_now = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
+
+            echo json_encode([
+                'success' => true,
+                'message' => "تم استخراج وتجميع بيانات العملاء من كافة الطلبات بنجاح! تم إضافة ($imported) عميل جديد وتحديث بيانات ($updated) عميل.",
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'total_customers_now' => $total_now
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // د) حفظ أو تحديث بيانات عميل من الكاشير
+        case 'save_customer':
+        case 'update_customer':
+            ensure_customers_schema($pdo);
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $cust_id = (int)($data['id'] ?? $data['customer_id'] ?? 0);
+            $name = trim($data['name'] ?? '');
+            $phone = trim($data['phone'] ?? '');
+            $phone2 = trim($data['phone2'] ?? '');
+            $address = trim($data['address'] ?? '');
+            $governorate = trim($data['governorate'] ?? 'القاهرة');
+            $delivery_lat = trim($data['delivery_lat'] ?? '');
+            $delivery_lng = trim($data['delivery_lng'] ?? '');
+            $delivery_distance_km = (isset($data['delivery_distance_km']) && $data['delivery_distance_km'] !== '') ? (float)$data['delivery_distance_km'] : null;
+            $email = trim($data['email'] ?? '');
+            $notes = trim($data['notes'] ?? '');
+
+            if (empty($name) || empty($phone)) {
+                echo json_encode(['success' => false, 'error' => 'الاسم ورقم الهاتف مطلوبان!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            if ($cust_id > 0) {
+                $upd = $pdo->prepare("UPDATE customers SET name = ?, phone = ?, phone2 = ?, address = ?, governorate = ?, delivery_lat = ?, delivery_lng = ?, delivery_distance_km = ?, email = ?, notes = ? WHERE id = ?");
+                $upd->execute([$name, $phone, $phone2, $address, $governorate, $delivery_lat, $delivery_lng, $delivery_distance_km, $email, $notes, $cust_id]);
+            } else {
+                $variants = normalize_egypt_phone_variants($phone);
+                $in_ph = implode(',', array_fill(0, count($variants), '?'));
+                $chk = $pdo->prepare("SELECT id FROM customers WHERE phone IN ($in_ph) LIMIT 1");
+                $chk->execute($variants);
+                $exist_id = $chk->fetchColumn();
+
+                if ($exist_id) {
+                    $cust_id = (int)$exist_id;
+                    $upd = $pdo->prepare("UPDATE customers SET name = ?, phone2 = ?, address = ?, governorate = ?, delivery_lat = COALESCE(NULLIF(?, ''), delivery_lat), delivery_lng = COALESCE(NULLIF(?, ''), delivery_lng), delivery_distance_km = COALESCE(?, delivery_distance_km), email = ?, notes = ? WHERE id = ?");
+                    $upd->execute([$name, $phone2, $address, $governorate, $delivery_lat, $delivery_lng, $delivery_distance_km, $email, $notes, $cust_id]);
+                } else {
+                    $ins = $pdo->prepare("INSERT INTO customers (name, phone, phone2, address, governorate, delivery_lat, delivery_lng, delivery_distance_km, email, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$name, $phone, $phone2, $address, $governorate, $delivery_lat, $delivery_lng, $delivery_distance_km, $email, $notes]);
+                    $cust_id = (int)$pdo->lastInsertId();
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'تم حفظ بيانات العميل بنجاح!',
+                'customer_id' => $cust_id
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // هـ) حذف عميل
+        case 'delete_customer':
+            $cust_id = (int)($json_payload['id'] ?? $_GET['id'] ?? $_POST['id'] ?? $_REQUEST['id'] ?? 0);
+            if ($cust_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'معرف العميل غير صالح']);
+                exit;
+            }
+            $pdo->prepare("DELETE FROM customers WHERE id = ?")->execute([$cust_id]);
+            echo json_encode(['success' => true, 'message' => 'تم حذف العميل بنجاح']);
             break;
 
         default:

@@ -282,7 +282,15 @@ class POSCart {
     }
 
     if (infoBanner && infoText && (validName || validAddr)) {
-      infoText.innerHTML = `✨ <b>عميل سابق:</b> ${validName || 'بيانات محفوظة'} ${customer.total_orders ? `(${customer.total_orders} طلبات سابقة)` : ''} - تم استرجاع العنوان والاسم تلقائياً`;
+      const stats = [];
+      if (customer.total_orders) stats.push(`${customer.total_orders} طلب`);
+      if (parseFloat(customer.total_spent || 0) > 0) stats.push(`${parseFloat(customer.total_spent).toFixed(0)} ج.م`);
+      if (customer.governorate && customer.governorate !== 'القاهرة') stats.push(customer.governorate);
+      
+      const statsBadge = stats.length > 0 ? ` <span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded-full mr-1">${stats.join(' • ')}</span>` : '';
+      const mapLink = customer.map_url ? ` <a href="${customer.map_url}" target="_blank" class="text-blue-600 hover:text-blue-800 underline text-xs font-semibold mr-1 inline-flex items-center gap-0.5">📍 موقع GPS</a>` : '';
+
+      infoText.innerHTML = `✨ <b>عميل مسجل:</b> ${validName || 'بيانات محفوظة'}${statsBadge}${mapLink} - تم استرجاع العنوان والاسم تلقائياً`;
       infoBanner.classList.remove('hidden');
       if (window.lucide) window.lucide.createIcons();
     }

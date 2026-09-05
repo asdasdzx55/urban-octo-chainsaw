@@ -300,6 +300,38 @@ class SyrianHomeAPI {
     return await this.get('get_customer_by_phone', { phone: phone });
   }
 
+  async lookupCustomer(phone) {
+    return await this.get('lookup_customer', { phone: phone });
+  }
+
+  /**
+   * 22.4 Search Customers (البحث في قاعدة بيانات العملاء بالاسم أو الهاتف أو العنوان)
+   */
+  async searchCustomers(query = '', page = 1, limit = 50) {
+    return await this.get('search_customers', { q: query, page: page, limit: limit });
+  }
+
+  /**
+   * 22.5 Sync All Customers from Web Orders (استخراج وتجميع بيانات العملاء من كافة الطلبات السابقة)
+   */
+  async syncAllWebCustomers() {
+    return await this.post('sync_all_web_customers');
+  }
+
+  /**
+   * 22.6 Save / Update Customer Data (حفظ أو تعديل بيانات عميل)
+   */
+  async saveCustomer(customerData) {
+    return await this.post('save_customer', customerData);
+  }
+
+  /**
+   * 22.7 Delete Customer (حذف عميل)
+   */
+  async deleteCustomer(customerId) {
+    return await this.post('delete_customer', { id: customerId });
+  }
+
   /**
    * 23. Get Employees List (جلب قائمة العمال والموظفين مع ملخص الرواتب والسلف)
    */

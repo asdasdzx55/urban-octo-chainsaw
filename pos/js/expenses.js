@@ -192,7 +192,6 @@ class ExpensesController {
 
   /* ==================== SUPPLIERS REPORTS & LEDGER ==================== */
   async loadSuppliersReport() {
-    const tbody = document.getElementById('suppliers-report-table-body');
     const loadingRow = document.getElementById('suppliers-report-loading');
     
     try {
@@ -215,48 +214,9 @@ class ExpensesController {
       if (totalPaidEl) totalPaidEl.textContent = parseFloat(summary.total_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
       if (countEl) countEl.textContent = res.count || (res.suppliers || []).length;
 
-      if (!tbody) return;
-
-      const suppliers = res.suppliers || [];
-      if (suppliers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-gray-400">لا يوجد موردين مسجلين حتى الآن</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = suppliers.map(s => {
-        const bal = parseFloat(s.balance || 0);
-        const balColor = bal > 0 ? 'text-rose-600 dark:text-rose-400 font-black' : (bal < 0 ? 'text-blue-600 font-black' : 'text-emerald-600 font-bold');
-        const phoneStr = s.phone ? `<span class="font-mono text-gray-400">${s.phone}</span>` : `<span class="text-gray-300">غير مسجل</span>`;
-
-        return `
-          <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition">
-            <td class="py-3 px-3">
-              <div class="font-bold text-gray-900 dark:text-white">${s.name}</div>
-              <div class="text-[10px] text-gray-400">${phoneStr}</div>
-            </td>
-            <td class="py-3 px-3 ${balColor} font-mono text-left" dir="ltr">
-              ${bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-            </td>
-            <td class="py-3 px-3 text-center font-bold font-mono text-gray-700 dark:text-gray-300">
-              ${s.purchases_count || 0}
-            </td>
-            <td class="py-3 px-3 text-left font-bold font-mono text-indigo-600 dark:text-indigo-400" dir="ltr">
-              ${parseFloat(s.total_supplied || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-            </td>
-            <td class="py-3 px-3 text-left font-bold font-mono text-emerald-600 dark:text-emerald-400" dir="ltr">
-              ${parseFloat(s.total_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-            </td>
-            <td class="py-3 px-3 text-center">
-              <button type="button" onclick="window.expensesController.openSupplierLedger(${s.id}, '${s.name.replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
-                <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
-                <span>كشف حساب</span>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      if (window.lucide) window.lucide.createIcons();
+      this.allSuppliersData = res.suppliers || [];
+      this.currentSuppliersFilter = 'all';
+      this.renderSuppliersReportTable(this.allSuppliersData);
     } catch (err) {
       if (loadingRow) loadingRow.classList.add('hidden');
       console.error('Error loading suppliers report:', err);
@@ -264,8 +224,126 @@ class ExpensesController {
     }
   }
 
-  async openSupplierLedger(supplierId = null, supplierName = '') {
-    // If not explicitly passed, check active selects
+  renderSuppliersReportTable(suppliers) {
+    const tbody = document.getElementById('suppliers-report-table-body');
+    if (!tbody) return;
+
+    if (!suppliers || suppliers.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">لا يوجد موردين مطابقين للبحث أو الفلتر</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = suppliers.map(s => {
+      const bal = parseFloat(s.balance || 0);
+      const balColor = bal > 0 ? 'text-rose-600 dark:text-rose-400 font-black' : (bal < 0 ? 'text-blue-600 font-black' : 'text-emerald-600 font-bold');
+      const phoneStr = s.phone ? `<span class="font-mono text-gray-400">${s.phone}</span>` : `<span class="text-gray-300">غير مسجل</span>`;
+      const unpaidBadge = (s.unpaid_invoices_count > 0) ? `<span class="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-bold">(${s.unpaid_invoices_count} آجل)</span>` : '';
+      const lastDate = s.last_purchase_date ? s.last_purchase_date.split(' ')[0] : '<span class="text-gray-300">-</span>';
+
+      return `
+        <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition">
+          <td class="py-3 px-3">
+            <div class="font-bold text-gray-900 dark:text-white">${s.name}</div>
+            <div class="text-[10px] text-gray-400">${phoneStr}</div>
+          </td>
+          <td class="py-3 px-3 ${balColor} font-mono text-left" dir="ltr">
+            ${bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+          </td>
+          <td class="py-3 px-3 text-center font-bold font-mono text-gray-700 dark:text-gray-300">
+            <span>${s.purchases_count || 0}</span> ${unpaidBadge}
+          </td>
+          <td class="py-3 px-3 text-left font-bold font-mono text-indigo-600 dark:text-indigo-400" dir="ltr">
+            ${parseFloat(s.total_supplied || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+          </td>
+          <td class="py-3 px-3 text-left font-bold font-mono text-emerald-600 dark:text-emerald-400" dir="ltr">
+            ${parseFloat(s.total_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+          </td>
+          <td class="py-3 px-3 font-mono text-[11px] text-gray-500">
+            ${lastDate}
+          </td>
+          <td class="py-3 px-3 text-center">
+            <button type="button" onclick="window.expensesController.openSupplierLedger(${s.id}, '${s.name.replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
+              <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+              <span>كشف حساب</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  searchSuppliersReport(term) {
+    term = (term || '').trim().toLowerCase();
+    if (!this.allSuppliersData) return;
+
+    let filtered = this.allSuppliersData;
+    if (this.currentSuppliersFilter === 'debt') {
+      filtered = filtered.filter(s => parseFloat(s.balance || 0) > 0);
+    } else if (this.currentSuppliersFilter === 'settled') {
+      filtered = filtered.filter(s => parseFloat(s.balance || 0) <= 0);
+    }
+
+    if (term) {
+      filtered = filtered.filter(s => 
+        (s.name && s.name.toLowerCase().includes(term)) ||
+        (s.phone && s.phone.includes(term))
+      );
+    }
+
+    this.renderSuppliersReportTable(filtered);
+  }
+
+  filterSuppliersReport(filterType) {
+    this.currentSuppliersFilter = filterType;
+    document.querySelectorAll('.sup-filter-btn').forEach(btn => {
+      if (btn.getAttribute('data-filter') === filterType) {
+        btn.className = 'sup-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs';
+      } else {
+        btn.className = 'sup-filter-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600';
+      }
+    });
+
+    const searchInput = document.getElementById('sup-report-search');
+    this.searchSuppliersReport(searchInput ? searchInput.value : '');
+  }
+
+  exportSuppliersReportExcel() {
+    if (!this.allSuppliersData || this.allSuppliersData.length === 0) {
+      window.app?.showToast('لا توجد بيانات موردين لتصديرها!', 'warning');
+      return;
+    }
+
+    let csv = '\uFEFF'; // UTF-8 BOM
+    csv += 'اسم المورد,رقم الهاتف,الرصيد المستحق (ج.م),عدد فواتير التوريد,فواتير بها متبقي,إجمالي البضاعة الموردة (ج.م),إجمالي المسدد (ج.م),تاريخ آخر توريد\n';
+
+    this.allSuppliersData.forEach(s => {
+      const name = `"${(s.name || '').replace(/"/g, '""')}"`;
+      const phone = `"${s.phone || ''}"`;
+      const bal = parseFloat(s.balance || 0).toFixed(2);
+      const pCount = s.purchases_count || 0;
+      const unpCount = s.unpaid_invoices_count || 0;
+      const supplied = parseFloat(s.total_supplied || 0).toFixed(2);
+      const paid = parseFloat(s.total_paid || 0).toFixed(2);
+      const lastDate = `"${s.last_purchase_date || ''}"`;
+
+      csv += `${name},${phone},${bal},${pCount},${unpCount},${supplied},${paid},${lastDate}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `تقرير_الموردين_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    window.app?.showToast('تم تصدير تقرير الموردين بنجاح 📑', 'success');
+  }
+
+  async openSupplierLedger(supplierId = null, supplierName = '', fromDate = '', toDate = '') {
     if (!supplierId && !supplierName) {
       const expSelect = document.getElementById('exp-supplier-select');
       const purchSelect = document.getElementById('purch-supplier-select');
@@ -283,9 +361,13 @@ class ExpensesController {
       return;
     }
 
+    this.activeSupplierId = supplierId;
+    this.activeSupplierName = supplierName;
+    this.ledgerFilter = 'all';
+
     try {
       window.app?.showLoading(true, 'جاري جلب كشف الحساب المالي للمورد...');
-      const res = await window.api.getSupplierLedger(supplierId, supplierName);
+      const res = await window.api.getSupplierLedger(supplierId, supplierName, fromDate, toDate);
       window.app?.showLoading(false);
 
       if (!res || !res.success) {
@@ -314,35 +396,13 @@ class ExpensesController {
       document.getElementById('sup-ledger-total-payments').textContent = parseFloat(summary.total_payments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
       document.getElementById('sup-ledger-invoices-count').textContent = (summary.purchases_count || 0) + ' فواتير';
 
-      const tbody = document.getElementById('sup-ledger-table-body');
-      const txs = res.transactions || [];
+      // Set input dates if returned
+      const fromInput = document.getElementById('sup-ledger-from-date');
+      const toInput = document.getElementById('sup-ledger-to-date');
+      if (fromInput) fromInput.value = res.filter?.from_date || fromDate || '';
+      if (toInput) toInput.value = res.filter?.to_date || toDate || '';
 
-      if (txs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-gray-400">لا توجد حركات مسجلة لهذا المورد حتى الآن</td></tr>`;
-      } else {
-        tbody.innerHTML = txs.map(t => {
-          const isPurch = t.type === 'فاتورة توريد';
-          const typeBadge = isPurch 
-            ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">توريد بضاعة</span>`
-            : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">سداد نقدي</span>`;
-
-          const creditStr = (t.credit > 0) ? `<span class="font-bold text-rose-600 dark:text-rose-400 font-mono">+${parseFloat(t.credit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
-          const debitStr = (t.debit > 0) ? `<span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">-${parseFloat(t.debit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
-          const remStr = (t.remaining > 0) ? `<span class="font-bold text-amber-600 dark:text-amber-400 font-mono">${parseFloat(t.remaining).toFixed(2)}</span>` : '<span class="text-emerald-600 font-bold">خالص</span>';
-
-          return `
-            <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 text-xs">
-              <td class="py-2.5 px-3 font-mono text-[11px] text-gray-500">${t.date || ''}</td>
-              <td class="py-2.5 px-3">${typeBadge}</td>
-              <td class="py-2.5 px-3 font-bold font-mono text-gray-700 dark:text-gray-300">${t.reference || '-'}</td>
-              <td class="py-2.5 px-3 text-left" dir="ltr">${creditStr}</td>
-              <td class="py-2.5 px-3 text-left" dir="ltr">${debitStr}</td>
-              <td class="py-2.5 px-3 text-left" dir="ltr">${remStr}</td>
-              <td class="py-2.5 px-3 text-[11px] text-gray-500">${t.notes || ''}</td>
-            </tr>
-          `;
-        }).join('');
-      }
+      this.renderLedgerTable();
 
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
@@ -352,6 +412,178 @@ class ExpensesController {
       console.error('Error opening supplier ledger:', err);
       window.app?.showToast(`تعذر جلب كشف الحساب: ${err.message}`, 'error');
     }
+  }
+
+  filterLedger(type) {
+    this.ledgerFilter = type;
+    document.querySelectorAll('.sup-ledger-tab-btn').forEach(btn => {
+      btn.className = 'sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600';
+    });
+    const activeBtn = document.getElementById(`sup-ledger-filter-${type}`);
+    if (activeBtn) {
+      activeBtn.className = 'sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs';
+    }
+
+    this.renderLedgerTable();
+  }
+
+  renderLedgerTable() {
+    const tbody = document.getElementById('sup-ledger-table-body');
+    if (!tbody || !this.currentSupplierLedger) return;
+
+    let txs = this.currentSupplierLedger.transactions || [];
+    if (this.ledgerFilter === 'purchases') {
+      txs = txs.filter(t => t.type === 'فاتورة توريد');
+    } else if (this.ledgerFilter === 'payments') {
+      txs = txs.filter(t => t.type === 'دفعة نقدية مسددة');
+    } else if (this.ledgerFilter === 'unpaid') {
+      txs = txs.filter(t => (t.remaining > 0));
+    }
+
+    if (txs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-gray-400 font-bold">لا توجد حركات مطابقة للفلتر المحدد</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = txs.map(t => {
+      const isPurch = t.type === 'فاتورة توريد';
+      const typeBadge = isPurch 
+        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">توريد بضاعة</span>`
+        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">سداد نقدي</span>`;
+
+      const creditStr = (t.credit > 0) ? `<span class="font-bold text-rose-600 dark:text-rose-400 font-mono">+${parseFloat(t.credit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
+      const debitStr = (t.debit > 0) ? `<span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">-${parseFloat(t.debit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
+      const remStr = (t.remaining > 0) ? `<span class="font-bold text-amber-600 dark:text-amber-400 font-mono">${parseFloat(t.remaining).toFixed(2)}</span>` : '<span class="text-emerald-600 font-bold">خالص</span>';
+
+      const hasItems = isPurch && Array.isArray(t.items) && t.items.length > 0;
+      const itemsBtn = hasItems 
+        ? `<button type="button" onclick="window.expensesController.toggleTxItems(${t.id})" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800 cursor-pointer">
+             <i data-lucide="boxes" class="w-3 h-3"></i>
+             <span>${t.items.length} أصناف ▾</span>
+           </button>`
+        : `<span class="text-gray-300">-</span>`;
+
+      let itemsRow = '';
+      if (hasItems) {
+        itemsRow = `
+          <tr id="sup-tx-items-${t.id}" class="hidden bg-gray-50/90 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-700/60">
+            <td colspan="8" class="p-3">
+              <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-xs">
+                <div class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-2 flex items-center gap-1">
+                  <i data-lucide="package" class="w-3.5 h-3.5"></i>
+                  <span>أصناف فاتورة التوريد (${t.reference || t.id}):</span>
+                </div>
+                <table class="w-full text-right text-[11px] border-collapse">
+                  <thead>
+                    <tr class="border-b border-gray-100 dark:border-gray-700 text-gray-400 font-bold">
+                      <th class="py-1.5 px-2">الصنف</th>
+                      <th class="py-1.5 px-2 text-center">الكمية</th>
+                      <th class="py-1.5 px-2 text-left">سعر التكلفة</th>
+                      <th class="py-1.5 px-2 text-left">إجمالي التكلفة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${t.items.map(it => `
+                      <tr class="border-b border-gray-50 dark:border-gray-700/40">
+                        <td class="py-1 px-2 font-bold text-gray-800 dark:text-gray-200">${it.name}</td>
+                        <td class="py-1 px-2 text-center font-mono font-bold">${it.qty} ${it.unit || 'قطعة'}</td>
+                        <td class="py-1 px-2 text-left font-mono" dir="ltr">${parseFloat(it.cost_price || 0).toFixed(2)} ج.م</td>
+                        <td class="py-1 px-2 text-left font-mono font-bold text-indigo-600 dark:text-indigo-400" dir="ltr">${parseFloat(it.total_cost || (it.qty * it.cost_price)).toFixed(2)} ج.م</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      return `
+        <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 text-xs">
+          <td class="py-2.5 px-3 font-mono text-[11px] text-gray-500">${t.date || ''}</td>
+          <td class="py-2.5 px-3">${typeBadge}</td>
+          <td class="py-2.5 px-3 font-bold font-mono text-gray-700 dark:text-gray-300">${t.reference || '-'}</td>
+          <td class="py-2.5 px-3 text-left" dir="ltr">${creditStr}</td>
+          <td class="py-2.5 px-3 text-left" dir="ltr">${debitStr}</td>
+          <td class="py-2.5 px-3 text-left" dir="ltr">${remStr}</td>
+          <td class="py-2.5 px-3 text-[11px] text-gray-500">${t.notes || ''}</td>
+          <td class="py-2.5 px-3 text-center">${itemsBtn}</td>
+        </tr>
+        ${itemsRow}
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  toggleTxItems(txId) {
+    const row = document.getElementById(`sup-tx-items-${txId}`);
+    if (row) {
+      row.classList.toggle('hidden');
+    }
+  }
+
+  applyLedgerDateFilter() {
+    const fromDate = document.getElementById('sup-ledger-from-date')?.value || '';
+    const toDate = document.getElementById('sup-ledger-to-date')?.value || '';
+    this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName, fromDate, toDate);
+  }
+
+  clearLedgerDateFilter() {
+    const fromInput = document.getElementById('sup-ledger-from-date');
+    const toInput = document.getElementById('sup-ledger-to-date');
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+    this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName, '', '');
+  }
+
+  exportSupplierLedgerExcel() {
+    if (!this.currentSupplierLedger || !this.currentSupplierLedger.supplier) {
+      window.app?.showToast('لا توجد بيانات كشف حساب متاحة للتصدير', 'warning');
+      return;
+    }
+
+    const sup = this.currentSupplierLedger.supplier;
+    const txs = this.currentSupplierLedger.transactions || [];
+
+    let csv = '\uFEFF';
+    csv += `كشف حساب المورد: ${sup.name}\n`;
+    csv += `رقم الهاتف: ${sup.phone || 'غير مسجل'}\n`;
+    csv += `الرصيد المستحق الحالي: ${sup.balance} ج.م\n`;
+    csv += `تاريخ التصدير: ${new Date().toLocaleString('ar-EG')}\n\n`;
+
+    csv += 'التاريخ والوقت,النوع,رقم المرجع,دائن (توريد),مدين (سداد),المتبقي,طريقة الدفع,ملاحظات,أصناف الفاتورة\n';
+
+    txs.forEach(t => {
+      const date = `"${t.date || ''}"`;
+      const type = `"${t.type || ''}"`;
+      const ref = `"${t.reference || ''}"`;
+      const credit = parseFloat(t.credit || 0).toFixed(2);
+      const debit = parseFloat(t.debit || 0).toFixed(2);
+      const rem = parseFloat(t.remaining || 0).toFixed(2);
+      const pm = `"${t.payment_method || ''}"`;
+      const notes = `"${(t.notes || '').replace(/"/g, '""')}"`;
+      
+      let itemsList = '';
+      if (Array.isArray(t.items) && t.items.length > 0) {
+        itemsList = t.items.map(it => `${it.name} (${it.qty} ${it.unit || ''} بسعر ${it.cost_price})`).join(' | ');
+      }
+      itemsList = `"${itemsList.replace(/"/g, '""')}"`;
+
+      csv += `${date},${type},${ref},${credit},${debit},${rem},${pm},${notes},${itemsList}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `كشف_حساب_${sup.name}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    window.app?.showToast('تم تصدير كشف الحساب بنجاح 📑', 'success');
   }
 
   closeSupplierLedgerModal() {

@@ -1144,10 +1144,17 @@
               <p class="text-xs text-gray-400 mt-0.5">متابعة إجمالي مديونيات الموردين، حركة التوريد، وكشف الحساب التفصيلي لكل مورد</p>
             </div>
             
-            <button onclick="window.expensesController.loadSuppliersReport()" class="px-3.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-              <span>تحديث البيانات</span>
-            </button>
+            <div class="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <button type="button" onclick="window.expensesController.exportSuppliersReportExcel()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer" title="تصدير كشف الموردين إلى ملف إكسيل">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span>تصدير Excel</span>
+              </button>
+
+              <button onclick="window.expensesController.loadSuppliersReport()" class="px-3.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>تحديث البيانات</span>
+              </button>
+            </div>
           </div>
 
           <!-- KPI Summary Cards for Suppliers -->
@@ -1168,13 +1175,22 @@
             </div>
           </div>
 
-          <!-- Suppliers Table Card -->
-          <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h4 class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                <i data-lucide="truck" class="w-4 h-4 text-gray-500"></i>
-                <span>قائمة الموردين وأرصدة الحسابات (<span id="sup-report-count">0</span> مورد)</span>
-              </h4>
+          <!-- Suppliers Filter & Table Card -->
+          <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs flex flex-col">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50 dark:bg-gray-800/60">
+              <div class="flex items-center gap-2 flex-1 max-w-md">
+                <div class="relative w-full">
+                  <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute right-3 top-2.5"></i>
+                  <input type="text" id="sup-report-search" oninput="window.expensesController.searchSuppliersReport(this.value)" placeholder="ابحث باسم المورد أو رقم الهاتف..." class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pr-9 pl-3 py-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500">
+                </div>
+              </div>
+
+              <!-- Filter Pills -->
+              <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl">
+                <button type="button" onclick="window.expensesController.filterSuppliersReport('all')" class="sup-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs" data-filter="all">الكل</button>
+                <button type="button" onclick="window.expensesController.filterSuppliersReport('debt')" class="sup-filter-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" data-filter="debt">عليهم مديونية ⚠️</button>
+                <button type="button" onclick="window.expensesController.filterSuppliersReport('settled')" class="sup-filter-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" data-filter="settled">خالصين ✅</button>
+              </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -1183,15 +1199,16 @@
                   <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
                     <th class="py-3 px-3">المورد</th>
                     <th class="py-3 px-3">الرصيد المستحق</th>
-                    <th class="py-3 px-3 text-center">عدد الفواتير</th>
+                    <th class="py-3 px-3 text-center">فواتير التوريد</th>
                     <th class="py-3 px-3">إجمالي التوريد</th>
                     <th class="py-3 px-3">إجمالي المسدد</th>
+                    <th class="py-3 px-3">آخر توريد</th>
                     <th class="py-3 px-3 text-center">الإجراء</th>
                   </tr>
                 </thead>
                 <tbody id="suppliers-report-table-body">
                   <tr id="suppliers-report-loading" class="hidden">
-                    <td colspan="6" class="py-8 text-center text-gray-400 font-bold">جاري تحميل تقارير الموردين...</td>
+                    <td colspan="7" class="py-8 text-center text-gray-400 font-bold">جاري تحميل تقارير الموردين...</td>
                   </tr>
                 </tbody>
               </table>
@@ -2526,6 +2543,10 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <button onclick="window.expensesController.exportSupplierLedgerExcel()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm" title="تصدير كشف الحساب إلى Excel">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>تصدير Excel</span>
+          </button>
           <button onclick="window.expensesController.printSupplierLedger()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="طباعة كشف الحساب">
             <i data-lucide="printer" class="w-4 h-4"></i>
             <span>طباعة الكشف</span>
@@ -2556,6 +2577,27 @@
         </div>
       </div>
 
+      <!-- Filter Controls Bar (Type Filter + Date Range) -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+        <!-- Type Filter Pills -->
+        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <button type="button" onclick="window.expensesController.filterLedger('all')" id="sup-ledger-filter-all" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs">الكل</button>
+          <button type="button" onclick="window.expensesController.filterLedger('purchases')" id="sup-ledger-filter-purchases" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">فواتير التوريد 📥</button>
+          <button type="button" onclick="window.expensesController.filterLedger('payments')" id="sup-ledger-filter-payments" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">سندات السداد 💵</button>
+          <button type="button" onclick="window.expensesController.filterLedger('unpaid')" id="sup-ledger-filter-unpaid" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">فواتير بها متبقي ⏳</button>
+        </div>
+
+        <!-- Date Range -->
+        <div class="flex items-center gap-1.5 flex-wrap text-xs">
+          <span class="text-[11px] font-bold text-gray-500">الفترة:</span>
+          <input type="date" id="sup-ledger-from-date" class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-0.5 text-xs font-mono">
+          <span class="text-gray-400">إلى</span>
+          <input type="date" id="sup-ledger-to-date" class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-0.5 text-xs font-mono">
+          <button type="button" onclick="window.expensesController.applyLedgerDateFilter()" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition">فلترة</button>
+          <button type="button" onclick="window.expensesController.clearLedgerDateFilter()" class="px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold text-xs" title="إلغاء فلترة التاريخ">مسح</button>
+        </div>
+      </div>
+
       <!-- Chronological Table of Transactions -->
       <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700 mt-1">
         <table class="w-full text-right border-collapse text-xs">
@@ -2568,6 +2610,7 @@
               <th class="py-2.5 px-3">مدين (سداد -)</th>
               <th class="py-2.5 px-3">المتبقي</th>
               <th class="py-2.5 px-3">تفاصيل / ملاحظات</th>
+              <th class="py-2.5 px-3 text-center">الأصناف</th>
             </tr>
           </thead>
           <tbody id="sup-ledger-table-body">

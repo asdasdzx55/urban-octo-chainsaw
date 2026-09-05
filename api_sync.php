@@ -637,36 +637,51 @@ try {
             $total_purchases_val = 0;
             $total_payments_val = 0;
 
+            $from_date = trim($_GET['from_date'] ?? $data['from_date'] ?? '');
+            $to_date = trim($_GET['to_date'] ?? $data['to_date'] ?? '');
+
             foreach ($purchases as $p) {
                 $tot = (float)$p['total_amount'];
                 $paid = (float)$p['paid_amount'];
+                $p_date = $p['date'] ?: $p['created_at'];
+
+                if (!empty($from_date) && substr($p_date, 0, 10) < $from_date) continue;
+                if (!empty($to_date) && substr($p_date, 0, 10) > $to_date) continue;
+
                 $total_purchases_val += $tot;
                 $transactions[] = [
                     'id' => $p['id'],
-                    'date' => $p['date'] ?: $p['created_at'],
+                    'date' => $p_date,
                     'type' => 'فاتورة توريد',
                     'reference' => $p['invoice_number'] ?: "فاتورة #{$p['id']}",
                     'credit' => $tot,
                     'debit' => $paid,
                     'remaining' => max(0, $tot - $paid),
                     'payment_method' => $p['payment_method'],
-                    'notes' => "توريد بضاعة " . ($p['status'] ? "({$p['status']})" : "")
+                    'notes' => "توريد بضاعة " . ($p['status'] ? "({$p['status']})" : ""),
+                    'items' => $p['items'] ?? []
                 ];
             }
 
             foreach ($payments as $pay) {
                 $amt = (float)$pay['amount'];
+                $pay_date = $pay['date'] ?: $pay['created_at'];
+
+                if (!empty($from_date) && substr($pay_date, 0, 10) < $from_date) continue;
+                if (!empty($to_date) && substr($pay_date, 0, 10) > $to_date) continue;
+
                 $total_payments_val += $amt;
                 $transactions[] = [
                     'id' => $pay['id'],
-                    'date' => $pay['date'] ?: $pay['created_at'],
+                    'date' => $pay_date,
                     'type' => 'دفعة نقدية مسددة',
                     'reference' => "سند صرف #{$pay['id']}",
                     'credit' => 0,
                     'debit' => $amt,
                     'remaining' => 0,
                     'payment_method' => $pay['payment_method'],
-                    'notes' => $pay['note']
+                    'notes' => $pay['note'],
+                    'items' => []
                 ];
             }
 
@@ -683,6 +698,10 @@ try {
                     'total_payments' => $total_payments_val,
                     'purchases_count' => count($purchases),
                     'payments_count' => count($payments)
+                ],
+                'filter' => [
+                    'from_date' => $from_date,
+                    'to_date' => $to_date
                 ],
                 'purchases' => $purchases,
                 'payments' => $payments,
@@ -701,13 +720,13 @@ try {
             }
 
             try {
-                $purchases = $pdo->query("SELECT supplier_id, supplier_name, total_amount, paid_amount FROM purchases WHERE status != 'مرتجع'")->fetchAll(PDO::FETCH_ASSOC);
+                $purchases = $pdo->query("SELECT supplier_id, supplier_name, total_amount, paid_amount, date, created_at FROM purchases WHERE status != 'مرتجع' ORDER BY date DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
             } catch (Exception $e) {
                 $purchases = [];
             }
 
             try {
-                $payments = $pdo->query("SELECT supplier_id, note, amount FROM expenses WHERE category = 'سداد موردين'")->fetchAll(PDO::FETCH_ASSOC);
+                $payments = $pdo->query("SELECT supplier_id, note, amount, date, created_at FROM expenses WHERE category = 'سداد موردين' ORDER BY date DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
             } catch (Exception $e) {
                 $payments = [];
             }
@@ -722,23 +741,42 @@ try {
                 
                 $p_count = 0;
                 $p_supplied = 0;
+                $p_unpaid_count = 0;
+                $last_purch_date = null;
+
                 foreach ($purchases as $p) {
                     if (((int)$p['supplier_id'] === $s_id) || (!empty($p['supplier_name']) && trim($p['supplier_name']) === $s_name)) {
                         $p_count++;
-                        $p_supplied += (float)$p['total_amount'];
+                        $tot = (float)$p['total_amount'];
+                        $paid = (float)$p['paid_amount'];
+                        $p_supplied += $tot;
+                        if (($tot - $paid) > 0.01) {
+                            $p_unpaid_count++;
+                        }
+                        if (!$last_purch_date) {
+                            $last_purch_date = $p['date'] ?: $p['created_at'];
+                        }
                     }
                 }
                 
                 $p_paid = 0;
+                $last_pay_date = null;
+
                 foreach ($payments as $pay) {
                     if (((int)($pay['supplier_id'] ?? 0) === $s_id) || (!empty($pay['note']) && mb_strpos($pay['note'], $s_name) !== false)) {
                         $p_paid += (float)$pay['amount'];
+                        if (!$last_pay_date) {
+                            $last_pay_date = $pay['date'] ?: $pay['created_at'];
+                        }
                     }
                 }
 
                 $s['purchases_count'] = $p_count;
+                $s['unpaid_invoices_count'] = $p_unpaid_count;
                 $s['total_supplied'] = $p_supplied;
                 $s['total_paid'] = $p_paid;
+                $s['last_purchase_date'] = $last_purch_date;
+                $s['last_payment_date'] = $last_pay_date;
 
                 $total_debt += (float)$s['balance'];
                 $total_supplied += $p_supplied;

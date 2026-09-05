@@ -227,11 +227,13 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 17.2 Get Supplier Ledger / Statement (كشف حساب مالي تفصيلي للمورد)
+   * 17.2 Get Supplier Ledger / Statement (كشف حساب مالي تفصيلي للمورد مع فلترة التاريخ)
    */
-  async getSupplierLedger(supplierId, supplierName = '') {
+  async getSupplierLedger(supplierId, supplierName = '', fromDate = '', toDate = '') {
     const params = { supplier_id: supplierId };
     if (supplierName) params.supplier_name = supplierName;
+    if (fromDate) params.from_date = fromDate;
+    if (toDate) params.to_date = toDate;
     return await this.get('get_supplier_ledger', params);
   }
 

@@ -494,7 +494,7 @@ class App {
     });
 
     // Update View Containers
-    ['pos', 'orders', 'returns', 'inventory', 'expenses', 'reports', 'settings'].forEach(v => {
+    ['pos', 'orders', 'returns', 'inventory', 'expenses', 'employees', 'reports', 'settings'].forEach(v => {
       const el = document.getElementById(`view-${v}`);
       if (el) {
         if (v === viewName) {
@@ -521,6 +521,8 @@ class App {
       window.reportsController?.loadReports('today');
     } else if (viewName === 'expenses') {
       window.expensesController?.init();
+    } else if (viewName === 'employees') {
+      window.employeesController?.init();
     } else if (viewName === 'settings') {
       window.settingsController?.initForm();
     }

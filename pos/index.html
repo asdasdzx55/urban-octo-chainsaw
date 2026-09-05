@@ -70,36 +70,41 @@
       </div>
     </div>
 
-    <!-- Desktop Navigation View Switcher -->
-    <nav class="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl shrink-0">
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1.5" data-view="pos">
-        <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
-        <span>البيع</span>
+    <!-- Desktop Navigation View Switcher (Icon-Only Compact Toolbar) -->
+    <nav class="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-2xl shrink-0">
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all bg-indigo-600 text-white shadow-2xs cursor-pointer relative group" data-view="pos" title="شاشة الكاشير والبيع">
+        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">البيع</span>
       </button>
 
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="orders">
-        <i data-lucide="bike" class="w-3.5 h-3.5 text-emerald-500"></i>
-        <span>الدليفري والأونلاين</span>
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="orders" title="الطلبات والدليفري والأونلاين">
+        <i data-lucide="bike" class="w-4 h-4 text-emerald-500"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">الدليفري</span>
       </button>
 
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="returns">
-        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-        <span>المرتجع</span>
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="returns" title="المرتجعات واستعادة المخزون">
+        <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-500"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">المرتجع</span>
       </button>
 
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="inventory">
-        <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
-        <span>المخزون</span>
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="inventory" title="المخزون والجرد وتعديل الأسعار">
+        <i data-lucide="boxes" class="w-4 h-4 text-amber-500"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">المخزون</span>
       </button>
 
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="expenses">
-        <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
-        <span>المشتريات والمصروفات</span>
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="expenses" title="المشتريات والمصروفات وسداد الموردين">
+        <i data-lucide="wallet" class="w-4 h-4 text-purple-500"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">المصروفات</span>
       </button>
 
-      <button class="app-view-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5" data-view="reports">
-        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
-        <span>التقارير</span>
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="employees" title="العمال والرواتب والسلف">
+        <i data-lucide="users" class="w-4 h-4 text-sky-500"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">العمال والرواتب</span>
+      </button>
+
+      <button class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="reports" title="تقارير الوردية والمبيعات">
+        <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-500"></i>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">التقارير</span>
       </button>
     </nav>
 
@@ -173,6 +178,11 @@
           <button onclick="window.app.switchView('expenses')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="expenses">
             <i data-lucide="wallet" class="w-4 h-4 text-purple-500"></i>
             <span>المصروفات وسداد الموردين</span>
+          </button>
+
+          <button onclick="window.app.switchView('employees')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="employees">
+            <i data-lucide="users" class="w-4 h-4 text-sky-500"></i>
+            <span>👷 شؤون العمال والرواتب والسلف</span>
           </button>
 
           <button onclick="window.app.switchView('orders')" class="app-view-btn w-full p-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" data-view="orders">
@@ -1108,6 +1118,164 @@
 
     </section>
 
+    <!-- ==================== VIEW: EMPLOYEES & PAYROLL ==================== -->
+    <section id="view-employees" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
+      
+      <!-- Top Banner / Header Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400">
+                <i data-lucide="users" class="w-5 h-5"></i>
+              </span>
+              <h2 class="text-base sm:text-lg font-black text-gray-900 dark:text-white">شؤون العمال والرواتب والسلف</h2>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">متابعة رواتب العمال، تسجيل السلف والمكافآت، وخصمها من الخزينة تلقائياً</p>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="window.employeesController.openAddModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer">
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              <span>إضافة عامل جديد</span>
+            </button>
+
+            <button onclick="window.employeesController.openPayoutModal()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer">
+              <i data-lucide="hand-coins" class="w-4 h-4"></i>
+              <span>صرف سلفة / راتب 💸</span>
+            </button>
+
+            <button onclick="window.employeesController.loadEmployees()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition" title="تحديث البيانات">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Financial Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <!-- KPI 1: Workers Count -->
+          <div class="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">العمال النشطين</span>
+              <i data-lucide="user-check" class="w-4 h-4 text-indigo-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-emp-count" class="text-xl sm:text-2xl font-black text-indigo-700 dark:text-indigo-300 font-mono">0</h3>
+              <p class="text-[10px] text-indigo-500/80 mt-0.5">موظف مسجل</p>
+            </div>
+          </div>
+
+          <!-- KPI 2: Total Base Salaries -->
+          <div class="bg-gray-50 dark:bg-gray-700/50 border border-gray-200/80 dark:border-gray-700 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-700 dark:text-gray-300">إجمالي الرواتب الأساسية</span>
+              <i data-lucide="wallet" class="w-4 h-4 text-gray-400"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-emp-total-salary" class="text-lg sm:text-xl font-black text-gray-900 dark:text-white font-mono">0.00 ج.م</h3>
+              <p class="text-[10px] text-gray-400 mt-0.5">راتب شهري مستحق</p>
+            </div>
+          </div>
+
+          <!-- KPI 3: Total Advances -->
+          <div class="bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-700 dark:text-amber-300">سلف هذا الشهر 💸</span>
+              <i data-lucide="arrow-up-right" class="w-4 h-4 text-amber-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-emp-total-advances" class="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 font-mono">0.00 ج.م</h3>
+              <p class="text-[10px] text-amber-600/80 dark:text-amber-400/80 mt-0.5">تم سحبها مسبقاً</p>
+            </div>
+          </div>
+
+          <!-- KPI 4: Net Remaining -->
+          <div class="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">الصافي المتبقي للصرف</span>
+              <i data-lucide="badge-check" class="w-4 h-4 text-emerald-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-emp-total-remaining" class="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">0.00 ج.م</h3>
+              <p class="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">متبقي تسليمه للعمال</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <!-- Search Input -->
+          <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="emp-search-input" 
+              placeholder="ابحث باسم العامل أو الوظيفة أو الهاتف..." 
+              oninput="window.employeesController.searchQuery = this.value; window.employeesController.renderEmployeesList();"
+              class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+            >
+          </div>
+
+          <!-- Status Filters and Month Selection -->
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <!-- Filter Pills -->
+            <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-xs font-bold">
+              <button onclick="window.employeesController.statusFilter = 'all'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer">الكل</button>
+              <button onclick="window.employeesController.statusFilter = 'active'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">النشطين</button>
+              <button onclick="window.employeesController.statusFilter = 'inactive'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">المتوقفين</button>
+            </div>
+
+            <!-- Month Filter -->
+            <input 
+              type="month" 
+              id="emp-month-filter" 
+              onchange="window.employeesController.currentMonth = this.value; window.employeesController.loadRecentPayouts();"
+              class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer"
+            >
+          </div>
+        </div>
+
+        <!-- Employees Cards Grid -->
+        <div id="employees-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Recent Payouts Table Section -->
+        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="history" class="w-4 h-4 text-gray-400"></i>
+              <h3 class="text-xs font-bold text-gray-800 dark:text-gray-200">سجل حركات صرف الرواتب والسلف الأخيرة</h3>
+            </div>
+            <button onclick="window.employeesController.loadRecentPayouts()" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer">
+              تحديث السجل 🔄
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700/80">
+            <table class="w-full text-right border-collapse">
+              <thead>
+                <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 dark:text-gray-400 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                  <th class="py-2.5 px-4">التاريخ</th>
+                  <th class="py-2.5 px-4">العامل</th>
+                  <th class="py-2.5 px-4">نوع الحركة</th>
+                  <th class="py-2.5 px-4">المبلغ</th>
+                  <th class="py-2.5 px-4">طريقة الدفع</th>
+                  <th class="py-2.5 px-4">ملاحظات</th>
+                </tr>
+              </thead>
+              <tbody id="emp-payouts-table-body">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
     <!-- ==================== VIEW 6: SHIFT REPORTS ==================== -->
     <section id="view-reports" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
       
@@ -2010,6 +2178,248 @@
     </div>
   </div>
 
+  <!-- ==================== EMPLOYEE ADD / EDIT MODAL ==================== -->
+  <div id="employee-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 max-w-md w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+        <h3 id="emp-modal-title" class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-4 h-4 text-indigo-600"></i>
+          <span>➕ إضافة عامل جديد</span>
+        </h3>
+        <button onclick="window.employeesController.closeEmployeeModal()" class="p-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="emp-id">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Name -->
+        <div class="sm:col-span-2 flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اسم العامل / الموظف: <span class="text-rose-500">*</span></label>
+          <input type="text" id="emp-name" placeholder="مثال: محمود خليل..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <!-- Phone -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم الهاتف:</label>
+          <input type="tel" id="emp-phone" placeholder="01xxxxxxxxx" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+
+        <!-- Role -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الوظيفة / التخصص:</label>
+          <select id="emp-role" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+            <option value="كاشير">كاشير</option>
+            <option value="بائع أجبان وألبان">بائع أجبان وألبان</option>
+            <option value="عامل مخزن وجرد">عامل مخزن وجرد</option>
+            <option value="طيار دليفري">طيار دليفري</option>
+            <option value="عامل خدمات ونظافة">عامل خدمات ونظافة</option>
+            <option value="مدير صالة">مدير صالة</option>
+            <option value="عامل عام">عامل عام</option>
+          </select>
+        </div>
+
+        <!-- Salary Type -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">نظام الراتب:</label>
+          <select id="emp-salary-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+            <option value="monthly">راتب شهري ثابت</option>
+            <option value="daily">يومية</option>
+            <option value="commission">بالعمولة / الإنتاج</option>
+          </select>
+        </div>
+
+        <!-- Base Salary -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">الراتب الأساسي (ج.م):</label>
+          <input type="number" id="emp-base-salary" step="50" min="0" placeholder="5000" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+        </div>
+
+        <!-- Hire Date -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">تاريخ التعيين:</label>
+          <input type="date" id="emp-hire-date" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+
+        <!-- Active Checkbox -->
+        <div class="flex items-center gap-2 pt-5">
+          <input type="checkbox" id="emp-active" checked class="w-4 h-4 text-indigo-600 rounded">
+          <label for="emp-active" class="text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">العامل على رأس العمل (نشط)</label>
+        </div>
+
+        <!-- Notes -->
+        <div class="sm:col-span-2 flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">ملاحظات إضافية (أيام الإجازة / مواعيد الوردية):</label>
+          <textarea id="emp-notes" rows="2" placeholder="ملاحظات أو تفاصيل الوردية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <button type="button" onclick="window.employeesController.closeEmployeeModal()" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إلغاء</button>
+        <button type="button" onclick="window.employeesController.saveEmployee()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-md cursor-pointer">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>حفظ العامل</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SALARY & ADVANCE PAYOUT MODAL ==================== -->
+  <div id="salary-payout-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 max-w-sm w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i>
+          <span>صرف سلفة أو راتب للعامل 💸</span>
+        </h3>
+        <button onclick="window.employeesController.closePayoutModal()" class="p-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <!-- Select Employee -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اختر العامل: <span class="text-rose-500">*</span></label>
+          <select id="payout-employee-id" onchange="window.employeesController.onPayoutEmployeeChange()" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <!-- Employee Quick Stats Preview -->
+        <div id="payout-emp-preview" class="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 text-xs">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Payout Type -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">نوع الصرف:</label>
+          <select id="payout-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+            <option value="سلفة">سلفة من الراتب (خصم من الصافي)</option>
+            <option value="راتب شهري">تسليم راتب شهري كامل/جزئي</option>
+            <option value="يومية">صرف يومية</option>
+            <option value="مكافأة">مكافأة تشجيعية (إضافة على الراتب)</option>
+            <option value="خصم">خصم إداري / جزاء</option>
+            <option value="أوفر تايم">أوفر تايم / ساعات إضافية</option>
+          </select>
+        </div>
+
+        <!-- Amount -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ المنصرف (ج.م): <span class="text-rose-500">*</span></label>
+          <input type="number" id="payout-amount" step="10" min="1" placeholder="مثال: 500" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-base font-black font-mono text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Payment Method -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">طريقة الدفع (خصم من):</label>
+          <select id="payout-method" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+            <option value="كاش من الدرج">كاش من الدرج (يخصم من وردية الكاشير)</option>
+            <option value="فودافون كاش">محفظة إلكترونية / فودافون كاش</option>
+            <option value="تحويل بنكي / إنستاباي">تحويل بنكي / إنستاباي</option>
+            <option value="خزينة رئيسية">الخزينة الرئيسية للمحل</option>
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">ملاحظات / سبب الصرف:</label>
+          <input type="text" id="payout-notes" placeholder="مثال: سلفة منتصف الشهر..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <button type="button" onclick="window.employeesController.closePayoutModal()" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إلغاء</button>
+        <button type="button" onclick="window.employeesController.saveSalaryPayout()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-md cursor-pointer">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>تأكيد الصرف</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EMPLOYEE LEDGER (STATEMENT) MODAL ==================== -->
+  <div id="employee-ledger-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-2xl w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+      
+      <!-- Ledger Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+            <i data-lucide="receipt-text" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span id="ledger-emp-name">العامل</span>
+              <span id="ledger-emp-role" class="px-2 py-0.5 rounded-md text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-normal">كاشير</span>
+            </h3>
+            <p class="text-[11px] text-gray-400">كشف حساب الرواتب والسلف لشهر <span id="ledger-month-label" class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">2026-09</span></p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="window.employeesController.printLedger()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition cursor-pointer" title="طباعة كشف الحساب">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+          </button>
+          <button onclick="window.employeesController.closeLedgerModal()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Financial Breakdown Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-center">
+        <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-2xl border border-gray-100 dark:border-gray-800">
+          <span class="text-[10px] text-gray-400">الراتب الأساسي</span>
+          <p id="ledger-base-salary" class="text-xs font-bold text-gray-800 dark:text-gray-200 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-amber-50/70 dark:bg-amber-950/30 p-2.5 rounded-2xl border border-amber-100 dark:border-amber-900/40">
+          <span class="text-[10px] text-amber-600 dark:text-amber-400">إجمالي السلف</span>
+          <p id="ledger-total-advances" class="text-xs font-bold text-amber-600 dark:text-amber-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-purple-50/70 dark:bg-purple-950/30 p-2.5 rounded-2xl border border-purple-100 dark:border-purple-900/40">
+          <span class="text-[10px] text-purple-600 dark:text-purple-400">المكافآت</span>
+          <p id="ledger-total-bonuses" class="text-xs font-bold text-purple-600 dark:text-purple-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-rose-50/70 dark:bg-rose-950/30 p-2.5 rounded-2xl border border-rose-100 dark:border-rose-900/40">
+          <span class="text-[10px] text-rose-600 dark:text-rose-400">الخصومات</span>
+          <p id="ledger-total-deductions" class="text-xs font-bold text-rose-600 dark:text-rose-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-blue-50/70 dark:bg-blue-950/30 p-2.5 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+          <span class="text-[10px] text-blue-600 dark:text-blue-400">المسدد من الراتب</span>
+          <p id="ledger-total-paid" class="text-xs font-bold text-blue-600 dark:text-blue-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-emerald-50/80 dark:bg-emerald-950/40 p-2.5 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+          <span class="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">الصافي المتبقي</span>
+          <p id="ledger-net-remaining" class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+      </div>
+
+      <!-- Chronological Table of Transactions -->
+      <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700 mt-1">
+        <table class="w-full text-right border-collapse text-xs">
+          <thead>
+            <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+              <th class="py-2.5 px-3">التاريخ</th>
+              <th class="py-2.5 px-3">النوع</th>
+              <th class="py-2.5 px-3">المبلغ</th>
+              <th class="py-2.5 px-3">طريقة الدفع</th>
+              <th class="py-2.5 px-3">ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-table-body">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+        <button type="button" onclick="window.employeesController.closeLedgerModal()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Loading Modal -->
   <div id="global-loader" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center hidden">
     <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-3 max-w-xs mx-4 text-center">
@@ -2035,6 +2445,7 @@
   <script src="js/delivery-settlement.js"></script>
   <script src="js/returns.js"></script>
   <script src="js/reports.js"></script>
+  <script src="js/employees.js"></script>
   <script src="js/pwa.js"></script>
   <script src="js/app.js"></script>
 </body>

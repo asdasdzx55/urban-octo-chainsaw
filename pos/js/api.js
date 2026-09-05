@@ -253,6 +253,52 @@ class SyrianHomeAPI {
   async getDriverOrders(driverName, driverId = null) {
     return await this.get('get_driver_orders', { driver_name: driverName, driver_id: driverId });
   }
+
+  /**
+   * 23. Get Employees List (جلب قائمة العمال والموظفين مع ملخص الرواتب والسلف)
+   */
+  async getEmployees(activeOnly = false) {
+    return await this.get('get_employees', { active_only: activeOnly ? 1 : 0 });
+  }
+
+  /**
+   * 24. Sync / Add / Update Employee (إضافة أو تعديل بيانات عامل)
+   */
+  async syncEmployee(employeePayload) {
+    return await this.post('sync_employee', employeePayload);
+  }
+
+  /**
+   * 25. Delete / Deactivate Employee (حذف أو إيقاف عامل)
+   */
+  async deleteEmployee(employeeId, name = '') {
+    return await this.post('delete_employee', { employee_id: employeeId, name: name });
+  }
+
+  /**
+   * 26. Record Salary Payout / Advance (تسجيل صرف سلفة، راتب، مكافأة، خصم، يومية)
+   */
+  async recordSalaryPayout(payoutPayload) {
+    return await this.post('record_salary_payout', payoutPayload);
+  }
+
+  /**
+   * 27. Get Employee Financial Ledger (كشف حساب مالي تفصيلي لعامل)
+   */
+  async getEmployeeLedger(employeeId, monthYear = '') {
+    const params = { employee_id: employeeId };
+    if (monthYear) params.month_year = monthYear;
+    return await this.get('get_employee_ledger', params);
+  }
+
+  /**
+   * 28. Get General Salary Payouts Log (سجل مدفوعات الرواتب والسلف العامة)
+   */
+  async getSalaryPayouts(monthYear = '', limit = 50) {
+    const params = { limit: limit };
+    if (monthYear) params.month_year = monthYear;
+    return await this.get('get_salary_payouts', params);
+  }
 }
 
 window.api = new SyrianHomeAPI();

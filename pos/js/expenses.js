@@ -10,7 +10,8 @@ class ExpensesController {
     this.currentMode = 'purchase'; // 'purchase', 'expense', 'supplier', 'history'
   }
 
-  async init() {
+  async init(targetMode = null) {
+    if (targetMode) this.currentMode = targetMode;
     try {
       const meta = await window.api.getPosMeta();
       if (meta && meta.success) {
@@ -24,6 +25,7 @@ class ExpensesController {
       this.setMode(this.currentMode || 'purchase');
     } catch (e) {
       console.warn('Could not load pos meta:', e);
+      this.setMode(this.currentMode || 'purchase');
     }
   }
 
@@ -434,15 +436,23 @@ class ExpensesController {
       if (fromInput) fromInput.value = res.filter?.from_date || fromDate || '';
       if (toInput) toInput.value = res.filter?.to_date || toDate || '';
 
-      this.renderLedgerTable();
-
+      // Reveal modal first so user sees it immediately
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
+
+      try {
+        this.renderLedgerTable();
+      } catch (renderErr) {
+        console.error('Error rendering ledger table:', renderErr);
+      }
+
       if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       window.app?.showLoading(false);
       console.error('Error opening supplier ledger:', err);
-      window.app?.showToast(`تعذر جلب كشف الحساب: ${err.message}`, 'error');
+      const errMsg = `تعذر جلب كشف الحساب: ${err.message || err}`;
+      window.app?.showToast(errMsg, 'error');
+      alert(errMsg);
     }
   }
 

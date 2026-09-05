@@ -10,15 +10,34 @@ class PWAManager {
   }
 
   init() {
+    this.checkVersionUpdate();
     this.registerServiceWorker();
     this.listenInstallPrompt();
     this.checkStandaloneMode();
   }
 
+  async checkVersionUpdate() {
+    const currentVersion = '2.4.0';
+    const lastVersion = localStorage.getItem('pos_installed_version');
+    if (lastVersion !== currentVersion) {
+      console.log(`Upgrading POS shell from ${lastVersion} to ${currentVersion}...`);
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+          console.log('Cleaned old client caches successfully.');
+        } catch (e) {
+          console.warn('Could not clear caches:', e);
+        }
+      }
+      localStorage.setItem('pos_installed_version', currentVersion);
+    }
+  }
+
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=2.3.6')
+        navigator.serviceWorker.register('./sw.js?v=2.4.0')
           .then((reg) => {
             console.log('POS Service Worker registered successfully:', reg.scope);
             // Check for updates immediately
@@ -34,6 +53,31 @@ class PWAManager {
             console.warn('POS Service Worker registration failed:', err);
           });
       });
+    }
+  }
+
+  /**
+   * Force update POS App: Unregisters all service workers, purges caches, and reloads
+   */
+  async forceUpdateApp() {
+    try {
+      window.app?.showLoading(true, 'جاري مسح الكاش وتحديث التطبيق لأحدث إصدار...');
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          await reg.unregister();
+        }
+      }
+      localStorage.setItem('pos_installed_version', '2.4.0');
+      setTimeout(() => {
+        window.location.href = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+      }, 500);
+    } catch (e) {
+      window.location.reload();
     }
   }
 

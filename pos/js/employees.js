@@ -296,46 +296,61 @@ class EmployeesController {
   /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
   /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
   openAddModal() {
-    const modal = document.getElementById('employee-modal');
-    if (!modal) return;
-    const titleEl = document.getElementById('emp-modal-title');
-    if (titleEl) titleEl.textContent = '➕ إضافة عامل جديد';
-    const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = '';
-    const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = '';
-    const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = '';
-    const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = 'بائع أجبان وألبان';
-    const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = 'monthly';
-    const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = '5000';
-    const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = new Date().toISOString().slice(0, 10);
-    const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = '';
-    const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = true;
+    try {
+      const modal = document.getElementById('employee-modal');
+      if (!modal) {
+        alert('تعذر فتح نافذة العامل: العنصر غير موجود!');
+        return;
+      }
+      const titleEl = document.getElementById('emp-modal-title');
+      if (titleEl) titleEl.textContent = '➕ إضافة عامل جديد';
+      const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = '';
+      const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = '';
+      const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = '';
+      const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = 'بائع أجبان وألبان';
+      const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = 'monthly';
+      const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = '5000';
+      const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = new Date().toISOString().slice(0, 10);
+      const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = '';
+      const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = true;
 
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    setTimeout(() => nameEl?.focus(), 50);
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      setTimeout(() => nameEl?.focus(), 50);
+    } catch (e) {
+      console.error('Error opening add employee modal:', e);
+      alert('خطأ في فتح نافذة العامل: ' + e.message);
+    }
   }
 
   openEditModal(id) {
-    const emp = this.employees.find(e => e.id == id);
-    if (!emp) return;
+    try {
+      const emp = this.employees.find(e => e.id == id);
+      if (!emp) {
+        window.app?.showToast('لم يتم العثور على بيانات العامل المحدد!', 'error');
+        return;
+      }
 
-    const modal = document.getElementById('employee-modal');
-    if (!modal) return;
+      const modal = document.getElementById('employee-modal');
+      if (!modal) return;
 
-    const titleEl = document.getElementById('emp-modal-title');
-    if (titleEl) titleEl.textContent = '✏️ تعديل بيانات العامل';
-    const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = emp.id;
-    const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = emp.name || '';
-    const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = emp.phone || '';
-    const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = emp.role || 'عامل';
-    const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = emp.salary_type || 'monthly';
-    const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = emp.base_salary || 0;
-    const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = emp.hire_date || new Date().toISOString().slice(0, 10);
-    const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = emp.notes || '';
-    const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = emp.is_active != 0;
+      const titleEl = document.getElementById('emp-modal-title');
+      if (titleEl) titleEl.textContent = '✏️ تعديل بيانات العامل';
+      const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = emp.id;
+      const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = emp.name || '';
+      const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = emp.phone || '';
+      const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = emp.role || 'عامل';
+      const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = emp.salary_type || 'monthly';
+      const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = emp.base_salary || 0;
+      const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = emp.hire_date || new Date().toISOString().slice(0, 10);
+      const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = emp.notes || '';
+      const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = emp.is_active != 0;
 
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    } catch (e) {
+      console.error('Error opening edit employee modal:', e);
+    }
   }
 
   closeEmployeeModal() {
@@ -358,7 +373,9 @@ class EmployeesController {
     const isActive = document.getElementById('emp-active')?.checked ? 1 : 0;
 
     if (!name) {
-      window.app?.showToast('يرجى إدخال اسم العامل', 'warning');
+      const msg = 'يرجى إدخال اسم العامل!';
+      window.app?.showToast(msg, 'warning');
+      alert(msg);
       document.getElementById('emp-name')?.focus();
       return;
     }
@@ -390,7 +407,10 @@ class EmployeesController {
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.app?.showToast(`خطأ في الحفظ: ${err.message}`, 'error');
+      const errMsg = `خطأ في الحفظ: ${err.message || err}`;
+      console.error(errMsg);
+      window.app?.showToast(errMsg, 'error');
+      alert(errMsg);
     }
   }
 
@@ -416,49 +436,59 @@ class EmployeesController {
 
   /* ==================== SALARY & ADVANCE PAYOUT MODAL ==================== */
   async openPayoutModal(employeeId = null, defaultType = 'سلفة') {
-    const modal = document.getElementById('salary-payout-modal');
-    if (!modal) return;
+    try {
+      const modal = document.getElementById('salary-payout-modal');
+      if (!modal) {
+        alert('تعذر فتح نافذة الصرف: العنصر غير موجود!');
+        return;
+      }
 
-    // Auto-load employees if not loaded yet
-    if (!this.employees || this.employees.length === 0) {
-      window.app?.showLoading(true, 'جاري جلب قائمة العمال...');
-      await this.loadEmployees();
-      window.app?.showLoading(false);
+      // Auto-load employees if not loaded yet
+      if (!this.employees || this.employees.length === 0) {
+        window.app?.showLoading(true, 'جاري جلب قائمة العمال...');
+        await this.loadEmployees();
+        window.app?.showLoading(false);
+      }
+
+      const select = document.getElementById('payout-employee-id');
+      if (!select) return;
+
+      if (!this.employees || this.employees.length === 0) {
+        const msg = 'لا يوجد عمال مسجلون حالياً. يرجى إضافة عامل أولاً!';
+        window.app?.showToast(msg, 'warning');
+        alert(msg);
+        this.openAddModal();
+        return;
+      }
+
+      // Populate employees in select
+      select.innerHTML = this.employees.map(e => `
+        <option value="${e.id}" ${e.id == employeeId ? 'selected' : ''}>
+          ${e.name} (${e.role || 'عامل'})${e.is_active == 0 ? ' [متوقف]' : ''} - متبقي: ${(parseFloat(e.net_remaining_salary !== undefined ? e.net_remaining_salary : (e.base_salary || 0))).toFixed(0)} ج.م
+        </option>
+      `).join('');
+
+      const typeEl = document.getElementById('payout-type');
+      if (typeEl) typeEl.value = defaultType;
+
+      const amtEl = document.getElementById('payout-amount');
+      if (amtEl) amtEl.value = '';
+
+      const methEl = document.getElementById('payout-method');
+      if (methEl) methEl.value = 'كاش من الدرج';
+
+      const notesEl = document.getElementById('payout-notes');
+      if (notesEl) notesEl.value = defaultType === 'سلفة' ? 'سلفة من الراتب' : '';
+
+      this.onPayoutEmployeeChange();
+
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      setTimeout(() => amtEl?.focus(), 50);
+    } catch (e) {
+      console.error('Error opening payout modal:', e);
+      alert('خطأ في فتح نافذة صرف الراتب / السلفة: ' + e.message);
     }
-
-    const select = document.getElementById('payout-employee-id');
-    if (!select) return;
-
-    if (!this.employees || this.employees.length === 0) {
-      window.app?.showToast('لا يوجد عمال مسجلون حالياً. يرجى إضافة عامل أولاً!', 'warning');
-      this.openAddModal();
-      return;
-    }
-
-    // Populate employees in select
-    select.innerHTML = this.employees.map(e => `
-      <option value="${e.id}" ${e.id == employeeId ? 'selected' : ''}>
-        ${e.name} (${e.role || 'عامل'})${e.is_active == 0 ? ' [متوقف]' : ''} - متبقي: ${(parseFloat(e.net_remaining_salary !== undefined ? e.net_remaining_salary : (e.base_salary || 0))).toFixed(0)} ج.م
-      </option>
-    `).join('');
-
-    const typeEl = document.getElementById('payout-type');
-    if (typeEl) typeEl.value = defaultType;
-
-    const amtEl = document.getElementById('payout-amount');
-    if (amtEl) amtEl.value = '';
-
-    const methEl = document.getElementById('payout-method');
-    if (methEl) methEl.value = 'كاش من الدرج';
-
-    const notesEl = document.getElementById('payout-notes');
-    if (notesEl) notesEl.value = defaultType === 'سلفة' ? 'سلفة من الراتب' : '';
-
-    this.onPayoutEmployeeChange();
-
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    setTimeout(() => amtEl?.focus(), 50);
   }
 
   closePayoutModal() {
@@ -502,12 +532,16 @@ class EmployeesController {
     const notes = document.getElementById('payout-notes')?.value.trim();
 
     if (!empId) {
-      window.app?.showToast('يرجى اختيار العامل', 'warning');
+      const msg = 'يرجى اختيار العامل للصرف!';
+      window.app?.showToast(msg, 'warning');
+      alert(msg);
       return;
     }
 
     if (!amount || amount <= 0) {
-      window.app?.showToast('يرجى إدخال مبلغ صحيح للصرف', 'warning');
+      const msg = 'يرجى إدخال مبلغ صحيح للصرف أكبر من الصفر!';
+      window.app?.showToast(msg, 'warning');
+      alert(msg);
       document.getElementById('payout-amount')?.focus();
       return;
     }
@@ -532,7 +566,8 @@ class EmployeesController {
 
       if (res && res.success) {
         try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
-        window.app?.showToast(res.message || `تم تسجيل صرف ${type} بقيمة ${amount.toFixed(2)} ج.م بنجاح 💸`, 'success');
+        const successMsg = res.message || `تم تسجيل صرف ${type} بقيمة ${amount.toFixed(2)} ج.م بنجاح 💸`;
+        window.app?.showToast(successMsg, 'success');
         this.closePayoutModal();
         this.loadEmployees();
         this.loadRecentPayouts();
@@ -544,7 +579,10 @@ class EmployeesController {
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.app?.showToast(`خطأ في تسجيل الصرف: ${err.message}`, 'error');
+      const errMsg = `خطأ في تسجيل الصرف: ${err.message || err}`;
+      console.error(errMsg);
+      window.app?.showToast(errMsg, 'error');
+      alert(errMsg);
     }
   }
 

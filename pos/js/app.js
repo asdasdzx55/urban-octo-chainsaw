@@ -53,6 +53,9 @@ class App {
     // Init Expenses & Suppliers
     window.expensesController?.init();
 
+    // Init Employees & Payroll in background
+    window.employeesController?.init();
+
     // Init Store Brand Name from Settings
     if (window.settingsController) {
       const store = window.settingsController.getStoreInfo();
@@ -1041,17 +1044,18 @@ class App {
     const colors = {
       success: 'bg-emerald-600 text-white',
       error: 'bg-rose-600 text-white',
+      warning: 'bg-amber-600 text-white',
       info: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
     };
 
-    toast.className = `fixed bottom-20 sm:bottom-6 start-6 z-50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs sm:text-sm font-bold animate-drawer-slide-up ${colors[type] || colors.info}`;
+    toast.className = `fixed bottom-20 sm:bottom-6 start-6 z-[9999] px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs sm:text-sm font-bold animate-drawer-slide-up ${colors[type] || colors.info}`;
     toast.innerHTML = `<span>${message}</span>`;
     document.body.appendChild(toast);
 
     setTimeout(() => {
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 300);
-    }, 2400);
+    }, 2800);
   }
 
   showLoading(show, message = '') {

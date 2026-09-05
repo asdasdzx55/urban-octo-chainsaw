@@ -1,0 +1,19 @@
+# Syrian Home POS - Apache / LiteSpeed Configuration
+# Prevent stale caching for Service Worker, HTML shell, and manifest
+<IfModule mod_headers.c>
+    # Always serve sw.js, index.html, and manifest fresh
+    <FilesMatch "^(sw\.js|index\.html|manifest\.json)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+
+    # Force revalidation for JavaScript and CSS files
+    <FilesMatch "\.(js|css)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes

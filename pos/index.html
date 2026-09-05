@@ -768,23 +768,27 @@
           <p class="text-xs text-gray-500 mt-0.5">سجل بضائع التوريد الجديدة بطرق الدفع (كاش، آجل، إنستاباي، فودافون كاش) أو سجل المصروفات وسداد الموردين</p>
         </div>
 
-        <!-- Mode Tabs: Purchase Invoice, General Expense, Supplier Payment, Invoices History -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 p-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl w-full max-w-3xl">
-          <button onclick="window.expensesController.setMode('purchase')" class="expense-mode-btn py-2.5 px-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition" data-mode="purchase">
+        <!-- Mode Tabs: Purchase Invoice, General Expense, Supplier Payment, Invoices History, Suppliers Reports -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 p-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl w-full max-w-4xl">
+          <button onclick="window.expensesController.setMode('purchase')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition" data-mode="purchase">
             <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
             <span>مشتريات وتوريد</span>
           </button>
-          <button onclick="window.expensesController.setMode('expense')" class="expense-mode-btn py-2.5 px-2.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="expense">
+          <button onclick="window.expensesController.setMode('expense')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="expense">
             <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
             <span>مصروف عام</span>
           </button>
-          <button onclick="window.expensesController.setMode('supplier')" class="expense-mode-btn py-2.5 px-2.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="supplier">
+          <button onclick="window.expensesController.setMode('supplier')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="supplier">
             <i data-lucide="truck" class="w-3.5 h-3.5"></i>
             <span>سداد مورد</span>
           </button>
-          <button onclick="window.expensesController.setMode('history')" class="expense-mode-btn py-2.5 px-2.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="history">
+          <button onclick="window.expensesController.setMode('history')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="history">
             <i data-lucide="history" class="w-3.5 h-3.5"></i>
             <span>سجل الفواتير</span>
+          </button>
+          <button onclick="window.expensesController.setMode('suppliers_report')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="suppliers_report">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span>كشوفات الموردين</span>
           </button>
         </div>
 
@@ -835,10 +839,16 @@
                     <i data-lucide="truck" class="w-3.5 h-3.5 text-indigo-600"></i>
                     <span>المورد: <span class="text-rose-500">*</span></span>
                   </label>
-                  <button type="button" onclick="window.purchasesController.openNewSupplierModal()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800" title="إضافة مورد جديد">
-                    <i data-lucide="plus" class="w-3 h-3"></i>
-                    <span>مورد جديد +</span>
-                  </button>
+                  <div class="flex items-center gap-1">
+                    <button type="button" onclick="window.expensesController.openSupplierLedger(window.purchasesController.selectedSupplierId)" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[10px] hover:text-indigo-600 transition border border-gray-200 dark:border-gray-600 cursor-pointer" title="عرض كشف حساب المورد">
+                      <i data-lucide="receipt-text" class="w-3 h-3"></i>
+                      <span>كشف حساب</span>
+                    </button>
+                    <button type="button" onclick="window.purchasesController.openNewSupplierModal()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800" title="إضافة مورد جديد">
+                      <i data-lucide="plus" class="w-3 h-3"></i>
+                      <span>مورد جديد +</span>
+                    </button>
+                  </div>
                 </div>
 
                 <select id="purch-supplier-select" onchange="window.purchasesController.onSupplierSelected(this.value)" class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
@@ -1050,10 +1060,16 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div class="sm:col-span-2 flex flex-col gap-1">
-              <label class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                <i data-lucide="truck" class="w-3.5 h-3.5 text-emerald-600"></i>
-                <span>اختر المورد: <span class="text-rose-500">*</span></span>
-              </label>
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <i data-lucide="truck" class="w-3.5 h-3.5 text-emerald-600"></i>
+                  <span>اختر المورد: <span class="text-rose-500">*</span></span>
+                </label>
+                <button type="button" onclick="window.expensesController.openSupplierLedger()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-bold hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800 cursor-pointer" title="عرض كشف الحساب والمديونيات السابقة للمورد">
+                  <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+                  <span>عرض كشف الحساب 📑</span>
+                </button>
+              </div>
               <select id="exp-supplier-select" onchange="window.expensesController.onSupplierSelected(this.value)" class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold">
                 <!-- Rendered dynamically -->
               </select>
@@ -1112,6 +1128,76 @@
           <div id="purchases-history-list" class="flex flex-col gap-2.5">
             <!-- Rendered dynamically -->
           </div>
+        </div>
+
+        <!-- ==================== CONTAINER 4: SUPPLIERS REPORTS & ACCOUNTS ==================== -->
+        <div id="suppliers-report-container" class="hidden flex flex-col gap-4 max-w-5xl mx-auto w-full">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <div>
+              <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <span class="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400">
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                </span>
+                <span>تقارير وكشوفات حساب الموردين</span>
+              </h3>
+              <p class="text-xs text-gray-400 mt-0.5">متابعة إجمالي مديونيات الموردين، حركة التوريد، وكشف الحساب التفصيلي لكل مورد</p>
+            </div>
+            
+            <button onclick="window.expensesController.loadSuppliersReport()" class="px-3.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>تحديث البيانات</span>
+            </button>
+          </div>
+
+          <!-- KPI Summary Cards for Suppliers -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-4 flex flex-col justify-between">
+              <span class="text-xs font-bold text-rose-700 dark:text-rose-300">إجمالي ديون الموردين (المستحق)</span>
+              <div id="sup-report-total-debt" class="text-lg font-black text-rose-600 dark:text-rose-400 font-mono mt-2">0.00 ج.م</div>
+            </div>
+
+            <div class="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl p-4 flex flex-col justify-between">
+              <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">إجمالي البضاعة الموردة</span>
+              <div id="sup-report-total-supplied" class="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono mt-2">0.00 ج.م</div>
+            </div>
+
+            <div class="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-4 flex flex-col justify-between">
+              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">إجمالي المسدد للموردين</span>
+              <div id="sup-report-total-paid" class="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-2">0.00 ج.م</div>
+            </div>
+          </div>
+
+          <!-- Suppliers Table Card -->
+          <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h4 class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <i data-lucide="truck" class="w-4 h-4 text-gray-500"></i>
+                <span>قائمة الموردين وأرصدة الحسابات (<span id="sup-report-count">0</span> مورد)</span>
+              </h4>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-right border-collapse text-xs">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                    <th class="py-3 px-3">المورد</th>
+                    <th class="py-3 px-3">الرصيد المستحق</th>
+                    <th class="py-3 px-3 text-center">عدد الفواتير</th>
+                    <th class="py-3 px-3">إجمالي التوريد</th>
+                    <th class="py-3 px-3">إجمالي المسدد</th>
+                    <th class="py-3 px-3 text-center">الإجراء</th>
+                  </tr>
+                </thead>
+                <tbody id="suppliers-report-table-body">
+                  <tr id="suppliers-report-loading" class="hidden">
+                    <td colspan="6" class="py-8 text-center text-gray-400 font-bold">جاري تحميل تقارير الموردين...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -2416,6 +2502,82 @@
 
       <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-end">
         <button type="button" onclick="window.employeesController.closeLedgerModal()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SUPPLIER LEDGER (STATEMENT) MODAL ==================== -->
+  <div id="supplier-ledger-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-3xl w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95">
+      
+      <!-- Ledger Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">
+            <i data-lucide="truck" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <span id="sup-ledger-name">المورد</span>
+              <span class="px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">كشف حساب معتمد</span>
+            </h3>
+            <p id="sup-ledger-phone" class="text-[11px] text-gray-400 font-mono">هاتف المورد</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="window.expensesController.printSupplierLedger()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="طباعة كشف الحساب">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>طباعة الكشف</span>
+          </button>
+          <button onclick="window.expensesController.closeSupplierLedgerModal()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Financial Breakdown Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+        <div class="bg-rose-50/80 dark:bg-rose-950/40 p-3 rounded-2xl border border-rose-200 dark:border-rose-900/60">
+          <span class="text-[10px] font-bold text-rose-700 dark:text-rose-300">الرصيد المستحق الحالي</span>
+          <p id="sup-ledger-current-balance" class="text-sm font-black text-rose-600 dark:text-rose-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-indigo-50/70 dark:bg-indigo-950/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+          <span class="text-[10px] text-indigo-600 dark:text-indigo-400">إجمالي التوريدات</span>
+          <p id="sup-ledger-total-purchases" class="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/40">
+          <span class="text-[10px] text-emerald-600 dark:text-emerald-400">إجمالي المسدد له</span>
+          <p id="sup-ledger-total-payments" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">0.00 ج.م</p>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
+          <span class="text-[10px] text-gray-400">عدد فواتير التوريد</span>
+          <p id="sup-ledger-invoices-count" class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5 font-mono">0 فواتير</p>
+        </div>
+      </div>
+
+      <!-- Chronological Table of Transactions -->
+      <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700 mt-1">
+        <table class="w-full text-right border-collapse text-xs">
+          <thead>
+            <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+              <th class="py-2.5 px-3">التاريخ والوقت</th>
+              <th class="py-2.5 px-3">النوع</th>
+              <th class="py-2.5 px-3">رقم المرجع</th>
+              <th class="py-2.5 px-3">دائن (توريد +)</th>
+              <th class="py-2.5 px-3">مدين (سداد -)</th>
+              <th class="py-2.5 px-3">المتبقي</th>
+              <th class="py-2.5 px-3">تفاصيل / ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody id="sup-ledger-table-body">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+        <button type="button" onclick="window.expensesController.closeSupplierLedgerModal()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إغلاق</button>
       </div>
     </div>
   </div>

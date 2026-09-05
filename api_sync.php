@@ -569,6 +569,196 @@ try {
             break;
 
         // ============================================================
+        // 2.65 كشف حساب مالي تفصيلي لمورد (Supplier Ledger & Statement)
+        // ============================================================
+        case 'get_supplier_ledger':
+        case 'get_supplier_statement':
+            $sup_id = (int)($_GET['supplier_id'] ?? $_POST['supplier_id'] ?? $json_payload['supplier_id'] ?? 0);
+            $sup_name = trim($_GET['supplier_name'] ?? $_POST['supplier_name'] ?? $json_payload['supplier_name'] ?? '');
+
+            $supplier = null;
+            if ($sup_id > 0) {
+                $stmt = $pdo->prepare("SELECT * FROM suppliers WHERE id = ? LIMIT 1");
+                $stmt->execute([$sup_id]);
+                $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$supplier && !empty($sup_name)) {
+                $stmt = $pdo->prepare("SELECT * FROM suppliers WHERE name = ? LIMIT 1");
+                $stmt->execute([$sup_name]);
+                $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$supplier) {
+                echo json_encode(['success' => false, 'error' => 'لم يتم العثور على المورد المحدد!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $sup_id = (int)$supplier['id'];
+            $sup_name = $supplier['name'];
+
+            // التأكد من وجود عمود supplier_id في جدول المصروفات
+            try {
+                $col_chk = $pdo->query("SHOW COLUMNS FROM expenses LIKE 'supplier_id'")->fetch();
+                if (!$col_chk) {
+                    $pdo->exec("ALTER TABLE expenses ADD COLUMN supplier_id INT DEFAULT NULL");
+                }
+            } catch (Exception $e) {}
+
+            // 1. جلب جميع فواتير التوريد من هذا المورد
+            $purch_stmt = $pdo->prepare("SELECT id, invoice_number, payment_method, total_amount, paid_amount, discount, date, status, created_at 
+                                         FROM purchases 
+                                         WHERE supplier_id = ? OR supplier_name = ? 
+                                         ORDER BY date DESC, id DESC");
+            $purch_stmt->execute([$sup_id, $sup_name]);
+            $purchases = $purch_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // جلب أصناف كل فاتورة توريد إن وجدت
+            foreach ($purchases as &$p) {
+                try {
+                    $it_stmt = $pdo->prepare("SELECT name, barcode, qty, unit, cost_price, selling_price, total_cost FROM purchase_items WHERE purchase_id = ?");
+                    $it_stmt->execute([$p['id']]);
+                    $p['items'] = $it_stmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $e) {
+                    $p['items'] = [];
+                }
+            }
+            unset($p);
+
+            // 2. جلب جميع دفعات السداد المسددة لهذا المورد من الخزينة
+            $pay_stmt = $pdo->prepare("SELECT id, amount, note, date, payment_method, created_at 
+                                       FROM expenses 
+                                       WHERE (supplier_id = ? OR note LIKE ? OR note LIKE ?) AND category = 'سداد موردين' 
+                                       ORDER BY date DESC, id DESC");
+            $pay_stmt->execute([$sup_id, "%[سداد مورد: {$sup_name}]%", "%{$sup_name}%"]);
+            $payments = $pay_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. بناء جدول زمني موحد للحركات (Chronological Ledger)
+            $transactions = [];
+            $total_purchases_val = 0;
+            $total_payments_val = 0;
+
+            foreach ($purchases as $p) {
+                $tot = (float)$p['total_amount'];
+                $paid = (float)$p['paid_amount'];
+                $total_purchases_val += $tot;
+                $transactions[] = [
+                    'id' => $p['id'],
+                    'date' => $p['date'] ?: $p['created_at'],
+                    'type' => 'فاتورة توريد',
+                    'reference' => $p['invoice_number'] ?: "فاتورة #{$p['id']}",
+                    'credit' => $tot,
+                    'debit' => $paid,
+                    'remaining' => max(0, $tot - $paid),
+                    'payment_method' => $p['payment_method'],
+                    'notes' => "توريد بضاعة " . ($p['status'] ? "({$p['status']})" : "")
+                ];
+            }
+
+            foreach ($payments as $pay) {
+                $amt = (float)$pay['amount'];
+                $total_payments_val += $amt;
+                $transactions[] = [
+                    'id' => $pay['id'],
+                    'date' => $pay['date'] ?: $pay['created_at'],
+                    'type' => 'دفعة نقدية مسددة',
+                    'reference' => "سند صرف #{$pay['id']}",
+                    'credit' => 0,
+                    'debit' => $amt,
+                    'remaining' => 0,
+                    'payment_method' => $pay['payment_method'],
+                    'notes' => $pay['note']
+                ];
+            }
+
+            usort($transactions, function($a, $b) {
+                return strcmp($b['date'], $a['date']);
+            });
+
+            echo json_encode([
+                'success' => true,
+                'supplier' => $supplier,
+                'summary' => [
+                    'current_balance' => (float)$supplier['balance'],
+                    'total_purchases' => $total_purchases_val,
+                    'total_payments' => $total_payments_val,
+                    'purchases_count' => count($purchases),
+                    'payments_count' => count($payments)
+                ],
+                'purchases' => $purchases,
+                'payments' => $payments,
+                'transactions' => $transactions
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.66 تقرير إجمالي الموردين والمديونيات وحركة التوريد
+        // ============================================================
+        case 'get_suppliers_report':
+            try {
+                $suppliers = $pdo->query("SELECT * FROM suppliers ORDER BY balance DESC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $suppliers = [];
+            }
+
+            try {
+                $purchases = $pdo->query("SELECT supplier_id, supplier_name, total_amount, paid_amount FROM purchases WHERE status != 'مرتجع'")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $purchases = [];
+            }
+
+            try {
+                $payments = $pdo->query("SELECT supplier_id, note, amount FROM expenses WHERE category = 'سداد موردين'")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $payments = [];
+            }
+
+            $total_debt = 0;
+            $total_supplied = 0;
+            $total_paid = 0;
+
+            foreach ($suppliers as &$s) {
+                $s_id = (int)$s['id'];
+                $s_name = trim($s['name'] ?? '');
+                
+                $p_count = 0;
+                $p_supplied = 0;
+                foreach ($purchases as $p) {
+                    if (((int)$p['supplier_id'] === $s_id) || (!empty($p['supplier_name']) && trim($p['supplier_name']) === $s_name)) {
+                        $p_count++;
+                        $p_supplied += (float)$p['total_amount'];
+                    }
+                }
+                
+                $p_paid = 0;
+                foreach ($payments as $pay) {
+                    if (((int)($pay['supplier_id'] ?? 0) === $s_id) || (!empty($pay['note']) && mb_strpos($pay['note'], $s_name) !== false)) {
+                        $p_paid += (float)$pay['amount'];
+                    }
+                }
+
+                $s['purchases_count'] = $p_count;
+                $s['total_supplied'] = $p_supplied;
+                $s['total_paid'] = $p_paid;
+
+                $total_debt += (float)$s['balance'];
+                $total_supplied += $p_supplied;
+                $total_paid += $p_paid;
+            }
+            unset($s);
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($suppliers),
+                'summary' => [
+                    'total_debt' => $total_debt,
+                    'total_supplied' => $total_supplied,
+                    'total_paid' => $total_paid
+                ],
+                'suppliers' => $suppliers
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 2.7 تسجيل مرتجع فاتورة مشتريات (Purchase Return)
         // ============================================================
         case 'return_purchase':
@@ -825,6 +1015,413 @@ try {
         // ============================================================
         // 3. إضافة أو تعديل أو مزامنة صنف/منتج مركزي في المتجر
         // ============================================================
+        // ============================================================
+        // 2.15 جلب قائمة العمال والموظفين (Get Employees)
+        // ============================================================
+        case 'get_employees':
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(150) NOT NULL,
+                    phone VARCHAR(50) DEFAULT NULL,
+                    role VARCHAR(100) DEFAULT 'عامل',
+                    salary_type VARCHAR(20) DEFAULT 'monthly',
+                    base_salary DECIMAL(10,2) DEFAULT 0.00,
+                    daily_wage DECIMAL(10,2) DEFAULT 0.00,
+                    hire_date VARCHAR(50) DEFAULT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+            } catch (Exception $e) {
+                try {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS employees (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL,
+                        phone VARCHAR(50) DEFAULT NULL,
+                        role VARCHAR(100) DEFAULT 'عامل',
+                        salary_type VARCHAR(20) DEFAULT 'monthly',
+                        base_salary DECIMAL(10,2) DEFAULT 0.00,
+                        daily_wage DECIMAL(10,2) DEFAULT 0.00,
+                        hire_date DATE DEFAULT NULL,
+                        is_active TINYINT DEFAULT 1,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                } catch (Exception $e2) {}
+            }
+
+            $active_only = isset($_GET['active_only']) ? (int)$_GET['active_only'] : 0;
+            $sql = "SELECT * FROM employees" . ($active_only ? " WHERE is_active = 1" : "") . " ORDER BY name ASC";
+            $employees = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+            // جلب ملخص سلف ورواتب الشهر الحالي لكل موظف
+            $curr_month = date('Y-m');
+            $payouts_stmt = $pdo->prepare("SELECT employee_id, type, SUM(amount) as total_amt FROM employee_payouts WHERE month_year = ? OR date LIKE ? GROUP BY employee_id, type");
+            $payouts_stmt->execute([$curr_month, $curr_month . '%']);
+            $all_payouts = $payouts_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $payouts_map = [];
+            foreach ($all_payouts as $po) {
+                $eid = (int)$po['employee_id'];
+                if (!isset($payouts_map[$eid])) {
+                    $payouts_map[$eid] = ['سلفة' => 0, 'راتب شهري' => 0, 'مكافأة' => 0, 'خصم' => 0, 'يومية' => 0];
+                }
+                $payouts_map[$eid][$po['type']] = (float)$po['total_amt'];
+            }
+
+            foreach ($employees as &$emp) {
+                $eid = (int)$emp['id'];
+                $summary = $payouts_map[$eid] ?? ['سلفة' => 0, 'راتب شهري' => 0, 'مكافأة' => 0, 'خصم' => 0, 'يومية' => 0];
+                $emp['current_month'] = $curr_month;
+                $emp['advances_this_month'] = $summary['سلفة'] ?? 0;
+                $emp['bonuses_this_month'] = $summary['مكافأة'] ?? 0;
+                $emp['deductions_this_month'] = $summary['خصم'] ?? 0;
+                $emp['paid_salary_this_month'] = $summary['راتب شهري'] ?? 0;
+
+                $base = (float)$emp['base_salary'];
+                $emp['net_remaining_salary'] = round($base + ($emp['bonuses_this_month'] ?? 0) - ($emp['deductions_this_month'] ?? 0) - ($emp['advances_this_month'] ?? 0) - ($emp['paid_salary_this_month'] ?? 0), 2);
+            }
+            unset($emp);
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($employees),
+                'current_month' => $curr_month,
+                'employees' => $employees
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.16 إضافة أو تعديل بيانات عامل/موظف (Sync / Save Employee)
+        // ============================================================
+        case 'sync_employee':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $emp_id = (int)($data['id'] ?? $data['employee_id'] ?? 0);
+            $name = trim($data['name'] ?? '');
+            $phone = trim($data['phone'] ?? '');
+            $role = trim($data['role'] ?? 'عامل');
+            $salary_type = trim($data['salary_type'] ?? 'monthly');
+            $base_salary = (float)($data['base_salary'] ?? 0);
+            $daily_wage = (float)($data['daily_wage'] ?? 0);
+            $hire_date = !empty($data['hire_date']) ? trim($data['hire_date']) : date('Y-m-d');
+            $is_active = isset($data['is_active']) ? (int)$data['is_active'] : 1;
+            $notes = trim($data['notes'] ?? '');
+
+            if (empty($name)) {
+                echo json_encode(['success' => false, 'error' => 'اسم العامل / الموظف مطلوب!']);
+                exit;
+            }
+
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(150) NOT NULL,
+                    phone VARCHAR(50) DEFAULT NULL,
+                    role VARCHAR(100) DEFAULT 'عامل',
+                    salary_type VARCHAR(20) DEFAULT 'monthly',
+                    base_salary DECIMAL(10,2) DEFAULT 0.00,
+                    daily_wage DECIMAL(10,2) DEFAULT 0.00,
+                    hire_date VARCHAR(50) DEFAULT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+            } catch (Exception $e) {
+                try {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS employees (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL,
+                        phone VARCHAR(50) DEFAULT NULL,
+                        role VARCHAR(100) DEFAULT 'عامل',
+                        salary_type VARCHAR(20) DEFAULT 'monthly',
+                        base_salary DECIMAL(10,2) DEFAULT 0.00,
+                        daily_wage DECIMAL(10,2) DEFAULT 0.00,
+                        hire_date DATE DEFAULT NULL,
+                        is_active TINYINT DEFAULT 1,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                } catch (Exception $e2) {}
+            }
+
+            // فحص وجود الموظف
+            $chk = null;
+            if ($emp_id > 0) {
+                $chk = $pdo->prepare("SELECT id FROM employees WHERE id = ?");
+                $chk->execute([$emp_id]);
+            } else {
+                $chk = $pdo->prepare("SELECT id FROM employees WHERE name = ?");
+                $chk->execute([$name]);
+            }
+            $existing_id = $chk->fetchColumn();
+
+            if ($existing_id) {
+                $upd = $pdo->prepare("UPDATE employees SET name = ?, phone = ?, role = ?, salary_type = ?, base_salary = ?, daily_wage = ?, hire_date = ?, is_active = ?, notes = ? WHERE id = ?");
+                $upd->execute([$name, $phone, $role, $salary_type, $base_salary, $daily_wage, $hire_date, $is_active, $notes, $existing_id]);
+                $final_id = (int)$existing_id;
+            } else {
+                $ins = $pdo->prepare("INSERT INTO employees (name, phone, role, salary_type, base_salary, daily_wage, hire_date, is_active, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $ins->execute([$name, $phone, $role, $salary_type, $base_salary, $daily_wage, $hire_date, $is_active, $notes]);
+                $final_id = (int)$pdo->lastInsertId();
+            }
+
+            echo json_encode([
+                'success' => true,
+                'employee_id' => $final_id,
+                'name' => $name,
+                'message' => "✅ تمت مزامنة بيانات الموظف ({$name}) بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.17 حذف أو تعطيل عامل/موظف (Delete Employee)
+        // ============================================================
+        case 'delete_employee':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $emp_id = (int)($data['id'] ?? $data['employee_id'] ?? 0);
+            $name = trim($data['name'] ?? '');
+            $force = !empty($data['force']);
+
+            if ($emp_id > 0) {
+                if ($force) {
+                    $pdo->prepare("DELETE FROM employees WHERE id = ?")->execute([$emp_id]);
+                } else {
+                    $pdo->prepare("UPDATE employees SET is_active = 0 WHERE id = ?")->execute([$emp_id]);
+                }
+            } elseif (!empty($name)) {
+                if ($force) {
+                    $pdo->prepare("DELETE FROM employees WHERE name = ?")->execute([$name]);
+                } else {
+                    $pdo->prepare("UPDATE employees SET is_active = 0 WHERE name = ?")->execute([$name]);
+                }
+            } else {
+                echo json_encode(['success' => false, 'error' => 'معرف الموظف أو اسمه مطلوب!']);
+                exit;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => '✅ تم تحديث حالة الموظف / حذفه بنجاح.'
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.18 تسجيل صرف راتب أو سلفة أو مكافأة (Record Salary Payout)
+        // ============================================================
+        case 'record_salary_payout':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $emp_id = (int)($data['employee_id'] ?? 0);
+            $emp_name = trim($data['employee_name'] ?? '');
+            $type = trim($data['type'] ?? 'راتب شهري'); // راتب شهري / سلفة / مكافأة / خصم / يومية / أوفر تايم
+            $amount = (float)($data['amount'] ?? 0);
+            $payment_method = trim($data['payment_method'] ?? 'كاش من الدرج');
+            $date = !empty($data['date']) ? trim($data['date']) : date('Y-m-d');
+            $month_year = !empty($data['month_year']) ? trim($data['month_year']) : date('Y-m', strtotime($date));
+            $notes = trim($data['notes'] ?? '');
+            $cashier_name = trim($data['cashier_name'] ?? 'كاشير المحل');
+
+            if ($amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'يجب إدخال مبلغ صحيح أكبر من الصفر!']);
+                exit;
+            }
+
+            // التأكد من اسم ومعرف الموظف
+            if ($emp_id > 0 && empty($emp_name)) {
+                $st = $pdo->prepare("SELECT name FROM employees WHERE id = ?");
+                $st->execute([$emp_id]);
+                $emp_name = $st->fetchColumn() ?: "موظف #{$emp_id}";
+            } elseif (!empty($emp_name) && $emp_id <= 0) {
+                $st = $pdo->prepare("SELECT id FROM employees WHERE name = ?");
+                $st->execute([$emp_name]);
+                $emp_id = (int)$st->fetchColumn();
+            }
+
+            if (empty($emp_name)) {
+                echo json_encode(['success' => false, 'error' => 'اسم الموظف أو رقمه مطلوب!']);
+                exit;
+            }
+
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS employee_payouts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    employee_id INTEGER NOT NULL,
+                    employee_name VARCHAR(150) NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    amount DECIMAL(10,2) NOT NULL,
+                    payment_method VARCHAR(50) DEFAULT 'كاش من الدرج',
+                    date VARCHAR(50) NOT NULL,
+                    month_year VARCHAR(20) DEFAULT NULL,
+                    notes TEXT,
+                    cashier_name VARCHAR(100) DEFAULT 'كاشير المحل',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+            } catch (Exception $e) {
+                try {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS employee_payouts (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        employee_id INT NOT NULL,
+                        employee_name VARCHAR(150) NOT NULL,
+                        type VARCHAR(50) NOT NULL,
+                        amount DECIMAL(10,2) NOT NULL,
+                        payment_method VARCHAR(50) DEFAULT 'كاش من الدرج',
+                        date DATE NOT NULL,
+                        month_year VARCHAR(20) DEFAULT NULL,
+                        notes TEXT,
+                        cashier_name VARCHAR(100) DEFAULT 'كاشير المحل',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                } catch (Exception $e2) {}
+            }
+
+            $ins = $pdo->prepare("INSERT INTO employee_payouts (employee_id, employee_name, type, amount, payment_method, date, month_year, notes, cashier_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $ins->execute([$emp_id, $emp_name, $type, $amount, $payment_method, $date, $month_year, $notes, $cashier_name]);
+            $payout_id = (int)$pdo->lastInsertId();
+
+            // تسجيل الحركة كمصروف تلقائياً في expenses إذا كانت صرف نقدي (سلفة، راتب، مكافأة، يومية)
+            if ($type !== 'خصم') {
+                try {
+                    $cat_name = ($type === 'سلفة') ? 'سلف عاملين' : 'رواتب عاملين';
+                    $exp_note = "صرف ({$type}) للعامل ({$emp_name}) لشهر ({$month_year})" . (!empty($notes) ? " - {$notes}" : "");
+                    $pdo->prepare("INSERT INTO expenses (category, amount, note, date, partner_name, payment_method) VALUES (?, ?, ?, ?, ?, ?)")
+                        ->execute([$cat_name, $amount, $exp_note, $date, $cashier_name, $payment_method]);
+                } catch (Exception $e_exp) {}
+            }
+
+            echo json_encode([
+                'success' => true,
+                'payout_id' => $payout_id,
+                'employee_name' => $emp_name,
+                'type' => $type,
+                'amount' => $amount,
+                'month_year' => $month_year,
+                'message' => "✅ تم تسجيل صرف ({$type}) بمبلغ ({$amount} ج.م) للعامل ({$emp_name}) بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.19 جلب سجل الرواتب والسلف والمدفوعات (Get Salary Payouts)
+        // ============================================================
+        case 'get_salary_payouts':
+            $emp_id = (int)($_GET['employee_id'] ?? 0);
+            $emp_name = trim($_GET['employee_name'] ?? '');
+            $month_year = trim($_GET['month_year'] ?? '');
+            $type = trim($_GET['type'] ?? '');
+            $limit = min(200, max(1, (int)($_GET['limit'] ?? 100)));
+
+            $conditions = [];
+            $params = [];
+
+            if ($emp_id > 0) {
+                $conditions[] = "employee_id = ?";
+                $params[] = $emp_id;
+            }
+            if (!empty($emp_name)) {
+                $conditions[] = "employee_name LIKE ?";
+                $params[] = "%{$emp_name}%";
+            }
+            if (!empty($month_year)) {
+                $conditions[] = "month_year = ?";
+                $params[] = $month_year;
+            }
+            if (!empty($type)) {
+                $conditions[] = "type = ?";
+                $params[] = $type;
+            }
+
+            $where = !empty($conditions) ? "WHERE " . implode(' AND ', $conditions) : "";
+            $sql = "SELECT * FROM employee_payouts {$where} ORDER BY date DESC, id DESC LIMIT {$limit}";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $payouts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $total_sum = 0;
+            foreach ($payouts as $p) {
+                $total_sum += (float)$p['amount'];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($payouts),
+                'total_amount' => $total_sum,
+                'payouts' => $payouts
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.20 كشف حساب مالي تفصيلي لعامل/موظف (Get Employee Ledger)
+        // ============================================================
+        case 'get_employee_ledger':
+            $emp_id = (int)($_GET['employee_id'] ?? 0);
+            $emp_name = trim($_GET['employee_name'] ?? '');
+            $month_year = trim($_GET['month_year'] ?? date('Y-m'));
+
+            $emp = null;
+            if ($emp_id > 0) {
+                $st = $pdo->prepare("SELECT * FROM employees WHERE id = ?");
+                $st->execute([$emp_id]);
+                $emp = $st->fetch(PDO::FETCH_ASSOC);
+            } elseif (!empty($emp_name)) {
+                $st = $pdo->prepare("SELECT * FROM employees WHERE name = ?");
+                $st->execute([$emp_name]);
+                $emp = $st->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$emp) {
+                echo json_encode(['success' => false, 'error' => 'العامل / الموظف غير موجود!']);
+                exit;
+            }
+
+            $eid = (int)$emp['id'];
+            $st_po = $pdo->prepare("SELECT * FROM employee_payouts WHERE (employee_id = ? OR employee_name = ?) AND (month_year = ? OR date LIKE ?) ORDER BY date ASC, id ASC");
+            $st_po->execute([$eid, $emp['name'], $month_year, $month_year . '%']);
+            $transactions = $st_po->fetchAll(PDO::FETCH_ASSOC);
+
+            $total_advances = 0;
+            $total_bonuses = 0;
+            $total_deductions = 0;
+            $total_paid = 0;
+            $total_daily = 0;
+
+            foreach ($transactions as $t) {
+                $amt = (float)$t['amount'];
+                $tt = trim($t['type']);
+                if ($tt === 'سلفة' || mb_strpos($tt, 'سلف') !== false) {
+                    $total_advances += $amt;
+                } elseif ($tt === 'مكافأة' || $tt === 'أوفر تايم' || mb_strpos($tt, 'مكاف') !== false || mb_strpos($tt, 'أوفر') !== false) {
+                    $total_bonuses += $amt;
+                } elseif ($tt === 'خصم' || mb_strpos($tt, 'خصم') !== false) {
+                    $total_deductions += $amt;
+                } elseif ($tt === 'راتب شهري' || mb_strpos($tt, 'راتب') !== false) {
+                    $total_paid += $amt;
+                } elseif ($tt === 'يومية' || mb_strpos($tt, 'يومي') !== false) {
+                    $total_daily += $amt;
+                }
+            }
+
+            $base_salary = (float)$emp['base_salary'];
+            $net_remaining = round($base_salary + $total_bonuses + $total_daily - $total_deductions - $total_advances - $total_paid, 2);
+
+            echo json_encode([
+                'success' => true,
+                'employee' => $emp,
+                'month_year' => $month_year,
+                'summary' => [
+                    'base_salary' => $base_salary,
+                    'total_advances' => $total_advances,
+                    'total_bonuses' => $total_bonuses,
+                    'total_deductions' => $total_deductions,
+                    'total_paid_salary' => $total_paid,
+                    'total_daily_wages' => $total_daily,
+                    'net_remaining_to_pay' => $net_remaining
+                ],
+                'transactions' => $transactions
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 3. إضافة أو تعديل أو مزامنة صنف/منتج مركزي في المتجر
+
         case 'sync_product':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $remote_id = (int)($data['product_id'] ?? $data['remote_id'] ?? 0);

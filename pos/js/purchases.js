@@ -200,7 +200,7 @@ class PurchasesController {
     }
   }
 
-  saveNewSupplier() {
+  async saveNewSupplier() {
     const name = (document.getElementById('new-supplier-name')?.value || '').trim();
     const phone = (document.getElementById('new-supplier-phone')?.value || '').trim();
     const initialBal = parseFloat(document.getElementById('new-supplier-initial-balance')?.value || 0);
@@ -210,19 +210,47 @@ class PurchasesController {
       return;
     }
 
-    const newId = Date.now();
-    const newSup = {
-      id: newId,
-      name: name,
-      phone: phone,
-      balance: initialBal
-    };
+    try {
+      window.app?.showLoading?.(true, 'جاري حفظ ومزامنة المورد سحابياً...');
+      const res = await window.api.syncSupplier({
+        name: name,
+        phone: phone,
+        initial_balance: initialBal
+      });
+      window.app?.showLoading?.(false);
 
-    this.suppliers.unshift(newSup);
-    this.selectedSupplierId = newId;
-    this.renderSuppliersDropdown();
-    this.closeNewSupplierModal();
-    window.app?.showToast('تمت إضافة واختيار المورد: ' + name, 'success');
+      const realId = (res && res.success && res.supplier_id) ? res.supplier_id : Date.now();
+      const newSup = {
+        id: realId,
+        name: name,
+        phone: phone,
+        balance: initialBal
+      };
+
+      this.suppliers = this.suppliers.filter(s => s.id !== realId && s.name !== name);
+      this.suppliers.unshift(newSup);
+      this.selectedSupplierId = realId;
+      this.renderSuppliersDropdown();
+      this.closeNewSupplierModal();
+      
+      // Update expenses controller suppliers as well
+      if (window.expensesController) {
+        window.expensesController.suppliers = this.suppliers;
+        window.expensesController.renderSuppliersDropdown();
+      }
+
+      window.app?.showToast(res?.message || ('تمت إضافة ومزامنة المورد سحابياً: ' + name), 'success');
+    } catch (err) {
+      window.app?.showLoading?.(false);
+      console.warn('Sync supplier error, saving locally:', err);
+      const newId = Date.now();
+      const newSup = { id: newId, name: name, phone: phone, balance: initialBal };
+      this.suppliers.unshift(newSup);
+      this.selectedSupplierId = newId;
+      this.renderSuppliersDropdown();
+      this.closeNewSupplierModal();
+      window.app?.showToast('تم حفظ المورد محلياً: ' + name, 'warning');
+    }
   }
 
   /* ==================== PAYMENT METHODS ==================== */

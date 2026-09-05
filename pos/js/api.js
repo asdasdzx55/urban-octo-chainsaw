@@ -220,6 +220,29 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 17.1 Sync / Add / Update Supplier (إضافة أو تعديل مورد سحابياً)
+   */
+  async syncSupplier(supplierPayload) {
+    return await this.post('sync_supplier', supplierPayload);
+  }
+
+  /**
+   * 17.2 Get Supplier Ledger / Statement (كشف حساب مالي تفصيلي للمورد)
+   */
+  async getSupplierLedger(supplierId, supplierName = '') {
+    const params = { supplier_id: supplierId };
+    if (supplierName) params.supplier_name = supplierName;
+    return await this.get('get_supplier_ledger', params);
+  }
+
+  /**
+   * 17.3 Get Suppliers Comprehensive Report (تقرير إجمالي الموردين والمديونيات)
+   */
+  async getSuppliersReport() {
+    return await this.get('get_suppliers_report');
+  }
+
+  /**
    * 18. Get Delivery Drivers List (جلب قائمة طياري الدليفري)
    */
   async getDeliveryDrivers() {

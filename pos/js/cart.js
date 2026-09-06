@@ -8,6 +8,8 @@ class POSCart {
     this.items = [];
     this.discountAmount = 0;
     this.taxRate = 0; // Default 0% or customizable
+    this.paymentFeeType = 'percent'; // 'percent' or 'fixed'
+    this.paymentFeeVal = 0; // variable fee/tax on payment method
     this.paymentMethod = 'cash'; // 'cash', 'instapay', 'vodafone_cash', 'card'
     this.orderType = 'hall'; // 'hall' (استلام بالمحل) or 'delivery' (توصيل منزلي)
     this.deliveryPayMode = 'cod'; // 'cod' (تحصيل عند الاستلام - آجل) or 'prepaid' (مدفوعة مسبقاً)
@@ -189,12 +191,36 @@ class POSCart {
     return this.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
   }
 
+  getPaymentFee() {
+    const isDelivery = this.orderType === 'delivery';
+    const pm = isDelivery 
+      ? (this.deliveryPayMode === 'prepaid' ? this.deliveryPrepaidMethod : 'cash')
+      : this.paymentMethod;
+
+    if (pm === 'cash' || pm === 'cash_store' || (isDelivery && this.deliveryPayMode === 'cod')) {
+      return 0;
+    }
+
+    const subtotal = this.getSubtotal();
+    const afterDiscount = Math.max(0, subtotal - this.discountAmount);
+    const val = parseFloat(this.paymentFeeVal || 0);
+
+    if (val <= 0) return 0;
+
+    if (this.paymentFeeType === 'percent') {
+      return Math.round((afterDiscount * (val / 100)) * 100) / 100;
+    } else {
+      return val;
+    }
+  }
+
   getTotal() {
     const subtotal = this.getSubtotal();
     const afterDiscount = Math.max(0, subtotal - this.discountAmount);
     const tax = afterDiscount * (this.taxRate / 100);
+    const paymentFee = this.getPaymentFee();
     const delivery = this.orderType === 'delivery' ? parseFloat(this.deliveryFee || 0) : 0;
-    return afterDiscount + tax + delivery;
+    return afterDiscount + tax + paymentFee + delivery;
   }
 
   getTotalItemsCount() {
@@ -368,6 +394,9 @@ class POSCart {
       total_amount: total,
       discount: this.discountAmount,
       tax: this.taxRate,
+      payment_fee: this.getPaymentFee(),
+      payment_fee_val: this.paymentFeeVal,
+      payment_fee_type: this.paymentFeeType,
       cashier_notes: this.cashierNotes,
       paid_amount: paidAmount,
       amount_to_collect: amountToCollect,
@@ -411,6 +440,9 @@ class POSCart {
           items: [...this.items],
           subtotal: this.getSubtotal(),
           discount: this.discountAmount,
+          payment_fee: this.getPaymentFee(),
+          payment_fee_val: this.paymentFeeVal,
+          payment_fee_type: this.paymentFeeType,
           total: total,
           paid_amount: paidAmount,
           amount_to_collect: amountToCollect,
@@ -641,6 +673,13 @@ class POSCart {
             <tr>
               <td>الخصم الممنوح:</td>
               <td class="bw-val">-${parseFloat(inv.discount).toFixed(2)} ج.م</td>
+            </tr>
+          ` : ''}
+
+          ${(inv.payment_fee && parseFloat(inv.payment_fee) > 0) ? `
+            <tr>
+              <td>رسوم / ضريبة دفع (${inv.payment_method || 'إلكتروني'}):</td>
+              <td class="bw-val">+${parseFloat(inv.payment_fee).toFixed(2)} ج.م</td>
             </tr>
           ` : ''}
 
@@ -938,6 +977,9 @@ class POSCart {
     text += `---------------------------------\n`;
     if (parseFloat(inv.discount) > 0) {
       text += `الخصم: -${parseFloat(inv.discount).toFixed(2)} ج.م\n`;
+    }
+    if (parseFloat(inv.payment_fee || 0) > 0) {
+      text += `رسوم دفع إلكتروني (${inv.payment_method || 'إلكتروني'}): +${parseFloat(inv.payment_fee).toFixed(2)} ج.م\n`;
     }
     text += `*💰 صافي الإجمالي: ${parseFloat(inv.total).toFixed(2)} ج.م*\n`;
     text += `طريقة الدفع: ${inv.payment_method}\n`;

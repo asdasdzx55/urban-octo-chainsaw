@@ -47,12 +47,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.5.1">
-  <link rel="stylesheet" href="css/receipt.css?v=2.5.1">
+  <link rel="stylesheet" href="css/pos.css?v=2.5.2">
+  <link rel="stylesheet" href="css/receipt.css?v=2.5.2">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.5.1';
+    window.APP_VERSION = '2.5.2';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -124,7 +124,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.1</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.2</span>
         </div>
       </div>
     </div>
@@ -223,7 +223,7 @@
             </div>
             <div>
               <h3 class="text-xs font-black text-gray-900 dark:text-white leading-tight">سوبر ماركت المنزل السوري</h3>
-              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.1</p>
+              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.2</p>
             </div>
           </div>
           <button type="button" onclick="window.app.closeDrawerMenu()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
@@ -2121,6 +2121,179 @@
             </div>
           </div>
 
+          <!-- Card 3: Payment Method Taxes & Fees (ضرائب ورسوم وسائل الدفع) -->
+          <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="badge-percent" class="w-4 h-4 text-indigo-600"></i>
+                ضرائب ورسوم وسائل الدفع الإلكتروني
+              </h3>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="set-enable-payment-fee" class="sr-only peer" checked>
+                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span class="mr-2 text-xs font-bold text-gray-700 dark:text-gray-300">تفعيل</span>
+              </label>
+            </div>
+
+            <p class="text-[11px] text-gray-500">حدد القيمة الافتراضية للضريبة أو الرسوم لكل وسيلة دفع (يمكن للكاشير تغييرها أو تصفيرها لحظياً أثناء الفاتورة):</p>
+
+            <!-- 1. InstaPay Fee -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  <i data-lucide="smartphone" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  إنستاباي (InstaPay)
+                </span>
+                <span class="text-[10px] text-gray-400 font-mono">افتراضي للعملية</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] text-gray-500">نوع الرسوم:</label>
+                  <select id="set-instapay-fee-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-bold">
+                    <option value="percent">% نسبة مئوية من الإجمالي</option>
+                    <option value="fixed">ج.م مبلغ إضافي ثابت</option>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] text-gray-500">القيمة الافتراضية:</label>
+                  <input type="number" id="set-instapay-fee-val" step="0.1" min="0" value="0" placeholder="0" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-bold font-mono text-center">
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Vodafone Cash Fee -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  <i data-lucide="phone-call" class="w-3.5 h-3.5 text-rose-500"></i>
+                  فودافون كاش / المحافظ الإلكترونية
+                </span>
+                <span class="text-[10px] text-gray-400 font-mono">افتراضي للعملية</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] text-gray-500">نوع الرسوم:</label>
+                  <select id="set-vodafone-fee-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-bold">
+                    <option value="percent">% نسبة مئوية من الإجمالي</option>
+                    <option value="fixed">ج.م مبلغ إضافي ثابت</option>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] text-gray-500">القيمة الافتراضية:</label>
+                  <input type="number" id="set-vodafone-fee-val" step="0.1" min="0" value="0" placeholder="0" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-bold font-mono text-center">
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Visa / Bank Card Fee -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  <i data-lucide="credit-card" class="w-3.5 h-3.5 text-blue-500"></i>
+                  فيزا / بطاقات بنكية (Card)
+                </span>
+                <span class="text-[10px] text-gray-400 font-mono">افتراضي للعملية</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] text-gray-500">نوع الرسوم:</label>
+                  <select id="set-card-fee-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-bold">
+                    <option value="percent">% نسبة مئوية من الإجمالي</option>
+                    <option value="fixed">ج.م مبلغ إضافي ثابت</option>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] text-gray-500">القيمة الافتراضية:</label>
+                  <input type="number" id="set-card-fee-val" step="0.1" min="0" value="0" placeholder="0" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-bold font-mono text-center">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Danger Zone / System Reset & Data Wipe (منطقة الخطر وحذف البيانات) -->
+          <div class="p-5 bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl border-2 border-rose-200 dark:border-rose-900/60 flex flex-col gap-4">
+            <div class="flex items-center justify-between pb-2 border-b border-rose-200 dark:border-rose-900/60">
+              <h3 class="text-sm font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+                منطقة العمليات الحساسة (تصفير وحذف البيانات)
+              </h3>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                إجراءات إدارية خطيرة
+              </span>
+            </div>
+
+            <p class="text-[11px] text-rose-800/80 dark:text-rose-300/80">
+              تتيح لك هذه الأدوات إعادة تهيئة النظام أو تصفير الأرصدة والكميات مع حماية مسبقة بطلب تأكيد أمني.
+            </p>
+
+            <!-- Reset Action 1: Zero Quantities and Balances -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-rose-200 dark:border-rose-800/60 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <span class="text-base">⚖️</span>
+                  تصفير الحسابات والكميات فقط
+                </span>
+                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">آمن للكتالوج</span>
+              </div>
+              <p class="text-[11px] text-gray-500 leading-relaxed">
+                يقوم بتصفير جميع كميات المخزون (Stock = 0) وتصفير أرصدة الموردين والدليفري وعدادات العملاء (0) مع الحفاظ التام على قائمة المنتجات والأسعار وقوائم العملاء والموردين.
+              </p>
+              <div class="flex justify-end pt-1">
+                <button type="button" onclick="window.settingsController.triggerSystemReset('zero_quantities_and_balances')" class="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <span>تصفير الكميات والأرصدة</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Reset Action 2: Wipe Sales and Operations -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-rose-200 dark:border-rose-800/60 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <span class="text-base">🧹</span>
+                  حذف سجلات الفواتير والعمليات
+                </span>
+                <span class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md">حذف السجلات</span>
+              </div>
+              <p class="text-[11px] text-gray-500 leading-relaxed">
+                يقوم بحذف كافة فواتير المبيعات، سجلات المشتريات، المصروفات، والسلات المتروكة نهائياً، مع الحفاظ التام على كتالوج المنتجات وقائمة العملاء والموردين.
+              </p>
+              <div class="flex justify-end pt-1">
+                <button type="button" onclick="window.settingsController.triggerSystemReset('wipe_sales_and_operations')" class="px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>مسح الفواتير والمبيعات</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Reset Action 3: Factory Reset All -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-rose-300 dark:border-rose-700 flex flex-col gap-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                  <span class="text-base">🚨</span>
+                  إعادة ضبط المصنع ومسح شامل للبيانات
+                </span>
+                <span class="text-[10px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded-md">غير قابل للتراجع</span>
+              </div>
+              <p class="text-[11px] text-rose-700 dark:text-rose-300 font-semibold leading-relaxed">
+                مسح جذري شامل لجميع الفواتير والمصروفات والأرصدة والعمليات المخزنة في السيرفر والمحلي.
+              </p>
+              
+              <!-- Checkbox: wipe products -->
+              <label class="flex items-center gap-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 cursor-pointer">
+                <input type="checkbox" id="set-factory-wipe-products" class="rounded text-rose-600 focus:ring-rose-500 w-4 h-4">
+                <span class="text-xs font-bold text-rose-800 dark:text-rose-200">حذف كتالوج وقائمة المنتجات أيضاً (مسح كامل للباركود والأسعار)</span>
+              </label>
+
+              <div class="flex justify-end pt-1">
+                <button type="button" onclick="window.settingsController.triggerSystemReset('factory_reset_all')" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs flex items-center gap-1.5 transition shadow-md shadow-rose-600/30">
+                  <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                  <span>إعادة ضبط المصنع بالكامل</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Save Button Footer -->
@@ -2496,6 +2669,35 @@
         <div id="checkout-vodafone-fields" class="hidden flex flex-col gap-2">
           <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم محفظة فودافون كاش / مرجع التحويل (اختياري):</label>
           <input type="text" oninput="window.cart.vodafoneRef = this.value" placeholder="مثال: 010xxxxxxxx أو رقم العملية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+      </div>
+
+      <!-- ==================== 4. PAYMENT METHOD FEE / TAX (ضريبة / رسوم وسيلة الدفع) ==================== -->
+      <div id="checkout-payment-fee-section" class="hidden flex flex-col gap-2 p-3.5 bg-amber-50/70 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-800 transition">
+        <div class="flex items-center justify-between">
+          <label id="checkout-payment-fee-title" class="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+            <i data-lucide="percent" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>ضريبة / رسوم إضافية على طريقة الدفع:</span>
+          </label>
+          <span id="checkout-payment-fee-preview" class="text-xs font-black text-amber-700 dark:text-amber-300 font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-700">+0.00 ج.م</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Type Toggle Button (% or Fixed EGP) -->
+          <button type="button" id="checkout-payment-fee-type-btn" onclick="window.app.togglePaymentFeeType()" class="px-2.5 py-2 rounded-xl text-xs font-bold bg-amber-200/80 dark:bg-amber-900/60 hover:bg-amber-300 dark:hover:bg-amber-800 text-amber-950 dark:text-amber-100 border border-amber-300 dark:border-amber-700 transition flex items-center justify-center shrink-0" title="اضغط للتبديل بين النسبة المئوية والمبلغ الثابت">
+            % نسبة مئوية
+          </button>
+          <!-- Value Input -->
+          <input type="number" id="checkout-payment-fee-input" step="0.5" min="0" value="0" oninput="window.app.onPaymentFeeValChanged(this.value)" placeholder="0" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-amber-800 dark:text-amber-200 focus:ring-2 focus:ring-amber-500">
+          
+          <!-- Presets -->
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" onclick="window.app.setPaymentFeePreset(0, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700" title="بدون رسوم">0%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(1, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">1%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(1.5, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">1.5%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(2, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">2%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(5, 'fixed')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">5 ج.م</button>
+          </div>
         </div>
       </div>
 
@@ -3224,21 +3426,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.5.1"></script>
-  <script src="js/api.js?v=2.5.1"></script>
-  <script src="js/sync-manager.js?v=2.5.1"></script>
-  <script src="js/pos-scanner.js?v=2.5.1"></script>
-  <script src="js/settings.js?v=2.5.1"></script>
-  <script src="js/cart.js?v=2.5.1"></script>
-  <script src="js/inventory.js?v=2.5.1"></script>
-  <script src="js/purchases.js?v=2.5.1"></script>
-  <script src="js/expenses.js?v=2.5.1"></script>
-  <script src="js/orders.js?v=2.5.1"></script>
-  <script src="js/delivery-settlement.js?v=2.5.1"></script>
-  <script src="js/returns.js?v=2.5.1"></script>
-  <script src="js/reports.js?v=2.5.1"></script>
-  <script src="js/employees.js?v=2.5.1"></script>
-  <script src="js/pwa.js?v=2.5.1"></script>
-  <script src="js/app.js?v=2.5.1"></script>
+  <script src="js/barcode-parser.js?v=2.5.2"></script>
+  <script src="js/api.js?v=2.5.2"></script>
+  <script src="js/sync-manager.js?v=2.5.2"></script>
+  <script src="js/pos-scanner.js?v=2.5.2"></script>
+  <script src="js/settings.js?v=2.5.2"></script>
+  <script src="js/cart.js?v=2.5.2"></script>
+  <script src="js/inventory.js?v=2.5.2"></script>
+  <script src="js/purchases.js?v=2.5.2"></script>
+  <script src="js/expenses.js?v=2.5.2"></script>
+  <script src="js/orders.js?v=2.5.2"></script>
+  <script src="js/delivery-settlement.js?v=2.5.2"></script>
+  <script src="js/returns.js?v=2.5.2"></script>
+  <script src="js/reports.js?v=2.5.2"></script>
+  <script src="js/employees.js?v=2.5.2"></script>
+  <script src="js/pwa.js?v=2.5.2"></script>
+  <script src="js/app.js?v=2.5.2"></script>
 </body>
 </html>

@@ -387,6 +387,25 @@ class SyrianHomeAPI {
     if (monthYear) params.month_year = monthYear;
     return await this.get('get_salary_payouts', params);
   }
+
+  /**
+   * 29. System Reset & Data Wipe (إعادة ضبط وتصفير النظام من الإعدادات)
+   * Modes:
+   *  - zero_quantities_and_balances
+   *  - wipe_sales_and_operations
+   *  - factory_reset_all
+   */
+  async systemReset(mode, wipeProducts = 0) {
+    const payload = {
+      action: 'system_reset',
+      mode: mode,
+      confirm_token: 'CONFIRM_RESET_SYRIA_2026'
+    };
+    if (mode === 'factory_reset_all') {
+      payload.wipe_products = wipeProducts ? 1 : 0;
+    }
+    return await this.post('system_reset', payload);
+  }
 }
 
 window.api = new SyrianHomeAPI();

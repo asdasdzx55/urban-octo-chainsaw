@@ -698,52 +698,16 @@ class App {
 
   setDeliveryPayMode(mode) {
     window.cart.deliveryPayMode = mode;
-    this.updateDeliveryPaymentUI();
-  }
-
-  updateDeliveryPaymentUI() {
-    const isCOD = (window.cart.deliveryPayMode || 'cod') === 'cod';
-    const btnCOD = document.getElementById('btn-delivmode-cod');
-    const btnPrepaid = document.getElementById('btn-delivmode-prepaid');
-    const prepaidDetails = document.getElementById('deliv-prepaid-details');
-    const noticeBox = document.getElementById('deliv-status-notice');
-    const noticeText = document.getElementById('deliv-status-notice-text');
-    const noticeAmount = document.getElementById('deliv-status-notice-amount');
-    const total = window.cart.getTotal();
-
-    if (isCOD) {
-      btnCOD?.classList.add('border-2', 'border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/60', 'text-emerald-800', 'dark:text-emerald-300');
-      btnCOD?.classList.remove('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
-      
-      btnPrepaid?.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-950/60', 'text-indigo-800', 'dark:text-indigo-300');
-      btnPrepaid?.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
-
-      prepaidDetails?.classList.add('hidden');
-
-      if (noticeBox) {
-        noticeBox.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
-      }
-      if (noticeText) noticeText.textContent = 'المطلوب تحصيله كاش بواسطة الطيار:';
-      if (noticeAmount) noticeAmount.textContent = `${total.toFixed(2)} ج.م`;
-
-      window.cart.paidAmount = 0;
+    if (mode === 'cod') {
+      window.cart.paymentFeeVal = 0;
     } else {
-      btnPrepaid?.classList.add('border-2', 'border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-950/60', 'text-indigo-800', 'dark:text-indigo-300');
-      btnPrepaid?.classList.remove('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
-
-      btnCOD?.classList.remove('border-2', 'border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/60', 'text-emerald-800', 'dark:text-emerald-300');
-      btnCOD?.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
-
-      prepaidDetails?.classList.remove('hidden');
-
-      if (noticeBox) {
-        noticeBox.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
-      }
-      if (noticeText) noticeText.textContent = 'الفاتورة مدفوعة مسبقاً بالكامل (خالص) ✅';
-      if (noticeAmount) noticeAmount.textContent = 'المطلوب: 0.00 ج.م';
-
-      window.cart.paidAmount = total;
+      const fee = window.settingsController?.getPaymentMethodFee(window.cart.deliveryPrepaidMethod || 'instapay') || { type: 'percent', val: 0 };
+      window.cart.paymentFeeType = fee.type;
+      window.cart.paymentFeeVal = fee.val;
     }
+    this.updatePaymentFeeUI();
+    this.updateDeliveryPaymentUI();
+    this.updateCheckoutTotals();
   }
 
   setDeliveryPrepaidMethod(method) {
@@ -766,6 +730,17 @@ class App {
         el?.classList.add('bg-white', 'dark:bg-gray-800', 'border', 'border-gray-200', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
       }
     });
+
+    if (method === 'cash_store') {
+      window.cart.paymentFeeVal = 0;
+    } else {
+      const fee = window.settingsController?.getPaymentMethodFee(method) || { type: 'percent', val: 0 };
+      window.cart.paymentFeeType = fee.type;
+      window.cart.paymentFeeVal = fee.val;
+    }
+
+    this.updatePaymentFeeUI();
+    this.updateCheckoutTotals();
   }
 
   onDeliveryPrepaidRefInput(val) {
@@ -793,7 +768,7 @@ class App {
       this.updateDeliveryPaymentUI();
     } else {
       const cashInput = document.getElementById('checkout-cash-input');
-      if (cashInput) {
+      if (cashInput && window.cart.paymentMethod === 'cash') {
         cashInput.value = total.toFixed(2);
         window.cart.paidAmount = total;
       }
@@ -820,19 +795,91 @@ class App {
       cashFields?.classList.remove('hidden');
       instapayFields?.classList.add('hidden');
       vodafoneFields?.classList.add('hidden');
+      window.cart.paymentFeeVal = 0;
     } else if (method === 'instapay') {
       cashFields?.classList.add('hidden');
       instapayFields?.classList.remove('hidden');
       vodafoneFields?.classList.add('hidden');
+      const fee = window.settingsController?.getPaymentMethodFee('instapay') || { type: 'percent', val: 0 };
+      window.cart.paymentFeeType = fee.type;
+      window.cart.paymentFeeVal = fee.val;
     } else if (method === 'vodafone_cash') {
       cashFields?.classList.add('hidden');
       instapayFields?.classList.add('hidden');
       vodafoneFields?.classList.remove('hidden');
-    } else {
+      const fee = window.settingsController?.getPaymentMethodFee('vodafone_cash') || { type: 'percent', val: 0 };
+      window.cart.paymentFeeType = fee.type;
+      window.cart.paymentFeeVal = fee.val;
+    } else if (method === 'card') {
       cashFields?.classList.add('hidden');
       instapayFields?.classList.add('hidden');
       vodafoneFields?.classList.add('hidden');
+      const fee = window.settingsController?.getPaymentMethodFee('card') || { type: 'percent', val: 0 };
+      window.cart.paymentFeeType = fee.type;
+      window.cart.paymentFeeVal = fee.val;
     }
+
+    this.updatePaymentFeeUI();
+    this.updateCheckoutTotals();
+  }
+
+  updatePaymentFeeUI(syncInput = true) {
+    const feeSection = document.getElementById('checkout-payment-fee-section');
+    if (!feeSection) return;
+
+    const isDelivery = window.cart.orderType === 'delivery';
+    const pm = isDelivery
+      ? (window.cart.deliveryPayMode === 'prepaid' ? window.cart.deliveryPrepaidMethod : 'cash')
+      : window.cart.paymentMethod;
+
+    if (pm === 'cash' || pm === 'cash_store' || (isDelivery && window.cart.deliveryPayMode === 'cod')) {
+      feeSection.classList.add('hidden');
+      return;
+    }
+
+    feeSection.classList.remove('hidden');
+
+    const methodLabel = pm === 'instapay' ? 'إنستاباي' :
+                        pm === 'vodafone_cash' ? 'فودافون كاش' :
+                        pm === 'card' ? 'فيزا / بطاقة' : 'الدفع الإلكتروني';
+
+    const titleEl = document.getElementById('checkout-payment-fee-title');
+    if (titleEl) titleEl.textContent = `ضريبة / رسوم إضافية على (${methodLabel}):`;
+
+    const typeBtn = document.getElementById('checkout-payment-fee-type-btn');
+    if (typeBtn) {
+      typeBtn.textContent = window.cart.paymentFeeType === 'percent' ? '% نسبة مئوية' : 'ج.م مبلغ ثابت';
+    }
+
+    if (syncInput) {
+      const inputEl = document.getElementById('checkout-payment-fee-input');
+      if (inputEl) inputEl.value = window.cart.paymentFeeVal || 0;
+    }
+
+    const calculatedFee = window.cart.getPaymentFee();
+    const previewEl = document.getElementById('checkout-payment-fee-preview');
+    if (previewEl) {
+      previewEl.textContent = `+${calculatedFee.toFixed(2)} ج.م`;
+    }
+  }
+
+  onPaymentFeeValChanged(val) {
+    window.cart.paymentFeeVal = Math.max(0, parseFloat(val || 0));
+    this.updatePaymentFeeUI(false);
+    this.updateCheckoutTotals();
+  }
+
+  togglePaymentFeeType() {
+    window.cart.paymentFeeType = window.cart.paymentFeeType === 'percent' ? 'fixed' : 'percent';
+    this.updatePaymentFeeUI(true);
+    this.updateCheckoutTotals();
+  }
+
+  setPaymentFeePreset(val, type = 'percent') {
+    window.cart.paymentFeeType = type;
+    window.cart.paymentFeeVal = val;
+    this.updatePaymentFeeUI(true);
+    this.updateCheckoutTotals();
   }
 
   /* ==================== DELIVERY DRIVERS MANAGEMENT ==================== */

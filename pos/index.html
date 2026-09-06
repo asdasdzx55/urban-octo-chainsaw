@@ -236,7 +236,7 @@
       </button>
 
       <!-- Mobile Navigation Drawer Toggle Button (Mobile / Tablet) -->
-      <button type="button" onclick="window.app.toggleDrawerMenu()" class="lg:hidden h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition transform active:scale-95 cursor-pointer" title="قائمة التنقل لجميع الصفحات">
+      <button type="button" id="btn-hamburger-menu" onclick="window.app.toggleDrawerMenu()" class="lg:hidden h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition transform active:scale-95 cursor-pointer" title="قائمة التنقل لجميع الصفحات">
         <i data-lucide="menu" class="w-4 h-4"></i>
         <span>القائمة</span>
       </button>
@@ -1446,17 +1446,22 @@
           </div>
 
           <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="window.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer">
+            <button type="button" onclick="window.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer" title="إضافة عامل جديد للمنظومة">
               <i data-lucide="user-plus" class="w-4 h-4"></i>
-              <span>إضافة عامل جديد</span>
+              <span>➕ إضافة عامل جديد</span>
             </button>
 
-            <button type="button" onclick="window.openSalaryPayoutModal()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer">
+            <button type="button" onclick="window.openSalaryPayoutModal(null, 'راتب شهري')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer" title="دفع الراتب الشهري للعامل">
+              <i data-lucide="banknote" class="w-4 h-4"></i>
+              <span>💵 دفع رواتب</span>
+            </button>
+
+            <button type="button" onclick="window.openSalaryPayoutModal(null, 'سلفة')" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer" title="صرف سلفة على الراتب">
               <i data-lucide="hand-coins" class="w-4 h-4"></i>
-              <span>صرف سلفة / راتب 💸</span>
+              <span>💸 دفع سلف</span>
             </button>
 
-            <button type="button" onclick="window.employeesController?.loadEmployees()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition" title="تحديث البيانات">
+            <button type="button" onclick="window.employeesController?.loadEmployees()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="تحديث البيانات">
               <i data-lucide="refresh-cw" class="w-4 h-4"></i>
             </button>
           </div>
@@ -2622,7 +2627,7 @@
   </div>
 
   <!-- ==================== EMPLOYEE ADD / EDIT MODAL ==================== -->
-  <div id="employee-modal" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+  <div id="employee-modal" onclick="if(event.target === this) window.employeesController.closeEmployeeModal()" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 max-w-md w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
         <h3 id="emp-modal-title" class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -2709,10 +2714,10 @@
   </div>
 
   <!-- ==================== SALARY & ADVANCE PAYOUT MODAL ==================== -->
-  <div id="salary-payout-modal" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+  <div id="salary-payout-modal" onclick="if(event.target === this) window.employeesController.closePayoutModal()" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 max-w-sm w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <h3 id="salary-payout-modal-title" class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i>
           <span>صرف سلفة أو راتب للعامل 💸</span>
         </h3>
@@ -2738,7 +2743,7 @@
         <!-- Payout Type -->
         <div class="flex flex-col gap-1">
           <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">نوع الصرف:</label>
-          <select id="payout-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+          <select id="payout-type" onchange="window.employeesController.onPayoutTypeChange()" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
             <option value="سلفة">سلفة من الراتب (خصم من الصافي)</option>
             <option value="راتب شهري">تسليم راتب شهري كامل/جزئي</option>
             <option value="يومية">صرف يومية</option>
@@ -2750,7 +2755,12 @@
 
         <!-- Amount -->
         <div class="flex flex-col gap-1">
-          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ المنصرف (ج.م): <span class="text-rose-500">*</span></label>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ المنصرف (ج.م): <span class="text-rose-500">*</span></label>
+            <button type="button" onclick="window.employeesController.setFullRemainingPayoutAmount()" class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer" title="وضع كامل المبلغ المتبقي">
+              المتبقي بالكامل ⚡
+            </button>
+          </div>
           <input type="number" id="payout-amount" step="10" min="1" placeholder="مثال: 500" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-base font-black font-mono text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500">
         </div>
 
@@ -2783,7 +2793,7 @@
   </div>
 
   <!-- ==================== EMPLOYEE LEDGER (STATEMENT) MODAL ==================== -->
-  <div id="employee-ledger-modal" class="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+  <div id="employee-ledger-modal" onclick="if(event.target === this) window.employeesController.closeLedgerModal()" class="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-2xl w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
       
       <!-- Ledger Modal Header -->
@@ -2864,7 +2874,7 @@
   </div>
 
   <!-- ==================== SUPPLIER LEDGER (STATEMENT) MODAL ==================== -->
-  <div id="supplier-ledger-modal" class="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+  <div id="supplier-ledger-modal" onclick="if(event.target === this) window.expensesController.closeSupplierLedgerModal()" class="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-3xl w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95">
       
       <!-- Ledger Modal Header -->

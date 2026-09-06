@@ -365,24 +365,36 @@ class ExpensesController {
   async openSupplierLedger(supplierId = null, supplierName = '', fromDate = '', toDate = '') {
     const allSuppliers = await this.ensureSuppliersLoaded();
 
-    if (!supplierId && !supplierName) {
-      const expSelect = document.getElementById('exp-supplier-select');
-      const purchSelect = document.getElementById('purch-supplier-select');
-      if (expSelect && expSelect.value) {
-        supplierId = parseInt(expSelect.value, 10);
-        supplierName = expSelect.options[expSelect.selectedIndex]?.text.split('(')[0].trim();
-      } else if (purchSelect && purchSelect.value) {
-        supplierId = parseInt(purchSelect.value, 10);
-        supplierName = purchSelect.options[purchSelect.selectedIndex]?.getAttribute('data-name') || '';
-      } else if (allSuppliers.length > 0) {
-        supplierId = allSuppliers[0].id;
-        supplierName = allSuppliers[0].name;
+    // Normalize supplierId
+    if (supplierId && !isNaN(supplierId) && parseInt(supplierId, 10) > 0) {
+      supplierId = parseInt(supplierId, 10);
+    } else {
+      supplierId = null;
+    }
+
+    // Fallback cascade to find selected supplier
+    if (!supplierId) {
+      if (window.purchasesController?.selectedSupplierId && parseInt(window.purchasesController.selectedSupplierId, 10) > 0) {
+        supplierId = parseInt(window.purchasesController.selectedSupplierId, 10);
+      } else {
+        const purchSelect = document.getElementById('purch-supplier-select');
+        const expSelect = document.getElementById('exp-supplier-select');
+        if (purchSelect && purchSelect.value && parseInt(purchSelect.value, 10) > 0) {
+          supplierId = parseInt(purchSelect.value, 10);
+          supplierName = purchSelect.options[purchSelect.selectedIndex]?.getAttribute('data-name') || '';
+        } else if (expSelect && expSelect.value && parseInt(expSelect.value, 10) > 0) {
+          supplierId = parseInt(expSelect.value, 10);
+          supplierName = expSelect.options[expSelect.selectedIndex]?.text.split('(')[0].trim();
+        } else if (allSuppliers.length > 0) {
+          supplierId = allSuppliers[0].id;
+          supplierName = allSuppliers[0].name;
+        }
       }
     }
 
     if (supplierId && !supplierName && allSuppliers.length > 0) {
-      const found = allSuppliers.find(s => s.id == supplierId);
-      if (found) supplierName = found.name;
+      const match = allSuppliers.find(s => s.id == supplierId);
+      if (match) supplierName = match.name;
     }
 
     if (!supplierId && !supplierName) {
@@ -459,7 +471,6 @@ class ExpensesController {
       console.error('Error opening supplier ledger:', err);
       const errMsg = `تعذر جلب كشف الحساب: ${err.message || err}`;
       window.app?.showToast(errMsg, 'error');
-      alert(errMsg);
     }
   }
 
@@ -648,6 +659,10 @@ class ExpensesController {
       modal.classList.add('hidden');
       modal.style.display = 'none';
     }
+  }
+
+  closeSupplierLedger() {
+    this.closeSupplierLedgerModal();
   }
 
   printSupplierLedger() {

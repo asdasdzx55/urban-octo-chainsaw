@@ -203,16 +203,20 @@ class EmployeesController {
             </div>
           </div>
 
-          <!-- Bottom Action Buttons -->
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="window.openSalaryPayoutModal(${emp.id}, 'سلفة')" class="py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition">
+          <div class="grid grid-cols-3 gap-1.5 pt-1">
+            <button type="button" onclick="window.openSalaryPayoutModal(${emp.id}, 'راتب شهري')" class="py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer" title="دفع الراتب الشهري">
+              <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
+              <span>دفع راتب</span>
+            </button>
+
+            <button type="button" onclick="window.openSalaryPayoutModal(${emp.id}, 'سلفة')" class="py-2 px-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer" title="صرف سلفة">
               <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
               <span>صرف سلفة</span>
             </button>
 
-            <button onclick="window.employeesController.openLedgerModal(${emp.id})" class="py-2 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition">
+            <button type="button" onclick="window.employeesController?.openLedgerModal(${emp.id})" class="py-2 px-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 font-bold text-[11px] flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="كشف حساب العامل">
               <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
-              <span>كشف حساب 📜</span>
+              <span>كشف حساب</span>
             </button>
           </div>
         </div>
@@ -294,12 +298,11 @@ class EmployeesController {
   }
 
   /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
-  /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
   openAddModal() {
     try {
       const modal = document.getElementById('employee-modal');
       if (!modal) {
-        alert('تعذر فتح نافذة العامل: العنصر غير موجود!');
+        window.app?.showToast('تعذر فتح نافذة العامل: العنصر غير موجود!', 'error');
         return;
       }
       const titleEl = document.getElementById('emp-modal-title');
@@ -319,7 +322,7 @@ class EmployeesController {
       setTimeout(() => nameEl?.focus(), 50);
     } catch (e) {
       console.error('Error opening add employee modal:', e);
-      alert('خطأ في فتح نافذة العامل: ' + e.message);
+      window.app?.showToast('خطأ في فتح نافذة العامل: ' + e.message, 'error');
     }
   }
 
@@ -375,7 +378,6 @@ class EmployeesController {
     if (!name) {
       const msg = 'يرجى إدخال اسم العامل!';
       window.app?.showToast(msg, 'warning');
-      alert(msg);
       document.getElementById('emp-name')?.focus();
       return;
     }
@@ -410,7 +412,6 @@ class EmployeesController {
       const errMsg = `خطأ في الحفظ: ${err.message || err}`;
       console.error(errMsg);
       window.app?.showToast(errMsg, 'error');
-      alert(errMsg);
     }
   }
 
@@ -435,11 +436,19 @@ class EmployeesController {
   }
 
   /* ==================== SALARY & ADVANCE PAYOUT MODAL ==================== */
+  openSalaryModal(employeeId = null) {
+    return this.openPayoutModal(employeeId, 'راتب شهري');
+  }
+
+  openAdvanceModal(employeeId = null) {
+    return this.openPayoutModal(employeeId, 'سلفة');
+  }
+
   async openPayoutModal(employeeId = null, defaultType = 'سلفة') {
     try {
       const modal = document.getElementById('salary-payout-modal');
       if (!modal) {
-        alert('تعذر فتح نافذة الصرف: العنصر غير موجود!');
+        window.app?.showToast('تعذر فتح نافذة الصرف: العنصر غير موجود!', 'error');
         return;
       }
 
@@ -456,9 +465,14 @@ class EmployeesController {
       if (!this.employees || this.employees.length === 0) {
         const msg = 'لا يوجد عمال مسجلون حالياً. يرجى إضافة عامل أولاً!';
         window.app?.showToast(msg, 'warning');
-        alert(msg);
         this.openAddModal();
         return;
+      }
+
+      // Default to first active employee if none specified
+      if (!employeeId && this.employees.length > 0) {
+        const firstActive = this.employees.find(e => e.is_active != 0);
+        employeeId = firstActive ? firstActive.id : this.employees[0].id;
       }
 
       // Populate employees in select
@@ -468,26 +482,51 @@ class EmployeesController {
         </option>
       `).join('');
 
+      // Update Modal Title based on action
+      const modalTitle = document.getElementById('salary-payout-modal-title');
+      if (modalTitle) {
+        if (defaultType === 'راتب شهري') {
+          modalTitle.innerHTML = `<i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i><span>💵 دفع راتب شهري للعامل</span>`;
+        } else if (defaultType === 'سلفة') {
+          modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i><span>💸 دفع سلفة للعامل</span>`;
+        } else {
+          modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-indigo-500"></i><span>صرف مستحقات للعامل (${defaultType})</span>`;
+        }
+        if (window.lucide) window.lucide.createIcons();
+      }
+
       const typeEl = document.getElementById('payout-type');
       if (typeEl) typeEl.value = defaultType;
-
-      const amtEl = document.getElementById('payout-amount');
-      if (amtEl) amtEl.value = '';
 
       const methEl = document.getElementById('payout-method');
       if (methEl) methEl.value = 'كاش من الدرج';
 
       const notesEl = document.getElementById('payout-notes');
-      if (notesEl) notesEl.value = defaultType === 'سلفة' ? 'سلفة من الراتب' : '';
+      if (notesEl) notesEl.value = defaultType === 'سلفة' ? 'سلفة من الراتب' : (defaultType === 'راتب شهري' ? 'صرف راتب شهري' : '');
 
       this.onPayoutEmployeeChange();
+
+      // Auto-prefill amount if paying monthly salary
+      const amtEl = document.getElementById('payout-amount');
+      if (amtEl) {
+        if (defaultType === 'راتب شهري') {
+          const emp = this.employees.find(e => e.id == employeeId);
+          const base = parseFloat(emp?.base_salary || 0);
+          const advances = parseFloat(emp?.advances_this_month || 0);
+          const remaining = parseFloat(emp?.net_remaining_salary !== undefined ? emp.net_remaining_salary : (base - advances));
+          amtEl.value = Math.max(0, remaining).toFixed(2);
+        } else {
+          amtEl.value = '';
+          amtEl.placeholder = 'أدخل المبلغ المنصرف...';
+        }
+      }
 
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
       setTimeout(() => amtEl?.focus(), 50);
     } catch (e) {
       console.error('Error opening payout modal:', e);
-      alert('خطأ في فتح نافذة صرف الراتب / السلفة: ' + e.message);
+      window.app?.showToast('خطأ في فتح نافذة صرف الراتب / السلفة: ' + e.message, 'error');
     }
   }
 
@@ -522,6 +561,64 @@ class EmployeesController {
         <span class="text-emerald-600 dark:text-emerald-400 font-bold">المتبقي: <strong class="font-mono">${remaining.toFixed(0)} ج.م</strong></span>
       </div>
     `;
+
+    // If currently on "راتب شهري", update amount to match selected worker
+    const type = document.getElementById('payout-type')?.value;
+    if (type === 'راتب شهري') {
+      const amtEl = document.getElementById('payout-amount');
+      if (amtEl) amtEl.value = Math.max(0, remaining).toFixed(2);
+    }
+  }
+
+  onPayoutTypeChange() {
+    const typeEl = document.getElementById('payout-type');
+    const type = typeEl?.value || 'سلفة';
+    const empId = document.getElementById('payout-employee-id')?.value;
+    const emp = (this.employees || []).find(e => e.id == empId);
+    const amtEl = document.getElementById('payout-amount');
+    const notesEl = document.getElementById('payout-notes');
+    const modalTitle = document.getElementById('salary-payout-modal-title');
+
+    if (modalTitle) {
+      if (type === 'راتب شهري') {
+        modalTitle.innerHTML = `<i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i><span>💵 دفع راتب شهري للعامل</span>`;
+      } else if (type === 'سلفة') {
+        modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i><span>💸 دفع سلفة للعامل</span>`;
+      } else {
+        modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-indigo-500"></i><span>صرف مستحقات للعامل (${type})</span>`;
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    if (type === 'راتب شهري') {
+      if (emp) {
+        const base = parseFloat(emp.base_salary || 0);
+        const advances = parseFloat(emp.advances_this_month || 0);
+        const remaining = parseFloat(emp.net_remaining_salary !== undefined ? emp.net_remaining_salary : (base - advances));
+        if (amtEl) amtEl.value = Math.max(0, remaining).toFixed(2);
+      }
+      if (notesEl && (!notesEl.value || notesEl.value === 'سلفة من الراتب')) {
+        notesEl.value = 'صرف راتب شهري';
+      }
+    } else if (type === 'سلفة') {
+      if (amtEl) amtEl.value = '';
+      if (notesEl && (!notesEl.value || notesEl.value === 'صرف راتب شهري')) {
+        notesEl.value = 'سلفة من الراتب';
+      }
+    }
+  }
+
+  setFullRemainingPayoutAmount() {
+    const empId = document.getElementById('payout-employee-id')?.value;
+    const emp = (this.employees || []).find(e => e.id == empId);
+    const amtEl = document.getElementById('payout-amount');
+    if (!emp || !amtEl) return;
+    const base = parseFloat(emp.base_salary || 0);
+    const advances = parseFloat(emp.advances_this_month || 0);
+    const remaining = parseFloat(emp.net_remaining_salary !== undefined ? emp.net_remaining_salary : (base - advances));
+    amtEl.value = Math.max(0, remaining).toFixed(2);
+    amtEl.focus();
+    window.app?.showToast(`تم ضبط المبلغ على الصافي المتبقي (${amtEl.value} ج.م)`, 'info');
   }
 
   async saveSalaryPayout() {
@@ -534,14 +631,12 @@ class EmployeesController {
     if (!empId) {
       const msg = 'يرجى اختيار العامل للصرف!';
       window.app?.showToast(msg, 'warning');
-      alert(msg);
       return;
     }
 
     if (!amount || amount <= 0) {
       const msg = 'يرجى إدخال مبلغ صحيح للصرف أكبر من الصفر!';
       window.app?.showToast(msg, 'warning');
-      alert(msg);
       document.getElementById('payout-amount')?.focus();
       return;
     }
@@ -582,7 +677,6 @@ class EmployeesController {
       const errMsg = `خطأ في تسجيل الصرف: ${err.message || err}`;
       console.error(errMsg);
       window.app?.showToast(errMsg, 'error');
-      alert(errMsg);
     }
   }
 

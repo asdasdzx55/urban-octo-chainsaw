@@ -47,12 +47,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.4.2">
-  <link rel="stylesheet" href="css/receipt.css?v=2.4.2">
+  <link rel="stylesheet" href="css/pos.css?v=2.5.0">
+  <link rel="stylesheet" href="css/receipt.css?v=2.5.0">
 
-  <!-- Global Application Version Guard & Resilient Modal Dispatchers -->
+  <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.4.2';
+    window.APP_VERSION = '2.5.0';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -69,73 +69,42 @@
       }
     })();
 
-    // Bulletproof Global Dispatcher: Add / Edit Employee Modal
-    window.openAddEmployeeModal = function() {
-      console.log('[POS] openAddEmployeeModal clicked');
-      try {
-        if (window.employeesController && typeof window.employeesController.openAddModal === 'function') {
-          window.employeesController.openAddModal();
-          return;
+    // Bulletproof Global Dispatcher: Add / Edit Employee (Native Sub-View)
+    window.openAddEmployeeModal = function(empData = null) {
+      console.log('[POS] openAddEmployeeModal triggered');
+      if (window.app?.currentView !== 'employees') {
+        window.app?.switchView('employees');
+      }
+      setTimeout(() => {
+        if (window.employeesController) {
+          window.employeesController.setSubView('form', empData);
         }
-      } catch (err) {
-        console.error('Error invoking employeesController.openAddModal:', err);
-      }
-      // Direct DOM fallback
-      const modal = document.getElementById('employee-modal');
-      if (modal) {
-        const titleEl = document.getElementById('emp-modal-title');
-        if (titleEl) titleEl.textContent = '➕ إضافة عامل جديد';
-        const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = '';
-        const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = '';
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex';
-      } else {
-        alert('تعذر فتح نافذة العامل: يرجى تحديث الصفحة.');
-      }
+      }, 50);
     };
 
-    // Bulletproof Global Dispatcher: Salary & Advance Payout Modal
+    // Bulletproof Global Dispatcher: Salary & Advance Payout (Native Sub-View)
     window.openSalaryPayoutModal = function(empId = null, defaultType = 'سلفة') {
-      console.log('[POS] openSalaryPayoutModal clicked', empId, defaultType);
-      try {
-        if (window.employeesController && typeof window.employeesController.openPayoutModal === 'function') {
-          window.employeesController.openPayoutModal(empId, defaultType);
-          return;
+      console.log('[POS] openSalaryPayoutModal triggered', empId, defaultType);
+      if (window.app?.currentView !== 'employees') {
+        window.app?.switchView('employees');
+      }
+      setTimeout(() => {
+        if (window.employeesController) {
+          window.employeesController.setSubView('payout', { employeeId: empId, type: defaultType });
         }
-      } catch (err) {
-        console.error('Error invoking employeesController.openPayoutModal:', err);
-      }
-      // Direct DOM fallback
-      const modal = document.getElementById('salary-payout-modal');
-      if (modal) {
-        const typeEl = document.getElementById('payout-type');
-        if (typeEl) typeEl.value = defaultType;
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex';
-      } else {
-        alert('تعذر فتح نافذة الصرف: يرجى تحديث الصفحة.');
-      }
+      }, 50);
     };
 
-    // Bulletproof Global Dispatcher: Supplier Financial Ledger Modal
+    // Bulletproof Global Dispatcher: Supplier Financial Ledger
     window.openSupplierStatement = function(supplierId = null, supplierName = '') {
-      console.log('[POS] openSupplierStatement clicked', supplierId, supplierName);
-      try {
-        if (window.expensesController && typeof window.expensesController.openSupplierLedger === 'function') {
-          window.expensesController.openSupplierLedger(supplierId, supplierName);
-          return;
-        }
-      } catch (err) {
-        console.error('Error invoking expensesController.openSupplierLedger:', err);
+      console.log('[POS] openSupplierStatement triggered', supplierId, supplierName);
+      if (window.app?.currentView !== 'expenses') {
+        window.app?.switchView('expenses');
       }
-      // Direct DOM fallback
-      const modal = document.getElementById('supplier-ledger-modal');
-      if (modal) {
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex';
-      } else {
-        alert('تعذر فتح كشف حساب المورد: يرجى تحديث الصفحة.');
-      }
+      window.expensesController?.setMode('suppliers_report');
+      setTimeout(() => {
+        window.expensesController?.openSupplierLedger(supplierId, supplierName);
+      }, 50);
     };
   </script>
 </head>
@@ -158,7 +127,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shrink-0">v2.4.2</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.0</span>
         </div>
       </div>
     </div>
@@ -257,7 +226,7 @@
             </div>
             <div>
               <h3 class="text-xs font-black text-gray-900 dark:text-white leading-tight">سوبر ماركت المنزل السوري</h3>
-              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.4.2</p>
+              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.0</p>
             </div>
           </div>
           <button type="button" onclick="window.app.closeDrawerMenu()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
@@ -1428,45 +1397,45 @@
 
     </section>
 
-    <!-- ==================== VIEW: EMPLOYEES & PAYROLL ==================== -->
+    <!-- ==================== VIEW: EMPLOYEES & PAYROLL (REBUILT v2.5.0) ==================== -->
     <section id="view-employees" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
-      <!-- Top Banner / Header Card -->
-      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
-        
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+      <!-- Top Navigation Sub-Tabs Bar -->
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3">
+          <span class="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </span>
           <div>
-            <div class="flex items-center gap-2">
-              <span class="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400">
-                <i data-lucide="users" class="w-5 h-5"></i>
-              </span>
-              <h2 class="text-base sm:text-lg font-black text-gray-900 dark:text-white">شؤون العمال والرواتب والسلف</h2>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">متابعة رواتب العمال، تسجيل السلف والمكافآت، وخصمها من الخزينة تلقائياً</p>
-          </div>
-
-          <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="window.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer" title="إضافة عامل جديد للمنظومة">
-              <i data-lucide="user-plus" class="w-4 h-4"></i>
-              <span>➕ إضافة عامل جديد</span>
-            </button>
-
-            <button type="button" onclick="window.openSalaryPayoutModal(null, 'راتب شهري')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer" title="دفع الراتب الشهري للعامل">
-              <i data-lucide="banknote" class="w-4 h-4"></i>
-              <span>💵 دفع رواتب</span>
-            </button>
-
-            <button type="button" onclick="window.openSalaryPayoutModal(null, 'سلفة')" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition transform active:scale-95 cursor-pointer" title="صرف سلفة على الراتب">
-              <i data-lucide="hand-coins" class="w-4 h-4"></i>
-              <span>💸 دفع سلف</span>
-            </button>
-
-            <button type="button" onclick="window.employeesController?.loadEmployees()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="تحديث البيانات">
-              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            </button>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 dark:text-white">منظومة شؤون العمال والرواتب والسلف</h2>
+            <p class="text-[11px] text-gray-400">إدارة العاملين، صرف الرواتب والسلف المباشرة، وكشوف الحسابات المالية</p>
           </div>
         </div>
 
+        <!-- Sub-Tabs Switcher Buttons -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl self-start sm:self-auto flex-wrap">
+          <button type="button" onclick="window.employeesController.setSubView('list')" class="emp-subtab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1.5 transition cursor-pointer" data-subview="list">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+            <span>👥 دليل العمال</span>
+          </button>
+          <button type="button" onclick="window.employeesController.setSubView('form')" class="emp-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="form">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+            <span>➕ إضافة عامل</span>
+          </button>
+          <button type="button" onclick="window.employeesController.setSubView('payout')" class="emp-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="payout">
+            <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
+            <span>💸 صرف رواتب وسلف</span>
+          </button>
+          <button type="button" onclick="window.employeesController.setSubView('ledger')" class="emp-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="ledger">
+            <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+            <span>📜 كشف حساب</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== SUBVIEW 1: EMPLOYEES DIRECTORY / LIST ==================== -->
+      <div id="emp-subview-list" class="flex flex-col gap-4">
+        
         <!-- KPI Financial Summary Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <!-- KPI 1: Workers Count -->
@@ -1518,8 +1487,8 @@
           </div>
         </div>
 
-        <!-- Search and Filter Bar -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        <!-- Search and Filter Bar Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
           <!-- Search Input -->
           <div class="relative w-full sm:w-80">
             <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2"></i>
@@ -1532,13 +1501,12 @@
             >
           </div>
 
-          <!-- Status Filters and Month Selection -->
-          <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <!-- Filter Pills -->
+          <!-- Status Filters and Fast Actions -->
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
             <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-xs font-bold">
-              <button onclick="window.employeesController.statusFilter = 'all'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer">الكل</button>
-              <button onclick="window.employeesController.statusFilter = 'active'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">النشطين</button>
-              <button onclick="window.employeesController.statusFilter = 'inactive'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">المتوقفين</button>
+              <button type="button" onclick="window.employeesController.statusFilter = 'all'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer">الكل</button>
+              <button type="button" onclick="window.employeesController.statusFilter = 'active'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">النشطين</button>
+              <button type="button" onclick="window.employeesController.statusFilter = 'inactive'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">المتوقفين</button>
             </div>
 
             <!-- Month Filter -->
@@ -1548,22 +1516,26 @@
               onchange="window.employeesController.currentMonth = this.value; window.employeesController.loadRecentPayouts();"
               class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer"
             >
+
+            <button type="button" onclick="window.employeesController.loadEmployees()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="تحديث البيانات">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
           </div>
         </div>
 
         <!-- Employees Cards Grid -->
-        <div id="employees-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
+        <div id="employees-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-1">
           <!-- Populated by JavaScript -->
         </div>
 
-        <!-- Recent Payouts Table Section -->
-        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-3">
-          <div class="flex items-center justify-between">
+        <!-- Recent Payouts Table Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col gap-3 mt-2">
+          <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-2">
               <i data-lucide="history" class="w-4 h-4 text-gray-400"></i>
-              <h3 class="text-xs font-bold text-gray-800 dark:text-gray-200">سجل حركات صرف الرواتب والسلف الأخيرة</h3>
+              <h3 class="text-xs font-bold text-gray-800 dark:text-gray-200">سجل حركات صرف الرواتب والسلف الأخيرة لهذا الشهر</h3>
             </div>
-            <button onclick="window.employeesController.loadRecentPayouts()" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer">
+            <button type="button" onclick="window.employeesController.loadRecentPayouts()" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer">
               تحديث السجل 🔄
             </button>
           </div>
@@ -1586,7 +1558,250 @@
             </table>
           </div>
         </div>
+      </div>
 
+      <!-- ==================== SUBVIEW 2: ADD / EDIT EMPLOYEE FORM ==================== -->
+      <div id="emp-subview-form" class="hidden bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md max-w-3xl mx-auto w-full flex flex-col gap-5">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+          <h3 id="emp-form-title" class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i>
+            <span>تسجيل عامل / موظف جديد ➕</span>
+          </h3>
+          <button type="button" onclick="window.employeesController.setSubView('list')" class="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 transition cursor-pointer flex items-center gap-1">
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            <span>عودة للدليل</span>
+          </button>
+        </div>
+
+        <input type="hidden" id="emp-form-id">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Name -->
+          <div class="sm:col-span-2 flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اسم العامل / الموظف: <span class="text-rose-500">*</span></label>
+            <input type="text" id="emp-form-name" placeholder="مثال: محمود خليل السوري..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <!-- Phone -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">رقم الهاتف:</label>
+            <input type="tel" id="emp-form-phone" placeholder="01xxxxxxxxx" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-mono">
+          </div>
+
+          <!-- Role -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الوظيفة / التخصص:</label>
+            <select id="emp-form-role" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold">
+              <option value="كاشير">كاشير</option>
+              <option value="بائع أجبان وألبان" selected>بائع أجبان وألبان</option>
+              <option value="عامل مخزن وجرد">عامل مخزن وجرد</option>
+              <option value="طيار دليفري">طيار دليفري</option>
+              <option value="عامل خدمات ونظافة">عامل خدمات ونظافة</option>
+              <option value="مدير صالة">مدير صالة</option>
+              <option value="عامل عام">عامل عام</option>
+            </select>
+          </div>
+
+          <!-- Salary Type -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">نظام الراتب:</label>
+            <select id="emp-form-salary-type" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold">
+              <option value="monthly">راتب شهري ثابت</option>
+              <option value="daily">يومية</option>
+              <option value="commission">بالعمولة / الإنتاج</option>
+            </select>
+          </div>
+
+          <!-- Base Salary -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">الراتب الأساسي الشهري (ج.م):</label>
+            <input type="number" id="emp-form-base-salary" step="50" min="0" placeholder="5000" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+          </div>
+
+          <!-- Hire Date -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">تاريخ التعيين والبدء:</label>
+            <input type="date" id="emp-form-hire-date" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-mono">
+          </div>
+
+          <!-- Active Checkbox -->
+          <div class="flex items-center gap-2 pt-6">
+            <input type="checkbox" id="emp-form-active" checked class="w-4 h-4 text-indigo-600 rounded cursor-pointer">
+            <label for="emp-form-active" class="text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">العامل نشط وعلى رأس العمل</label>
+          </div>
+
+          <!-- Notes -->
+          <div class="sm:col-span-2 flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">ملاحظات إضافية (مواعيد الوردية، أيام الإجازة):</label>
+            <textarea id="emp-form-notes" rows="2" placeholder="أدخل أي تفاصيل إضافية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs"></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <button type="button" onclick="window.employeesController.setSubView('list')" class="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer hover:bg-gray-200 transition">إلغاء وعودة</button>
+          <button type="button" onclick="window.employeesController.saveEmployee()" class="flex-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>💾 حفظ بيانات العامل</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== SUBVIEW 3: SALARY & ADVANCE PAYOUT FORM ==================== -->
+      <div id="emp-subview-payout" class="hidden bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md max-w-2xl mx-auto w-full flex flex-col gap-5">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+          <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i>
+            <span>صرف رواتب وسلف العمال 💸</span>
+          </h3>
+          <button type="button" onclick="window.employeesController.setSubView('list')" class="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 transition cursor-pointer flex items-center gap-1">
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            <span>عودة للدليل</span>
+          </button>
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <!-- Select Employee -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اختر العامل المستحق للصرف: <span class="text-rose-500">*</span></label>
+            <select id="emp-payout-select" onchange="window.employeesController.onPayoutEmployeeChange()" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-amber-500">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <!-- Worker Stats Card Preview -->
+          <div id="emp-payout-worker-badge" class="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 text-xs">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Payout Type -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">نوع الصرف:</label>
+            <select id="emp-payout-type" onchange="window.employeesController.onPayoutTypeChange()" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold">
+              <option value="سلفة" selected>سلفة من الراتب (خصم من الصافي المستحق) 💸</option>
+              <option value="راتب شهري">تسليم راتب شهري 💵</option>
+              <option value="يومية">صرف يومية 💰</option>
+              <option value="مكافأة">مكافأة تشجيعية (إضافة) 🎁</option>
+            </select>
+          </div>
+
+          <!-- Amount -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ المنصرف (ج.م): <span class="text-rose-500">*</span></label>
+              <button type="button" onclick="window.employeesController.setFullRemainingPayoutAmount()" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer">
+                تسليم كامل الصافي المتبقي
+              </button>
+            </div>
+            <input type="number" id="emp-payout-amount" step="10" min="1" placeholder="أدخل المبلغ..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-sm font-mono font-black text-amber-600 dark:text-amber-400 focus:ring-2 focus:ring-amber-500">
+          </div>
+
+          <!-- Grid: Payment method & Dates -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">طريقة الدفع:</label>
+              <select id="emp-payout-method" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+                <option value="كاش من الدرج">كاش من الدرج</option>
+                <option value="فودافون كاش">فودافون كاش</option>
+                <option value="حساب بنكي">حساب بنكي</option>
+              </select>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">تاريخ الصرف:</label>
+              <input type="date" id="emp-payout-date" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">يخص شهر:</label>
+              <input type="month" id="emp-payout-month" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">بيان وملاحظات الصرف:</label>
+            <input type="text" id="emp-payout-notes" placeholder="مثال: سلفة نقدية لحساب مصاريف شخصية..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <button type="button" onclick="window.employeesController.setSubView('list')" class="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer hover:bg-gray-200 transition">إلغاء</button>
+          <button type="button" onclick="window.employeesController.saveSalaryPayout()" class="flex-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>تأكيد الصرف وخصم المبلغ من الخزينة</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== SUBVIEW 4: WORKER LEDGER (STATEMENT) ==================== -->
+      <div id="emp-subview-ledger" class="hidden bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md max-w-4xl mx-auto w-full flex flex-col gap-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+              <i data-lucide="receipt-text" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span>كشف حساب العامل: <strong id="emp-ledger-emp-name" class="text-indigo-600 dark:text-indigo-400">العامل</strong></span>
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-0.5">
+                <span id="emp-ledger-emp-role">عامل</span> • <span id="emp-ledger-emp-phone">هاتف</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <select id="emp-ledger-select" onchange="window.employeesController.loadEmployeeLedger(this.value)" class="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer">
+              <!-- Dynamically populated -->
+            </select>
+            <input type="month" id="emp-ledger-month-filter" onchange="window.employeesController.loadEmployeeLedger()" class="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-bold cursor-pointer">
+            <button type="button" onclick="window.employeesController.printLedger()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer" title="طباعة كشف الحساب">
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>طباعة</span>
+            </button>
+            <button type="button" onclick="window.employeesController.setSubView('list')" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 transition cursor-pointer">
+              عودة للدليل ↩️
+            </button>
+          </div>
+        </div>
+
+        <!-- Financial Summary Pills -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
+            <span class="text-[10px] text-gray-400">الراتب الأساسي</span>
+            <p id="emp-ledger-base-salary" class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5 font-mono">0.00 ج.م</p>
+          </div>
+          <div class="bg-amber-50/80 dark:bg-amber-950/40 p-3 rounded-2xl border border-amber-200 dark:border-amber-900/60">
+            <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300">إجمالي السلف المنصرفة</span>
+            <p id="emp-ledger-total-advances" class="text-sm font-black text-amber-600 dark:text-amber-400 mt-0.5 font-mono">0.00 ج.م</p>
+          </div>
+          <div class="bg-indigo-50/70 dark:bg-indigo-950/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+            <span class="text-[10px] text-indigo-600 dark:text-indigo-400">إجمالي الرواتب المسددة</span>
+            <p id="emp-ledger-total-paid" class="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 font-mono">0.00 ج.م</p>
+          </div>
+          <div class="bg-emerald-50/80 dark:bg-emerald-950/40 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900/60">
+            <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">الصافي المتبقي</span>
+            <p id="emp-ledger-net-remaining" class="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">0.00 ج.م</p>
+          </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700/80">
+          <table class="w-full text-right border-collapse">
+            <thead>
+              <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 dark:text-gray-400 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                <th class="py-2.5 px-4">التاريخ</th>
+                <th class="py-2.5 px-4">نوع الحركة</th>
+                <th class="py-2.5 px-4">المبلغ</th>
+                <th class="py-2.5 px-4">طريقة الدفع</th>
+                <th class="py-2.5 px-4">البيان والملاحظات</th>
+              </tr>
+            </thead>
+            <tbody id="emp-ledger-table-body">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </section>
@@ -2993,21 +3208,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.4.2"></script>
-  <script src="js/api.js?v=2.4.2"></script>
-  <script src="js/sync-manager.js?v=2.4.2"></script>
-  <script src="js/pos-scanner.js?v=2.4.2"></script>
-  <script src="js/settings.js?v=2.4.2"></script>
-  <script src="js/cart.js?v=2.4.2"></script>
-  <script src="js/inventory.js?v=2.4.2"></script>
-  <script src="js/purchases.js?v=2.4.2"></script>
-  <script src="js/expenses.js?v=2.4.2"></script>
-  <script src="js/orders.js?v=2.4.2"></script>
-  <script src="js/delivery-settlement.js?v=2.4.2"></script>
-  <script src="js/returns.js?v=2.4.2"></script>
-  <script src="js/reports.js?v=2.4.2"></script>
-  <script src="js/employees.js?v=2.4.2"></script>
-  <script src="js/pwa.js?v=2.4.2"></script>
-  <script src="js/app.js?v=2.4.2"></script>
+  <script src="js/barcode-parser.js?v=2.5.0"></script>
+  <script src="js/api.js?v=2.5.0"></script>
+  <script src="js/sync-manager.js?v=2.5.0"></script>
+  <script src="js/pos-scanner.js?v=2.5.0"></script>
+  <script src="js/settings.js?v=2.5.0"></script>
+  <script src="js/cart.js?v=2.5.0"></script>
+  <script src="js/inventory.js?v=2.5.0"></script>
+  <script src="js/purchases.js?v=2.5.0"></script>
+  <script src="js/expenses.js?v=2.5.0"></script>
+  <script src="js/orders.js?v=2.5.0"></script>
+  <script src="js/delivery-settlement.js?v=2.5.0"></script>
+  <script src="js/returns.js?v=2.5.0"></script>
+  <script src="js/reports.js?v=2.5.0"></script>
+  <script src="js/employees.js?v=2.5.0"></script>
+  <script src="js/pwa.js?v=2.5.0"></script>
+  <script src="js/app.js?v=2.5.0"></script>
 </body>
 </html>

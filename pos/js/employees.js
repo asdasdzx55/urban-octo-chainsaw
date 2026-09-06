@@ -1,6 +1,6 @@
 /**
- * Syrian Home POS - Employees & Payroll Controller
- * إدارة شؤون العمال والموظفين، الرواتب، السلف، وكشوف الحسابات المالية
+ * Syrian Home POS - Employees & Payroll Controller (v2.5.0)
+ * نظام إدارة شؤون العمال، الرواتب، السلف، وكشوف الحسابات المالية (إصدار متكامل بدون Modals عائمة)
  */
 class EmployeesController {
   constructor() {
@@ -9,25 +9,92 @@ class EmployeesController {
     this.currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     this.searchQuery = '';
     this.statusFilter = 'all'; // all, active, inactive
+    this.currentSubView = 'list'; // list, form, payout, ledger
     this.currentLedgerData = null;
+    this.activeLedgerEmpId = null;
   }
 
+  /**
+   * تهيئة متحكم العمال عند فتح الشاشة
+   */
   init() {
     this.currentMonth = new Date().toISOString().slice(0, 7);
     const monthInput = document.getElementById('emp-month-filter');
     if (monthInput && !monthInput.value) {
       monthInput.value = this.currentMonth;
     }
+    
+    // ضبط التبويب الافتراضي على قائمة العمال
+    this.setSubView(this.currentSubView || 'list');
     this.loadEmployees();
     this.loadRecentPayouts();
   }
 
   /**
-   * Load employees list and summary from cloud API
+   * التبديل بين الأقسام المدمجة في شاشة شؤون العمال (بدون نوافذ منبثقة)
+   * @param {'list'|'form'|'payout'|'ledger'} viewName 
+   * @param {any} data 
+   */
+  setSubView(viewName = 'list', data = null) {
+    this.currentSubView = viewName;
+
+    // تحديث أزرار التبويب العلوية
+    document.querySelectorAll('.emp-subtab-btn').forEach(btn => {
+      const target = btn.getAttribute('data-subview');
+      if (target === viewName) {
+        btn.className = 'emp-subtab-btn px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1.5 transition';
+      } else {
+        btn.className = 'emp-subtab-btn px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5 transition cursor-pointer';
+      }
+    });
+
+    // إخفاء كافة الشاشات الفرعية وإظهار الشاشة المختارة
+    const views = {
+      list: document.getElementById('emp-subview-list'),
+      form: document.getElementById('emp-subview-form'),
+      payout: document.getElementById('emp-subview-payout'),
+      ledger: document.getElementById('emp-subview-ledger')
+    };
+
+    Object.keys(views).forEach(k => {
+      if (views[k]) {
+        if (k === viewName) {
+          views[k].classList.remove('hidden');
+        } else {
+          views[k].classList.add('hidden');
+        }
+      }
+    });
+
+    // إجراءات خاصة بكل شاشة عند التبديل
+    if (viewName === 'form') {
+      if (data) {
+        this.populateEditForm(data);
+      } else {
+        this.resetAddForm();
+      }
+    } else if (viewName === 'payout') {
+      this.setupPayoutForm(data);
+    } else if (viewName === 'ledger') {
+      const empId = data?.employeeId || data || (this.employees[0]?.id);
+      this.setupLedgerView(empId);
+    } else if (viewName === 'list') {
+      this.renderKPIs();
+      this.renderEmployeesList();
+    }
+
+    // التمرير لأعلى الصفحة لضمان رؤية النموذج بالكامل على الموبايل
+    const parentContainer = document.getElementById('view-employees');
+    if (parentContainer) parentContainer.scrollTop = 0;
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  /**
+   * جلب قائمة العمال من السيرفر
    */
   async loadEmployees() {
     const listContainer = document.getElementById('employees-grid');
-    if (!listContainer) return;
 
     try {
       window.app?.showLoading(true, 'جاري تحميل بيانات العمال والرواتب...');
@@ -39,27 +106,30 @@ class EmployeesController {
         if (res.current_month) this.currentMonth = res.current_month;
         this.renderKPIs();
         this.renderEmployeesList();
+        this.updateDropdowns();
       } else {
         throw new Error(res?.error || 'فشل جلب بيانات العمال');
       }
     } catch (err) {
       window.app?.showLoading(false);
       console.error('Error loading employees:', err);
-      listContainer.innerHTML = `
-        <div class="col-span-full p-8 text-center bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 rounded-3xl">
-          <i data-lucide="alert-circle" class="w-8 h-8 text-rose-500 mx-auto mb-2"></i>
-          <p class="text-xs font-bold text-rose-600 dark:text-rose-400">تعذر الاتصال بالسيرفر لجلب بيانات العمال: ${err.message}</p>
-          <button onclick="window.employeesController.loadEmployees()" class="mt-3 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition">
-            إعادة المحاولة 🔄
-          </button>
-        </div>
-      `;
-      if (window.lucide) window.lucide.createIcons();
+      if (listContainer) {
+        listContainer.innerHTML = `
+          <div class="col-span-full p-8 text-center bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 rounded-3xl">
+            <i data-lucide="alert-circle" class="w-8 h-8 text-rose-500 mx-auto mb-2"></i>
+            <p class="text-xs font-bold text-rose-600 dark:text-rose-400">تعذر جلب بيانات العمال: ${err.message}</p>
+            <button type="button" onclick="window.employeesController.loadEmployees()" class="mt-3 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition cursor-pointer">
+              إعادة المحاولة 🔄
+            </button>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+      }
     }
   }
 
   /**
-   * Load general salary & advance payouts log for the month
+   * جلب سجل حركات الصرف للشهر المحدد
    */
   async loadRecentPayouts() {
     const tableBody = document.getElementById('emp-payouts-table-body');
@@ -77,13 +147,13 @@ class EmployeesController {
   }
 
   /**
-   * Update top KPI summary cards
+   * تحديث بطاقات ملخص الـ KPIs المالية
    */
   renderKPIs() {
     const activeEmployees = this.employees.filter(e => e.is_active != 0);
     const totalBaseSalary = activeEmployees.reduce((sum, e) => sum + parseFloat(e.base_salary || 0), 0);
     const totalAdvances = this.employees.reduce((sum, e) => sum + parseFloat(e.advances_this_month || 0), 0);
-    const totalRemaining = this.employees.reduce((sum, e) => sum + parseFloat(e.net_remaining_salary || 0), 0);
+    const totalRemaining = this.employees.reduce((sum, e) => sum + parseFloat(e.net_remaining_salary !== undefined ? e.net_remaining_salary : (parseFloat(e.base_salary || 0) - parseFloat(e.advances_this_month || 0))), 0);
 
     const elCount = document.getElementById('kpi-emp-count');
     const elSalary = document.getElementById('kpi-emp-total-salary');
@@ -93,11 +163,11 @@ class EmployeesController {
     if (elCount) elCount.textContent = activeEmployees.length;
     if (elSalary) elSalary.textContent = `${totalBaseSalary.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`;
     if (elAdvances) elAdvances.textContent = `${totalAdvances.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`;
-    if (elRemaining) elRemaining.textContent = `${totalRemaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`;
+    if (elRemaining) elRemaining.textContent = `${Math.max(0, totalRemaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`;
   }
 
   /**
-   * Filter and render employees cards grid
+   * عرض كروت العمال
    */
   renderEmployeesList() {
     const container = document.getElementById('employees-grid');
@@ -105,11 +175,9 @@ class EmployeesController {
 
     const query = this.searchQuery.trim().toLowerCase();
     const filtered = this.employees.filter(emp => {
-      // Status filter
       if (this.statusFilter === 'active' && emp.is_active == 0) return false;
       if (this.statusFilter === 'inactive' && emp.is_active != 0) return false;
 
-      // Search query
       if (query) {
         const name = (emp.name || '').toLowerCase();
         const role = (emp.role || '').toLowerCase();
@@ -121,15 +189,15 @@ class EmployeesController {
 
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div class="col-span-full p-12 text-center bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+        <div class="col-span-full p-10 text-center bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
           <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 mx-auto flex items-center justify-center mb-3">
             <i data-lucide="users" class="w-7 h-7"></i>
           </div>
-          <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">لا يوجد عمال مطابقين للبحث</h4>
-          <p class="text-xs text-gray-400 mt-1">يمكنك إضافة عامل جديد بالضغط على زر "إضافة عامل جديد" بالأعلى</p>
-          <button onclick="window.openAddEmployeeModal()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 mx-auto shadow-sm">
+          <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">لا يوجد عمال مطابقين</h4>
+          <p class="text-xs text-gray-400 mt-1">اضغط على زر إضافة عامل جديد للبدء بتسجيل العمال</p>
+          <button type="button" onclick="window.employeesController.setSubView('form')" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 mx-auto shadow-sm cursor-pointer">
             <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>إضافة عامل جديد</span>
+            <span>➕ تسجيل عامل جديد</span>
           </button>
         </div>
       `;
@@ -142,16 +210,14 @@ class EmployeesController {
       const advances = parseFloat(emp.advances_this_month || 0);
       const remaining = parseFloat(emp.net_remaining_salary !== undefined ? emp.net_remaining_salary : (baseSalary - advances));
       const isActive = emp.is_active != 0;
-
-      // Color scheme based on role
       const roleColor = this.getRoleBadgeColor(emp.role);
 
       return `
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-200/80 dark:border-gray-700 shadow-xs hover:shadow-md transition flex flex-col justify-between gap-4 relative overflow-hidden group">
-          <!-- Top Active Status Accent -->
+          <!-- Top Active Accent -->
           <div class="absolute top-0 right-0 left-0 h-1.5 ${isActive ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}"></div>
 
-          <!-- Header: Name, Role, Status -->
+          <!-- Header: Name, Role, Actions -->
           <div class="flex items-start justify-between gap-3 pt-1">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 rounded-2xl ${roleColor.bg} ${roleColor.text} font-black text-sm flex items-center justify-center shadow-2xs">
@@ -176,18 +242,18 @@ class EmployeesController {
               </div>
             </div>
 
-            <!-- More Actions / Edit / Delete -->
+            <!-- Edit / Delete -->
             <div class="flex items-center gap-1">
-              <button onclick="window.employeesController.openEditModal(${emp.id})" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 flex items-center justify-center transition" title="تعديل بيانات العامل">
+              <button type="button" onclick="window.employeesController.setSubView('form', ${emp.id})" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 flex items-center justify-center transition cursor-pointer" title="تعديل بيانات العامل">
                 <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
               </button>
-              <button onclick="window.employeesController.deleteEmployee(${emp.id}, '${emp.name}')" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 flex items-center justify-center transition" title="حذف العامل">
+              <button type="button" onclick="window.employeesController.deleteEmployee(${emp.id}, '${emp.name}')" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 flex items-center justify-center transition cursor-pointer" title="حذف العامل">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
           </div>
 
-          <!-- Financial Breakdown Box -->
+          <!-- Financial Summary -->
           <div class="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-3 border border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-2 text-center">
             <div>
               <p class="text-[10px] text-gray-400 font-medium">الراتب الأساسي</p>
@@ -203,18 +269,19 @@ class EmployeesController {
             </div>
           </div>
 
+          <!-- Fast Action Buttons -->
           <div class="grid grid-cols-3 gap-1.5 pt-1">
-            <button type="button" onclick="window.openSalaryPayoutModal(${emp.id}, 'راتب شهري')" class="py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer" title="دفع الراتب الشهري">
+            <button type="button" onclick="window.employeesController.setSubView('payout', { employeeId: ${emp.id}, type: 'راتب شهري' })" class="py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer" title="دفع الراتب الشهري">
               <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
               <span>دفع راتب</span>
             </button>
 
-            <button type="button" onclick="window.openSalaryPayoutModal(${emp.id}, 'سلفة')" class="py-2 px-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer" title="صرف سلفة">
+            <button type="button" onclick="window.employeesController.setSubView('payout', { employeeId: ${emp.id}, type: 'سلفة' })" class="py-2 px-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer" title="صرف سلفة">
               <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
               <span>صرف سلفة</span>
             </button>
 
-            <button type="button" onclick="window.employeesController?.openLedgerModal(${emp.id})" class="py-2 px-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 font-bold text-[11px] flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="كشف حساب العامل">
+            <button type="button" onclick="window.employeesController.setSubView('ledger', { employeeId: ${emp.id} })" class="py-2 px-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 font-bold text-[11px] flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="كشف حساب العامل">
               <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
               <span>كشف حساب</span>
             </button>
@@ -244,7 +311,7 @@ class EmployeesController {
   }
 
   /**
-   * Render recent salary & advance payouts table
+   * عرض جدول حركات الصرف الأخيرة
    */
   renderRecentPayouts() {
     const tbody = document.getElementById('emp-payouts-table-body');
@@ -262,137 +329,104 @@ class EmployeesController {
     }
 
     tbody.innerHTML = this.recentPayouts.map(p => {
-      const typeBadge = this.getPayoutTypeBadge(p.type);
+      let badge = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+      if (p.type === 'سلفة') badge = 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400';
+      if (p.type === 'راتب شهري') badge = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400';
+      if (p.type === 'مكافأة') badge = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400';
+
       return `
-        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/60 dark:hover:bg-gray-900/30 transition text-xs">
-          <td class="py-3 px-4 font-mono text-gray-500">${p.date || p.created_at?.slice(0, 10)}</td>
-          <td class="py-3 px-4 font-bold text-gray-900 dark:text-white">${p.employee_name}</td>
-          <td class="py-3 px-4">
-            <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${typeBadge}">
-              ${p.type}
-            </span>
+        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 text-xs">
+          <td class="py-2.5 px-4 font-mono text-gray-500">${p.date || ''}</td>
+          <td class="py-2.5 px-4 font-bold text-gray-900 dark:text-white">${p.employee_name || 'موظف'}</td>
+          <td class="py-2.5 px-4">
+            <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${badge}">${p.type || 'صرف'}</span>
           </td>
-          <td class="py-3 px-4 font-black font-mono text-indigo-600 dark:text-indigo-400">${parseFloat(p.amount || 0).toFixed(2)} ج.م</td>
-          <td class="py-3 px-4 text-gray-500">${p.payment_method || 'كاش من الدرج'}</td>
-          <td class="py-3 px-4 text-gray-400 truncate max-w-xs">${p.notes || '-'}</td>
+          <td class="py-2.5 px-4 font-black font-mono text-gray-900 dark:text-white" dir="ltr">
+            ${parseFloat(p.amount || 0).toFixed(2)} ج.م
+          </td>
+          <td class="py-2.5 px-4 text-gray-500">${p.payment_method || 'كاش'}</td>
+          <td class="py-2.5 px-4 text-gray-400">${p.notes || '-'}</td>
         </tr>
       `;
     }).join('');
   }
 
-  getPayoutTypeBadge(type = '') {
-    switch (type) {
-      case 'سلفة':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
-      case 'راتب شهري':
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
-      case 'مكافأة':
-        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300';
-      case 'خصم':
-        return 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300';
-      case 'يومية':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
-    }
+  /* ==================== SUBVIEW: ADD / EDIT EMPLOYEE ==================== */
+
+  resetAddForm() {
+    const titleEl = document.getElementById('emp-form-title');
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i><span>تسجيل عامل / موظف جديد ➕</span>`;
+    
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setVal('emp-form-id', '');
+    setVal('emp-form-name', '');
+    setVal('emp-form-phone', '');
+    setVal('emp-form-role', 'بائع أجبان وألبان');
+    setVal('emp-form-salary-type', 'monthly');
+    setVal('emp-form-base-salary', '5000');
+    setVal('emp-form-hire-date', new Date().toISOString().slice(0, 10));
+    setVal('emp-form-notes', '');
+    
+    const actEl = document.getElementById('emp-form-active');
+    if (actEl) actEl.checked = true;
+
+    setTimeout(() => document.getElementById('emp-form-name')?.focus(), 100);
+    if (window.lucide) window.lucide.createIcons();
   }
 
-  /* ==================== ADD / EDIT EMPLOYEE MODAL ==================== */
-  openAddModal() {
-    try {
-      const modal = document.getElementById('employee-modal');
-      if (!modal) {
-        window.app?.showToast('تعذر فتح نافذة العامل: العنصر غير موجود!', 'error');
-        return;
-      }
-      const titleEl = document.getElementById('emp-modal-title');
-      if (titleEl) titleEl.textContent = '➕ إضافة عامل جديد';
-      const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = '';
-      const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = '';
-      const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = '';
-      const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = 'بائع أجبان وألبان';
-      const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = 'monthly';
-      const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = '5000';
-      const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = new Date().toISOString().slice(0, 10);
-      const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = '';
-      const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = true;
-
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-      setTimeout(() => nameEl?.focus(), 50);
-    } catch (e) {
-      console.error('Error opening add employee modal:', e);
-      window.app?.showToast('خطأ في فتح نافذة العامل: ' + e.message, 'error');
+  populateEditForm(data) {
+    let emp = null;
+    if (typeof data === 'object' && data !== null) {
+      emp = data;
+    } else {
+      emp = this.employees.find(e => e.id == data);
     }
-  }
-
-  openEditModal(id) {
-    try {
-      const emp = this.employees.find(e => e.id == id);
-      if (!emp) {
-        window.app?.showToast('لم يتم العثور على بيانات العامل المحدد!', 'error');
-        return;
-      }
-
-      const modal = document.getElementById('employee-modal');
-      if (!modal) return;
-
-      const titleEl = document.getElementById('emp-modal-title');
-      if (titleEl) titleEl.textContent = '✏️ تعديل بيانات العامل';
-      const idEl = document.getElementById('emp-id'); if (idEl) idEl.value = emp.id;
-      const nameEl = document.getElementById('emp-name'); if (nameEl) nameEl.value = emp.name || '';
-      const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = emp.phone || '';
-      const roleEl = document.getElementById('emp-role'); if (roleEl) roleEl.value = emp.role || 'عامل';
-      const stEl = document.getElementById('emp-salary-type'); if (stEl) stEl.value = emp.salary_type || 'monthly';
-      const salEl = document.getElementById('emp-base-salary'); if (salEl) salEl.value = emp.base_salary || 0;
-      const hireEl = document.getElementById('emp-hire-date'); if (hireEl) hireEl.value = emp.hire_date || new Date().toISOString().slice(0, 10);
-      const notesEl = document.getElementById('emp-notes'); if (notesEl) notesEl.value = emp.notes || '';
-      const actEl = document.getElementById('emp-active'); if (actEl) actEl.checked = emp.is_active != 0;
-
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-    } catch (e) {
-      console.error('Error opening edit employee modal:', e);
+    if (!emp) {
+      window.app?.showToast('لم يتم العثور على بيانات العامل المحدد!', 'error');
+      return;
     }
-  }
 
-  closeEmployeeModal() {
-    const modal = document.getElementById('employee-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-    }
+    const titleEl = document.getElementById('emp-form-title');
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3" class="w-5 h-5 text-indigo-600"></i><span>تعديل بيانات العامل: ${emp.name} ✏️</span>`;
+
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setVal('emp-form-id', emp.id);
+    setVal('emp-form-name', emp.name || '');
+    setVal('emp-form-phone', emp.phone || '');
+    setVal('emp-form-role', emp.role || 'عامل');
+    setVal('emp-form-salary-type', emp.salary_type || 'monthly');
+    setVal('emp-form-base-salary', emp.base_salary || 0);
+    setVal('emp-form-hire-date', emp.hire_date || new Date().toISOString().slice(0, 10));
+    setVal('emp-form-notes', emp.notes || '');
+
+    const actEl = document.getElementById('emp-form-active');
+    if (actEl) actEl.checked = emp.is_active != 0;
+
+    setTimeout(() => document.getElementById('emp-form-name')?.focus(), 100);
+    if (window.lucide) window.lucide.createIcons();
   }
 
   async saveEmployee() {
-    const id = document.getElementById('emp-id')?.value;
-    const name = document.getElementById('emp-name')?.value.trim();
-    const phone = document.getElementById('emp-phone')?.value.trim();
-    const role = document.getElementById('emp-role')?.value.trim() || 'عامل';
-    const salaryType = document.getElementById('emp-salary-type')?.value || 'monthly';
-    const baseSalary = parseFloat(document.getElementById('emp-base-salary')?.value || 0) || 0;
-    const hireDate = document.getElementById('emp-hire-date')?.value || new Date().toISOString().slice(0, 10);
-    const notes = document.getElementById('emp-notes')?.value.trim();
-    const isActive = document.getElementById('emp-active')?.checked ? 1 : 0;
+    const nameEl = document.getElementById('emp-form-name');
+    const name = nameEl?.value.trim();
 
     if (!name) {
-      const msg = 'يرجى إدخال اسم العامل!';
-      window.app?.showToast(msg, 'warning');
-      document.getElementById('emp-name')?.focus();
+      window.app?.showToast('يرجى إدخال اسم العامل / الموظف!', 'warning');
+      nameEl?.focus();
       return;
     }
 
     const payload = {
+      id: document.getElementById('emp-form-id')?.value || undefined,
       name: name,
-      phone: phone,
-      role: role,
-      salary_type: salaryType,
-      base_salary: baseSalary,
-      hire_date: hireDate,
-      notes: notes,
-      is_active: isActive
+      phone: document.getElementById('emp-form-phone')?.value.trim(),
+      role: document.getElementById('emp-form-role')?.value,
+      salary_type: document.getElementById('emp-form-salary-type')?.value,
+      base_salary: parseFloat(document.getElementById('emp-form-base-salary')?.value || 0),
+      hire_date: document.getElementById('emp-form-hire-date')?.value,
+      is_active: document.getElementById('emp-form-active')?.checked ? 1 : 0,
+      notes: document.getElementById('emp-form-notes')?.value.trim()
     };
-    if (id) payload.id = parseInt(id, 10);
 
     try {
       window.app?.showLoading(true, 'جاري حفظ بيانات العامل...');
@@ -400,23 +434,21 @@ class EmployeesController {
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
         window.app?.showToast(res.message || 'تم حفظ بيانات العامل بنجاح ✅', 'success');
-        this.closeEmployeeModal();
         await this.loadEmployees();
+        this.setSubView('list');
       } else {
-        throw new Error(res?.error || 'فشل حفظ العامل');
+        throw new Error(res?.error || 'فشل حفظ بيانات العامل');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      const errMsg = `خطأ في الحفظ: ${err.message || err}`;
-      console.error(errMsg);
-      window.app?.showToast(errMsg, 'error');
+      console.error('Error saving employee:', err);
+      window.app?.showToast(`خطأ في الحفظ: ${err.message}`, 'error');
     }
   }
 
   async deleteEmployee(id, name) {
-    if (!confirm(`هل أنت متأكد من حذف أو تعطيل العامل (${name})؟`)) return;
+    if (!confirm(`هل أنت متأكد من رغبتك في حذف أو إيقاف العامل (${name})؟`)) return;
 
     try {
       window.app?.showLoading(true, 'جاري الحذف...');
@@ -425,7 +457,7 @@ class EmployeesController {
 
       if (res && res.success) {
         window.app?.showToast(res.message || 'تم حذف العامل بنجاح 🗑️', 'info');
-        this.loadEmployees();
+        await this.loadEmployees();
       } else {
         throw new Error(res?.error || 'فشل الحذف');
       }
@@ -435,167 +467,91 @@ class EmployeesController {
     }
   }
 
-  /* ==================== SALARY & ADVANCE PAYOUT MODAL ==================== */
-  openSalaryModal(employeeId = null) {
-    return this.openPayoutModal(employeeId, 'راتب شهري');
+  /* ==================== SUBVIEW: SALARY & ADVANCE PAYOUT ==================== */
+
+  updateDropdowns() {
+    const payoutSelect = document.getElementById('emp-payout-select');
+    const ledgerSelect = document.getElementById('emp-ledger-select');
+
+    const optionsHtml = (this.employees || []).map(e => `
+      <option value="${e.id}">
+        ${e.name} (${e.role || 'عامل'})${e.is_active == 0 ? ' [متوقف]' : ''} - متبقي: ${(parseFloat(e.net_remaining_salary !== undefined ? e.net_remaining_salary : (parseFloat(e.base_salary || 0) - parseFloat(e.advances_this_month || 0)))).toFixed(0)} ج.م
+      </option>
+    `).join('');
+
+    if (payoutSelect) payoutSelect.innerHTML = optionsHtml;
+    if (ledgerSelect) ledgerSelect.innerHTML = optionsHtml;
   }
 
-  openAdvanceModal(employeeId = null) {
-    return this.openPayoutModal(employeeId, 'سلفة');
-  }
+  setupPayoutForm(data = null) {
+    this.updateDropdowns();
 
-  async openPayoutModal(employeeId = null, defaultType = 'سلفة') {
-    try {
-      const modal = document.getElementById('salary-payout-modal');
-      if (!modal) {
-        window.app?.showToast('تعذر فتح نافذة الصرف: العنصر غير موجود!', 'error');
-        return;
-      }
+    let empId = data?.employeeId || null;
+    let payoutType = data?.type || 'سلفة';
 
-      // Auto-load employees if not loaded yet
-      if (!this.employees || this.employees.length === 0) {
-        window.app?.showLoading(true, 'جاري جلب قائمة العمال...');
-        await this.loadEmployees();
-        window.app?.showLoading(false);
-      }
-
-      const select = document.getElementById('payout-employee-id');
-      if (!select) return;
-
-      if (!this.employees || this.employees.length === 0) {
-        const msg = 'لا يوجد عمال مسجلون حالياً. يرجى إضافة عامل أولاً!';
-        window.app?.showToast(msg, 'warning');
-        this.openAddModal();
-        return;
-      }
-
-      // Default to first active employee if none specified
-      if (!employeeId && this.employees.length > 0) {
-        const firstActive = this.employees.find(e => e.is_active != 0);
-        employeeId = firstActive ? firstActive.id : this.employees[0].id;
-      }
-
-      // Populate employees in select
-      select.innerHTML = this.employees.map(e => `
-        <option value="${e.id}" ${e.id == employeeId ? 'selected' : ''}>
-          ${e.name} (${e.role || 'عامل'})${e.is_active == 0 ? ' [متوقف]' : ''} - متبقي: ${(parseFloat(e.net_remaining_salary !== undefined ? e.net_remaining_salary : (e.base_salary || 0))).toFixed(0)} ج.م
-        </option>
-      `).join('');
-
-      // Update Modal Title based on action
-      const modalTitle = document.getElementById('salary-payout-modal-title');
-      if (modalTitle) {
-        if (defaultType === 'راتب شهري') {
-          modalTitle.innerHTML = `<i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i><span>💵 دفع راتب شهري للعامل</span>`;
-        } else if (defaultType === 'سلفة') {
-          modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i><span>💸 دفع سلفة للعامل</span>`;
-        } else {
-          modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-indigo-500"></i><span>صرف مستحقات للعامل (${defaultType})</span>`;
-        }
-        if (window.lucide) window.lucide.createIcons();
-      }
-
-      const typeEl = document.getElementById('payout-type');
-      if (typeEl) typeEl.value = defaultType;
-
-      const methEl = document.getElementById('payout-method');
-      if (methEl) methEl.value = 'كاش من الدرج';
-
-      const notesEl = document.getElementById('payout-notes');
-      if (notesEl) notesEl.value = defaultType === 'سلفة' ? 'سلفة من الراتب' : (defaultType === 'راتب شهري' ? 'صرف راتب شهري' : '');
-
-      this.onPayoutEmployeeChange();
-
-      // Auto-prefill amount if paying monthly salary
-      const amtEl = document.getElementById('payout-amount');
-      if (amtEl) {
-        if (defaultType === 'راتب شهري') {
-          const emp = this.employees.find(e => e.id == employeeId);
-          const base = parseFloat(emp?.base_salary || 0);
-          const advances = parseFloat(emp?.advances_this_month || 0);
-          const remaining = parseFloat(emp?.net_remaining_salary !== undefined ? emp.net_remaining_salary : (base - advances));
-          amtEl.value = Math.max(0, remaining).toFixed(2);
-        } else {
-          amtEl.value = '';
-          amtEl.placeholder = 'أدخل المبلغ المنصرف...';
-        }
-      }
-
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-      setTimeout(() => amtEl?.focus(), 50);
-    } catch (e) {
-      console.error('Error opening payout modal:', e);
-      window.app?.showToast('خطأ في فتح نافذة صرف الراتب / السلفة: ' + e.message, 'error');
+    if (!empId && this.employees.length > 0) {
+      const firstActive = this.employees.find(e => e.is_active != 0);
+      empId = firstActive ? firstActive.id : this.employees[0].id;
     }
-  }
 
-  closePayoutModal() {
-    const modal = document.getElementById('salary-payout-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-    }
+    const selectEl = document.getElementById('emp-payout-select');
+    if (selectEl && empId) selectEl.value = empId;
+
+    const typeEl = document.getElementById('emp-payout-type');
+    if (typeEl) typeEl.value = payoutType;
+
+    const dateEl = document.getElementById('emp-payout-date');
+    if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+
+    const monthEl = document.getElementById('emp-payout-month');
+    if (monthEl) monthEl.value = this.currentMonth || new Date().toISOString().slice(0, 7);
+
+    this.onPayoutEmployeeChange();
+    this.onPayoutTypeChange();
+
+    setTimeout(() => document.getElementById('emp-payout-amount')?.focus(), 100);
   }
 
   onPayoutEmployeeChange() {
-    const empId = document.getElementById('payout-employee-id')?.value;
-    const infoBox = document.getElementById('payout-emp-preview');
-    if (!infoBox) return;
+    const empId = document.getElementById('emp-payout-select')?.value;
+    const emp = (this.employees || []).find(e => e.id == empId);
+    const badgeEl = document.getElementById('emp-payout-worker-badge');
+    const amtEl = document.getElementById('emp-payout-amount');
 
-    const emp = this.employees.find(e => e.id == empId);
-    if (!emp) {
-      infoBox.classList.add('hidden');
-      return;
-    }
+    if (!emp || !badgeEl) return;
 
-    infoBox.classList.remove('hidden');
     const base = parseFloat(emp.base_salary || 0);
     const advances = parseFloat(emp.advances_this_month || 0);
     const remaining = parseFloat(emp.net_remaining_salary !== undefined ? emp.net_remaining_salary : (base - advances));
 
-    infoBox.innerHTML = `
-      <div class="flex items-center justify-between text-xs">
-        <span class="text-gray-500">الراتب الأساسي: <strong class="text-gray-800 dark:text-gray-200 font-mono">${base.toFixed(0)} ج.م</strong></span>
-        <span class="text-amber-600 dark:text-amber-400 font-bold">سلف الشهر: <strong class="font-mono">${advances.toFixed(0)} ج.م</strong></span>
-        <span class="text-emerald-600 dark:text-emerald-400 font-bold">المتبقي: <strong class="font-mono">${remaining.toFixed(0)} ج.م</strong></span>
+    badgeEl.innerHTML = `
+      <div class="flex items-center justify-between gap-3">
+        <span class="font-bold text-gray-800 dark:text-gray-200">الراتب الأساسي: <strong class="font-mono text-indigo-600 dark:text-indigo-400">${base.toFixed(0)} ج.م</strong></span>
+        <span class="font-bold text-rose-500">سلف الشهر: <strong class="font-mono">${advances.toFixed(0)} ج.م</strong></span>
+        <span class="font-bold text-emerald-600 dark:text-emerald-400">الصافي المتبقي: <strong class="font-mono">${Math.max(0, remaining).toFixed(0)} ج.م</strong></span>
       </div>
     `;
 
-    // If currently on "راتب شهري", update amount to match selected worker
-    const type = document.getElementById('payout-type')?.value;
-    if (type === 'راتب شهري') {
-      const amtEl = document.getElementById('payout-amount');
-      if (amtEl) amtEl.value = Math.max(0, remaining).toFixed(2);
+    const type = document.getElementById('emp-payout-type')?.value;
+    if (type === 'راتب شهري' && amtEl) {
+      amtEl.value = Math.max(0, remaining).toFixed(2);
     }
   }
 
   onPayoutTypeChange() {
-    const typeEl = document.getElementById('payout-type');
+    const typeEl = document.getElementById('emp-payout-type');
     const type = typeEl?.value || 'سلفة';
-    const empId = document.getElementById('payout-employee-id')?.value;
+    const empId = document.getElementById('emp-payout-select')?.value;
     const emp = (this.employees || []).find(e => e.id == empId);
-    const amtEl = document.getElementById('payout-amount');
-    const notesEl = document.getElementById('payout-notes');
-    const modalTitle = document.getElementById('salary-payout-modal-title');
-
-    if (modalTitle) {
-      if (type === 'راتب شهري') {
-        modalTitle.innerHTML = `<i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i><span>💵 دفع راتب شهري للعامل</span>`;
-      } else if (type === 'سلفة') {
-        modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i><span>💸 دفع سلفة للعامل</span>`;
-      } else {
-        modalTitle.innerHTML = `<i data-lucide="hand-coins" class="w-4 h-4 text-indigo-500"></i><span>صرف مستحقات للعامل (${type})</span>`;
-      }
-      if (window.lucide) window.lucide.createIcons();
-    }
+    const amtEl = document.getElementById('emp-payout-amount');
+    const notesEl = document.getElementById('emp-payout-notes');
 
     if (type === 'راتب شهري') {
-      if (emp) {
+      if (emp && amtEl) {
         const base = parseFloat(emp.base_salary || 0);
         const advances = parseFloat(emp.advances_this_month || 0);
         const remaining = parseFloat(emp.net_remaining_salary !== undefined ? emp.net_remaining_salary : (base - advances));
-        if (amtEl) amtEl.value = Math.max(0, remaining).toFixed(2);
+        amtEl.value = Math.max(0, remaining).toFixed(2);
       }
       if (notesEl && (!notesEl.value || notesEl.value === 'سلفة من الراتب')) {
         notesEl.value = 'صرف راتب شهري';
@@ -609,9 +565,9 @@ class EmployeesController {
   }
 
   setFullRemainingPayoutAmount() {
-    const empId = document.getElementById('payout-employee-id')?.value;
+    const empId = document.getElementById('emp-payout-select')?.value;
     const emp = (this.employees || []).find(e => e.id == empId);
-    const amtEl = document.getElementById('payout-amount');
+    const amtEl = document.getElementById('emp-payout-amount');
     if (!emp || !amtEl) return;
     const base = parseFloat(emp.base_salary || 0);
     const advances = parseFloat(emp.advances_this_month || 0);
@@ -622,148 +578,258 @@ class EmployeesController {
   }
 
   async saveSalaryPayout() {
-    const empId = document.getElementById('payout-employee-id')?.value;
-    const type = document.getElementById('payout-type')?.value;
-    const amount = parseFloat(document.getElementById('payout-amount')?.value || 0);
-    const method = document.getElementById('payout-method')?.value;
-    const notes = document.getElementById('payout-notes')?.value.trim();
+    const empId = parseInt(document.getElementById('emp-payout-select')?.value || 0, 10);
+    const emp = (this.employees || []).find(e => e.id == empId);
+    const amount = parseFloat(document.getElementById('emp-payout-amount')?.value || 0);
 
-    if (!empId) {
-      const msg = 'يرجى اختيار العامل للصرف!';
-      window.app?.showToast(msg, 'warning');
+    if (!empId || !emp) {
+      window.app?.showToast('يرجى اختيار العامل لصرف المستحقات!', 'warning');
       return;
     }
 
     if (!amount || amount <= 0) {
-      const msg = 'يرجى إدخال مبلغ صحيح للصرف أكبر من الصفر!';
-      window.app?.showToast(msg, 'warning');
-      document.getElementById('payout-amount')?.focus();
+      window.app?.showToast('يرجى إدخال مبلغ صحيح للصرف أكبر من الصفر!', 'warning');
+      document.getElementById('emp-payout-amount')?.focus();
       return;
     }
 
-    const emp = this.employees.find(e => e.id == empId);
-    const empName = emp ? emp.name : '';
-
     const payload = {
-      employee_id: parseInt(empId),
-      employee_name: empName,
-      type: type,
+      employee_id: emp.id,
+      employee_name: emp.name,
+      type: document.getElementById('emp-payout-type')?.value || 'سلفة',
       amount: amount,
-      payment_method: method,
-      notes: notes,
-      cashier_name: window.app?.currentCashier || 'كاشير المحل'
+      payment_method: document.getElementById('emp-payout-method')?.value || 'كاش من الدرج',
+      date: document.getElementById('emp-payout-date')?.value || new Date().toISOString().slice(0, 10),
+      month_year: document.getElementById('emp-payout-month')?.value || this.currentMonth,
+      notes: document.getElementById('emp-payout-notes')?.value.trim() || '',
+      cashier_name: window.app?.currentUser?.name || 'كاشير المحل'
     };
 
     try {
-      window.app?.showLoading(true, `جاري تسجيل صرف ${type}...`);
+      window.app?.showLoading(true, 'جاري تسجيل حركة الصرف وخصمها من الخزينة...');
       const res = await window.api.recordSalaryPayout(payload);
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
-        const successMsg = res.message || `تم تسجيل صرف ${type} بقيمة ${amount.toFixed(2)} ج.م بنجاح 💸`;
-        window.app?.showToast(successMsg, 'success');
-        this.closePayoutModal();
-        this.loadEmployees();
-        this.loadRecentPayouts();
-
-        // Refresh cash shift reports silently to reflect deducted cash
-        window.reportsController?.loadReports?.('today');
+        window.app?.showToast(res.message || 'تم تسجيل الصرف وخصم المبلغ من الخزينة بنجاح 💵', 'success');
+        await this.loadEmployees();
+        await this.loadRecentPayouts();
+        this.setSubView('list');
       } else {
         throw new Error(res?.error || 'فشل تسجيل الصرف');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      const errMsg = `خطأ في تسجيل الصرف: ${err.message || err}`;
-      console.error(errMsg);
-      window.app?.showToast(errMsg, 'error');
+      console.error('Error saving salary payout:', err);
+      window.app?.showToast(`خطأ في تسجيل الصرف: ${err.message}`, 'error');
     }
   }
 
-  /* ==================== EMPLOYEE LEDGER (كشف حساب مالي تفصيلي) ==================== */
-  async openLedgerModal(employeeId, monthYear = null) {
-    const m = monthYear || this.currentMonth;
+  /* ==================== SUBVIEW: WORKER LEDGER (STATEMENT) ==================== */
+
+  setupLedgerView(empId) {
+    this.updateDropdowns();
+    if (!empId && this.employees.length > 0) empId = this.employees[0].id;
+    const selectEl = document.getElementById('emp-ledger-select');
+    if (selectEl && empId) selectEl.value = empId;
+    this.loadEmployeeLedger(empId);
+  }
+
+  async loadEmployeeLedger(empId = null, monthYear = '') {
+    if (!empId) {
+      empId = document.getElementById('emp-ledger-select')?.value;
+    }
+    if (!empId) return;
+
+    this.activeLedgerEmpId = empId;
+    const monthFilter = monthYear || document.getElementById('emp-ledger-month-filter')?.value || '';
+
     try {
-      window.app?.showLoading(true, 'جاري استخراج كشف الحساب المالي...');
-      const res = await window.api.getEmployeeLedger(employeeId, m);
+      window.app?.showLoading(true, 'جاري جلب كشف حساب العامل...');
+      const res = await window.api.getEmployeeLedger(empId, monthFilter);
       window.app?.showLoading(false);
 
       if (res && res.success) {
         this.currentLedgerData = res;
-        this.renderLedgerModal(res);
-        const modal = document.getElementById('employee-ledger-modal');
-        if (modal) {
-          modal.classList.remove('hidden');
-          modal.style.display = 'flex';
-        }
+        this.renderEmployeeLedger(res);
       } else {
-        throw new Error(res?.error || 'تعذر استخراج كشف الحساب');
+        throw new Error(res?.error || 'فشل جلب كشف الحساب');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.app?.showToast(`خطأ: ${err.message}`, 'error');
+      console.error('Error loading employee ledger:', err);
+      window.app?.showToast(`تعذر جلب كشف حساب العامل: ${err.message}`, 'error');
     }
   }
 
-  renderLedgerModal(data) {
-    const emp = data.employee || {};
-    const sum = data.summary || {};
-    const trans = data.transactions || [];
+  renderEmployeeLedger(res) {
+    const emp = res.employee || {};
+    const summary = res.summary || {};
+    const transactions = res.transactions || [];
 
-    document.getElementById('ledger-emp-name').textContent = emp.name || 'عامل';
-    document.getElementById('ledger-emp-role').textContent = emp.role || 'عامل';
-    document.getElementById('ledger-month-label').textContent = data.month_year || this.currentMonth;
+    const nameEl = document.getElementById('emp-ledger-emp-name');
+    const roleEl = document.getElementById('emp-ledger-emp-role');
+    const phoneEl = document.getElementById('emp-ledger-emp-phone');
 
-    // Summary breakdown
-    document.getElementById('ledger-base-salary').textContent = `${parseFloat(sum.base_salary || 0).toFixed(2)} ج.م`;
-    document.getElementById('ledger-total-advances').textContent = `${parseFloat(sum.total_advances || 0).toFixed(2)} ج.م`;
-    document.getElementById('ledger-total-bonuses').textContent = `${parseFloat(sum.total_bonuses || 0).toFixed(2)} ج.م`;
-    document.getElementById('ledger-total-deductions').textContent = `${parseFloat(sum.total_deductions || 0).toFixed(2)} ج.م`;
-    document.getElementById('ledger-total-paid').textContent = `${parseFloat(sum.total_paid_salary || 0).toFixed(2)} ج.م`;
-    document.getElementById('ledger-net-remaining').textContent = `${parseFloat(sum.net_remaining_to_pay || 0).toFixed(2)} ج.م`;
+    if (nameEl) nameEl.textContent = emp.name || 'العامل';
+    if (roleEl) roleEl.textContent = emp.role || 'عامل';
+    if (phoneEl) phoneEl.textContent = emp.phone ? `هاتف: ${emp.phone}` : 'بدون هاتف';
 
-    // Transactions table
-    const tbody = document.getElementById('ledger-table-body');
-    if (tbody) {
-      if (trans.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" class="p-6 text-center text-xs text-gray-400 font-medium">
-              لا توجد حركات سلف أو خصومات مسجلة لهذا العامل في شهر ${data.month_year}.
-            </td>
-          </tr>
-        `;
-      } else {
-        tbody.innerHTML = trans.map(t => `
-          <tr class="border-b border-gray-100 dark:border-gray-800 text-xs">
-            <td class="py-2.5 px-3 font-mono text-gray-500">${t.date || t.created_at?.slice(0, 10)}</td>
-            <td class="py-2.5 px-3">
-              <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${this.getPayoutTypeBadge(t.type)}">
-                ${t.type}
-              </span>
-            </td>
-            <td class="py-2.5 px-3 font-mono font-bold text-gray-900 dark:text-white">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
-            <td class="py-2.5 px-3 text-gray-500">${t.payment_method || 'كاش'}</td>
-            <td class="py-2.5 px-3 text-gray-400 truncate max-w-[180px]">${t.notes || '-'}</td>
-          </tr>
-        `).join('');
-      }
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setTxt('emp-ledger-base-salary', `${parseFloat(summary.base_salary || emp.base_salary || 0).toFixed(2)} ج.م`);
+    setTxt('emp-ledger-total-advances', `${parseFloat(summary.total_advances || 0).toFixed(2)} ج.م`);
+    setTxt('emp-ledger-total-paid', `${parseFloat(summary.total_paid_salary || 0).toFixed(2)} ج.م`);
+    setTxt('emp-ledger-net-remaining', `${parseFloat(summary.net_remaining !== undefined ? summary.net_remaining : 0).toFixed(2)} ج.م`);
+
+    const tbody = document.getElementById('emp-ledger-table-body');
+    if (!tbody) return;
+
+    if (transactions.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="py-8 text-center text-gray-400 font-bold text-xs">
+            لا توجد حركات مسجلة لهذا العامل في الفترة المحددة.
+          </td>
+        </tr>
+      `;
+      return;
     }
 
-    if (window.lucide) window.lucide.createIcons();
-  }
+    tbody.innerHTML = transactions.map(t => {
+      let badge = 'bg-gray-100 text-gray-700';
+      if (t.type === 'سلفة') badge = 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-bold';
+      if (t.type === 'راتب شهري') badge = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold';
 
-  closeLedgerModal() {
-    const modal = document.getElementById('employee-ledger-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-    }
+      return `
+        <tr class="border-b border-gray-100 dark:border-gray-800 text-xs hover:bg-gray-50/50">
+          <td class="py-2.5 px-4 font-mono text-gray-500">${t.date || ''}</td>
+          <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded-lg text-[10px] ${badge}">${t.type}</span></td>
+          <td class="py-2.5 px-4 font-black font-mono" dir="ltr">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
+          <td class="py-2.5 px-4 text-gray-500">${t.payment_method || 'كاش'}</td>
+          <td class="py-2.5 px-4 text-gray-400">${t.notes || '-'}</td>
+        </tr>
+      `;
+    }).join('');
   }
 
   printLedger() {
-    window.print();
+    if (!this.currentLedgerData || !this.currentLedgerData.employee) {
+      window.app?.showToast('لا توجد بيانات كشف حساب متاحة للطباعة', 'warning');
+      return;
+    }
+
+    const emp = this.currentLedgerData.employee;
+    const summary = this.currentLedgerData.summary || {};
+    const txs = this.currentLedgerData.transactions || [];
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.app?.showToast('يرجى السماح بفتح النوافذ المنبثقة للطباعة', 'warning');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>كشف حساب مستحقات: ${emp.name}</title>
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #111; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 16px; }
+          .title { font-size: 20px; font-weight: bold; }
+          .sub { font-size: 13px; color: #555; margin-top: 4px; }
+          .summary-box { display: flex; justify-content: space-between; background: #f4f4f5; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+          th { background: #f0f0f0; font-weight: bold; }
+          .print-btn { display: none; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">سوبرماركت البيت السوري</div>
+          <div class="sub">كشف حساب مستحقات ورواتب العامل: <strong>${emp.name}</strong> (${emp.role || 'عامل'})</div>
+          <div class="sub">تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')}</div>
+        </div>
+
+        <div class="summary-box">
+          <div>الراتب الأساسي: <strong>${parseFloat(emp.base_salary || 0).toFixed(2)} ج.م</strong></div>
+          <div>إجمالي السلف: <strong>${parseFloat(summary.total_advances || 0).toFixed(2)} ج.م</strong></div>
+          <div>الصافي المتبقي: <strong>${parseFloat(summary.net_remaining !== undefined ? summary.net_remaining : 0).toFixed(2)} ج.م</strong></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>نوع الحركة</th>
+              <th>المبلغ</th>
+              <th>طريقة الدفع</th>
+              <th>البيان والملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${txs.map(t => `
+              <tr>
+                <td>${t.date}</td>
+                <td>${t.type}</td>
+                <td dir="ltr">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
+                <td>${t.payment_method || 'كاش'}</td>
+                <td>${t.notes || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  /* ==================== BACKWARD COMPATIBILITY ALIASES ==================== */
+
+  openAddModal() {
+    this.setSubView('form', null);
+  }
+
+  openEditModal(id) {
+    this.setSubView('form', id);
+  }
+
+  openPayoutModal(employeeId = null, defaultType = 'سلفة') {
+    this.setSubView('payout', { employeeId, type: defaultType });
+  }
+
+  openSalaryModal(employeeId = null) {
+    this.setSubView('payout', { employeeId, type: 'راتب شهري' });
+  }
+
+  openAdvanceModal(employeeId = null) {
+    this.setSubView('payout', { employeeId, type: 'سلفة' });
+  }
+
+  openLedgerModal(employeeId = null) {
+    this.setSubView('ledger', { employeeId });
+  }
+
+  closeEmployeeModal() {
+    this.setSubView('list');
+  }
+
+  closePayoutModal() {
+    this.setSubView('list');
+  }
+
+  closeLedgerModal() {
+    this.setSubView('list');
   }
 }
 
+// إنشاء النسخة العامة من المتحكم
 window.employeesController = new EmployeesController();

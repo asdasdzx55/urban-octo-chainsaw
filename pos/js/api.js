@@ -357,10 +357,25 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 25. Delete / Deactivate Employee (حذف أو إيقاف عامل)
+   * 25. Delete / Deactivate Employee (حذف نهائي أو إيقاف عامل)
    */
-  async deleteEmployee(employeeId, name = '') {
-    return await this.post('delete_employee', { employee_id: employeeId, name: name });
+  async deleteEmployee(employeeId, name = '', force = true) {
+    return await this.post('delete_employee', {
+      employee_id: employeeId,
+      name: name,
+      force: force ? 1 : 0
+    });
+  }
+
+  /**
+   * 25b. Toggle Employee Active Status (إيقاف مؤقت أو إعادة تنشيط عامل)
+   */
+  async toggleEmployeeStatus(employeeId, isActive) {
+    return await this.post('delete_employee', {
+      employee_id: employeeId,
+      force: 0,
+      status: isActive ? 1 : 0
+    });
   }
 
   /**

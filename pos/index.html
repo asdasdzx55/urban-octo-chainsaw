@@ -47,12 +47,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.5.2">
-  <link rel="stylesheet" href="css/receipt.css?v=2.5.2">
+  <link rel="stylesheet" href="css/pos.css?v=2.5.3">
+  <link rel="stylesheet" href="css/receipt.css?v=2.5.3">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.5.2';
+    window.APP_VERSION = '2.5.3';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -124,7 +124,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.2</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.3</span>
         </div>
       </div>
     </div>
@@ -223,7 +223,7 @@
             </div>
             <div>
               <h3 class="text-xs font-black text-gray-900 dark:text-white leading-tight">سوبر ماركت المنزل السوري</h3>
-              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.2</p>
+              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.3</p>
             </div>
           </div>
           <button type="button" onclick="window.app.closeDrawerMenu()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
@@ -378,7 +378,7 @@
   <main class="flex-1 w-full max-w-[1760px] mx-auto p-3 sm:p-4 lg:p-4 flex flex-col lg:h-[calc(100vh-4rem)] lg:overflow-hidden min-h-0">
 
     <!-- ==================== VIEW 1: POS REGISTER ==================== -->
-    <section id="view-pos" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 h-full lg:overflow-hidden min-h-0">
+    <section id="view-pos" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 h-full lg:overflow-hidden min-h-0 pb-20 lg:pb-0">
       
       <!-- Left Column: Cart & Billing Panel (4 cols on Desktop - Locked to exact view height) -->
       <div class="hidden lg:flex lg:col-span-4 xl:col-span-4 2xl:col-span-4 bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700 shadow-md flex-col justify-between h-full overflow-hidden min-h-0">
@@ -491,7 +491,7 @@
         </div>
 
         <!-- Products Grid -->
-        <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3 flex-1 overflow-y-auto min-h-0 p-0.5">
+        <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3 flex-1 overflow-y-auto min-h-0 p-0.5 pb-24 lg:pb-2">
           <!-- Products render dynamically -->
         </div>
 
@@ -500,7 +500,7 @@
     </section>
 
     <!-- ==================== VIEW 2: DELIVERY & ONLINE ORDERS HUB (منظومة الدليفري والأونلاين) ==================== -->
-    <section id="view-orders" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
+    <section id="view-orders" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
       <!-- Hub Top Switcher: Online Orders vs Delivery Settlement -->
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -679,7 +679,7 @@
     </section>
 
     <!-- ==================== VIEW 3: RETURNS & REFUNDS ==================== -->
-    <section id="view-returns" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
+    <section id="view-returns" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -729,7 +729,7 @@
     </section>
 
     <!-- ==================== VIEW 4: INVENTORY & PRICE AUDIT ==================== -->
-    <section id="view-inventory" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
+    <section id="view-inventory" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -1627,8 +1627,8 @@
           <!-- Status Filters and Fast Actions -->
           <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
             <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-xs font-bold">
-              <button type="button" onclick="window.employeesController.statusFilter = 'all'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer">الكل</button>
-              <button type="button" onclick="window.employeesController.statusFilter = 'active'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">النشطين</button>
+              <button type="button" onclick="window.employeesController.statusFilter = 'active'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer">النشطين</button>
+              <button type="button" onclick="window.employeesController.statusFilter = 'all'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">الكل</button>
               <button type="button" onclick="window.employeesController.statusFilter = 'inactive'; window.employeesController.renderEmployeesList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">المتوقفين</button>
             </div>
 
@@ -1930,7 +1930,7 @@
     </section>
 
     <!-- ==================== VIEW 6: SHIFT REPORTS ==================== -->
-    <section id="view-reports" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
+    <section id="view-reports" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
@@ -2014,7 +2014,7 @@
     </section>
 
     <!-- ==================== VIEW 7: STORE & RECEIPT SETTINGS ==================== -->
-    <section id="view-settings" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full lg:overflow-y-auto min-h-0">
+    <section id="view-settings" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-6">
         
@@ -2458,7 +2458,7 @@
 
   <!-- ==================== CHECKOUT MODAL ==================== -->
   <div id="checkout-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
-    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-lg w-full flex flex-col gap-4 shadow-2xl border border-gray-200 dark:border-gray-700 max-h-[92vh] overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 max-w-lg w-full flex flex-col gap-4 shadow-2xl border border-gray-200 dark:border-gray-700 max-h-[92vh] overflow-y-auto">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
@@ -2682,21 +2682,22 @@
           <span id="checkout-payment-fee-preview" class="text-xs font-black text-amber-700 dark:text-amber-300 font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-700">+0.00 ج.م</span>
         </div>
 
-        <div class="flex items-center gap-2">
-          <!-- Type Toggle Button (% or Fixed EGP) -->
-          <button type="button" id="checkout-payment-fee-type-btn" onclick="window.app.togglePaymentFeeType()" class="px-2.5 py-2 rounded-xl text-xs font-bold bg-amber-200/80 dark:bg-amber-900/60 hover:bg-amber-300 dark:hover:bg-amber-800 text-amber-950 dark:text-amber-100 border border-amber-300 dark:border-amber-700 transition flex items-center justify-center shrink-0" title="اضغط للتبديل بين النسبة المئوية والمبلغ الثابت">
-            % نسبة مئوية
-          </button>
-          <!-- Value Input -->
-          <input type="number" id="checkout-payment-fee-input" step="0.5" min="0" value="0" oninput="window.app.onPaymentFeeValChanged(this.value)" placeholder="0" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-amber-800 dark:text-amber-200 focus:ring-2 focus:ring-amber-500">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+          <!-- Type Toggle Button & Value Input Row -->
+          <div class="flex items-center gap-2 flex-1">
+            <button type="button" id="checkout-payment-fee-type-btn" onclick="window.app.togglePaymentFeeType()" class="px-2.5 py-2 rounded-xl text-xs font-bold bg-amber-200/80 dark:bg-amber-900/60 hover:bg-amber-300 dark:hover:bg-amber-800 text-amber-950 dark:text-amber-100 border border-amber-300 dark:border-amber-700 transition flex items-center justify-center shrink-0" title="اضغط للتبديل بين النسبة المئوية والمبلغ الثابت">
+              % نسبة مئوية
+            </button>
+            <input type="number" id="checkout-payment-fee-input" step="0.5" min="0" value="0" oninput="window.app.onPaymentFeeValChanged(this.value)" placeholder="0" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-amber-800 dark:text-amber-200 focus:ring-2 focus:ring-amber-500">
+          </div>
           
-          <!-- Presets -->
-          <div class="flex items-center gap-1 shrink-0">
-            <button type="button" onclick="window.app.setPaymentFeePreset(0, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700" title="بدون رسوم">0%</button>
-            <button type="button" onclick="window.app.setPaymentFeePreset(1, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">1%</button>
-            <button type="button" onclick="window.app.setPaymentFeePreset(1.5, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">1.5%</button>
-            <button type="button" onclick="window.app.setPaymentFeePreset(2, 'percent')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">2%</button>
-            <button type="button" onclick="window.app.setPaymentFeePreset(5, 'fixed')" class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">5 ج.م</button>
+          <!-- Presets Row -->
+          <div class="flex items-center justify-between sm:justify-start gap-1 shrink-0 overflow-x-auto no-scrollbar">
+            <button type="button" onclick="window.app.setPaymentFeePreset(0, 'percent')" class="flex-1 sm:flex-initial px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700" title="بدون رسوم">0%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(1, 'percent')" class="flex-1 sm:flex-initial px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">1%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(1.5, 'percent')" class="flex-1 sm:flex-initial px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">1.5%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(2, 'percent')" class="flex-1 sm:flex-initial px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">2%</button>
+            <button type="button" onclick="window.app.setPaymentFeePreset(5, 'fixed')" class="flex-1 sm:flex-initial px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold hover:bg-gray-100 dark:hover:bg-gray-700">5 ج.م</button>
           </div>
         </div>
       </div>
@@ -3426,21 +3427,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.5.2"></script>
-  <script src="js/api.js?v=2.5.2"></script>
-  <script src="js/sync-manager.js?v=2.5.2"></script>
-  <script src="js/pos-scanner.js?v=2.5.2"></script>
-  <script src="js/settings.js?v=2.5.2"></script>
-  <script src="js/cart.js?v=2.5.2"></script>
-  <script src="js/inventory.js?v=2.5.2"></script>
-  <script src="js/purchases.js?v=2.5.2"></script>
-  <script src="js/expenses.js?v=2.5.2"></script>
-  <script src="js/orders.js?v=2.5.2"></script>
-  <script src="js/delivery-settlement.js?v=2.5.2"></script>
-  <script src="js/returns.js?v=2.5.2"></script>
-  <script src="js/reports.js?v=2.5.2"></script>
-  <script src="js/employees.js?v=2.5.2"></script>
-  <script src="js/pwa.js?v=2.5.2"></script>
-  <script src="js/app.js?v=2.5.2"></script>
+  <script src="js/barcode-parser.js?v=2.5.3"></script>
+  <script src="js/api.js?v=2.5.3"></script>
+  <script src="js/sync-manager.js?v=2.5.3"></script>
+  <script src="js/pos-scanner.js?v=2.5.3"></script>
+  <script src="js/settings.js?v=2.5.3"></script>
+  <script src="js/cart.js?v=2.5.3"></script>
+  <script src="js/inventory.js?v=2.5.3"></script>
+  <script src="js/purchases.js?v=2.5.3"></script>
+  <script src="js/expenses.js?v=2.5.3"></script>
+  <script src="js/orders.js?v=2.5.3"></script>
+  <script src="js/delivery-settlement.js?v=2.5.3"></script>
+  <script src="js/returns.js?v=2.5.3"></script>
+  <script src="js/reports.js?v=2.5.3"></script>
+  <script src="js/employees.js?v=2.5.3"></script>
+  <script src="js/pwa.js?v=2.5.3"></script>
+  <script src="js/app.js?v=2.5.3"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@ class EmployeesController {
     this.recentPayouts = [];
     this.currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     this.searchQuery = '';
-    this.statusFilter = 'all'; // all, active, inactive
+    this.statusFilter = 'active'; // all, active, inactive
     this.currentSubView = 'list'; // list, form, payout, ledger
     this.currentLedgerData = null;
     this.activeLedgerEmpId = null;
@@ -242,12 +242,15 @@ class EmployeesController {
               </div>
             </div>
 
-            <!-- Edit / Delete -->
+            <!-- Edit / Pause / Delete Actions -->
             <div class="flex items-center gap-1">
               <button type="button" onclick="window.employeesController.setSubView('form', ${emp.id})" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 flex items-center justify-center transition cursor-pointer" title="تعديل بيانات العامل">
                 <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
               </button>
-              <button type="button" onclick="window.employeesController.deleteEmployee(${emp.id}, '${emp.name}')" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 flex items-center justify-center transition cursor-pointer" title="حذف العامل">
+              <button type="button" onclick="window.employeesController.toggleEmployeeStatus(${emp.id}, '${emp.name}', ${emp.is_active != 0 ? 1 : 0})" class="w-8 h-8 rounded-xl ${isActive ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 hover:bg-amber-100' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'} flex items-center justify-center transition cursor-pointer" title="${isActive ? 'إيقاف مؤقت ⏸️' : 'إعادة تفعيل وتشغيل ▶️'}">
+                <i data-lucide="${isActive ? 'pause' : 'play'}" class="w-3.5 h-3.5"></i>
+              </button>
+              <button type="button" onclick="window.employeesController.deleteEmployee(${emp.id}, '${emp.name}')" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 flex items-center justify-center transition cursor-pointer" title="حذف نهائي من قاعدة البيانات 🗑️">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -447,16 +450,28 @@ class EmployeesController {
     }
   }
 
+  /**
+   * حذف العامل نهائياً من قاعدة البيانات والسيرفر (Permanent Force Delete)
+   */
   async deleteEmployee(id, name) {
-    if (!confirm(`هل أنت متأكد من رغبتك في حذف أو إيقاف العامل (${name})؟`)) return;
+    if (!confirm(`هل أنت متأكد من رغبتك في حذف العامل (${name}) نهائياً من النظام؟\n\n⚠️ تحذير: سيتم حذف بيانات العامل بالكامل من قاعدة البيانات ولن يظهر مجدداً.`)) return;
 
     try {
-      window.app?.showLoading(true, 'جاري الحذف...');
-      const res = await window.api.deleteEmployee(id, name);
+      window.app?.showLoading(true, 'جاري الحذف النهائي...');
+      const res = await window.api.deleteEmployee(id, name, true);
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        window.app?.showToast(res.message || 'تم حذف العامل بنجاح 🗑️', 'info');
+        // إزالة العامل فوراً من الذاكرة المحلية والواجهة
+        this.employees = (this.employees || []).filter(e => e.id != id);
+        this.renderKPIs();
+        this.renderEmployeesList();
+        this.updateDropdowns();
+
+        window.posScanner?.playSuccessBeep?.();
+        window.app?.showToast(`تم حذف العامل (${name}) نهائياً من قاعدة البيانات 🗑️`, 'success');
+
+        // تحديث إضافي في الخلفية من السيرفر
         await this.loadEmployees();
       } else {
         throw new Error(res?.error || 'فشل الحذف');
@@ -464,6 +479,43 @@ class EmployeesController {
     } catch (err) {
       window.app?.showLoading(false);
       window.app?.showToast(`خطأ أثناء الحذف: ${err.message}`, 'error');
+    }
+  }
+
+  /**
+   * تبديل حالة العامل: إيقاف مؤقت ⏸️ أو إعادة تفعيل وتشغيل ▶️
+   */
+  async toggleEmployeeStatus(id, name, currentStatus) {
+    const isCurrentlyActive = currentStatus != 0;
+    const newStatus = isCurrentlyActive ? 0 : 1;
+    const actionLabel = isCurrentlyActive ? 'إيقاف مؤقت' : 'إعادة تفعيل';
+    const confirmMsg = isCurrentlyActive
+      ? `هل تريد إيقاف العامل (${name}) مؤقتاً؟\n(سيتم تعطيل حسابه ويمكنك إعادة تشغيله في أي وقت دون حذف بياناته).`
+      : `هل تريد إعادة تفعيل وتشغيل العامل (${name}) في النظام؟`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      window.app?.showLoading(true, `جاري ${actionLabel}...`);
+      const res = await window.api.toggleEmployeeStatus(id, newStatus == 1);
+      window.app?.showLoading(false);
+
+      if (res && res.success) {
+        const emp = (this.employees || []).find(e => e.id == id);
+        if (emp) emp.is_active = newStatus;
+        
+        this.renderKPIs();
+        this.renderEmployeesList();
+        this.updateDropdowns();
+
+        window.posScanner?.playSuccessBeep?.();
+        window.app?.showToast(res.message || `تمت عملية ${actionLabel} بنجاح ✅`, 'success');
+      } else {
+        throw new Error(res?.error || `فشل ${actionLabel}`);
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ: ${err.message}`, 'error');
     }
   }
 

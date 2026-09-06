@@ -1574,18 +1574,26 @@ try {
             $emp_id = (int)($data['id'] ?? $data['employee_id'] ?? 0);
             $name = trim($data['name'] ?? '');
             $force = !empty($data['force']);
+            $status = isset($data['status']) ? (int)$data['status'] : 0;
 
             if ($emp_id > 0) {
                 if ($force) {
                     $pdo->prepare("DELETE FROM employees WHERE id = ?")->execute([$emp_id]);
+                    try {
+                        $pdo->prepare("DELETE FROM employee_payouts WHERE employee_id = ?")->execute([$emp_id]);
+                    } catch (Exception $pe) {}
+                    $msg = '✅ تم حذف الموظف نهائياً من قاعدة البيانات.';
                 } else {
-                    $pdo->prepare("UPDATE employees SET is_active = 0 WHERE id = ?")->execute([$emp_id]);
+                    $pdo->prepare("UPDATE employees SET is_active = ? WHERE id = ?")->execute([$status, $emp_id]);
+                    $msg = $status ? '✅ تم إعادة تفعيل الموظف بنجاح.' : '⏸️ تم إيقاف الموظف مؤقتاً.';
                 }
             } elseif (!empty($name)) {
                 if ($force) {
                     $pdo->prepare("DELETE FROM employees WHERE name = ?")->execute([$name]);
+                    $msg = '✅ تم حذف الموظف نهائياً من قاعدة البيانات.';
                 } else {
-                    $pdo->prepare("UPDATE employees SET is_active = 0 WHERE name = ?")->execute([$name]);
+                    $pdo->prepare("UPDATE employees SET is_active = ? WHERE name = ?")->execute([$status, $name]);
+                    $msg = $status ? '✅ تم إعادة تفعيل الموظف بنجاح.' : '⏸️ تم إيقاف الموظف مؤقتاً.';
                 }
             } else {
                 echo json_encode(['success' => false, 'error' => 'معرف الموظف أو اسمه مطلوب!']);
@@ -1594,7 +1602,7 @@ try {
 
             echo json_encode([
                 'success' => true,
-                'message' => '✅ تم تحديث حالة الموظف / حذفه بنجاح.'
+                'message' => $msg
             ], JSON_UNESCAPED_UNICODE);
             break;
 

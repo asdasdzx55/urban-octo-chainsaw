@@ -17,7 +17,7 @@ class PWAManager {
   }
 
   async checkVersionUpdate() {
-    const currentVersion = '2.5.2';
+    const currentVersion = '2.5.3';
     const lastVersion = localStorage.getItem('pos_installed_version');
     if (lastVersion !== currentVersion) {
       console.log(`Upgrading POS shell from ${lastVersion} to ${currentVersion}...`);
@@ -37,7 +37,7 @@ class PWAManager {
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       const doRegister = () => {
-        navigator.serviceWorker.register('./sw.js?v=2.5.2')
+        navigator.serviceWorker.register('./sw.js?v=2.5.3')
           .then((reg) => {
             console.log('POS Service Worker registered successfully:', reg.scope);
             // Check for updates immediately

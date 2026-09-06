@@ -214,4 +214,35 @@ h1, h2, h3, h4, h5, h6, p, span, div, td, th {
   transform: scale(0.95);
 }
 
+/* ==========================================================================
+   Mobile-Specific Polish & Safe Area Insets (v2.5.3)
+   ========================================================================== */
+
+/* Smooth momentum scrolling across all scrollable containers */
+.overflow-y-auto, .overflow-x-auto, [id^="view-"] {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Ensure mobile bottom navigation honors safe area on bezel-less phones (iPhone/Android) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .md\:hidden.fixed.bottom-0 {
+    padding-bottom: calc(0.25rem + env(safe-area-inset-bottom));
+    height: calc(4rem + env(safe-area-inset-bottom));
+  }
+  #mobile-cart-drawer > div {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Prevent accidental iOS double-tap zoom on quick action buttons */
+button, .mobile-tab-btn, .pay-method-btn, .product-card {
+  touch-action: manipulation;
+}
+
+/* Tap highlight styling for clean native app feel */
+button:active, .mobile-tab-btn:active {
+  opacity: 0.88;
+}
+
 

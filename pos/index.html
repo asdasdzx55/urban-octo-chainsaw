@@ -47,12 +47,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.5.0">
-  <link rel="stylesheet" href="css/receipt.css?v=2.5.0">
+  <link rel="stylesheet" href="css/pos.css?v=2.5.1">
+  <link rel="stylesheet" href="css/receipt.css?v=2.5.1">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.5.0';
+    window.APP_VERSION = '2.5.1';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -101,10 +101,7 @@
       if (window.app?.currentView !== 'expenses') {
         window.app?.switchView('expenses');
       }
-      window.expensesController?.setMode('suppliers_report');
-      setTimeout(() => {
-        window.expensesController?.openSupplierLedger(supplierId, supplierName);
-      }, 50);
+      window.expensesController?.openSupplierLedger(supplierId, supplierName);
     };
   </script>
 </head>
@@ -127,7 +124,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.0</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.1</span>
         </div>
       </div>
     </div>
@@ -226,7 +223,7 @@
             </div>
             <div>
               <h3 class="text-xs font-black text-gray-900 dark:text-white leading-tight">سوبر ماركت المنزل السوري</h3>
-              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.0</p>
+              <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold mt-0.5">نظام الكاشير ونقاط البيع v2.5.1</p>
             </div>
           </div>
           <button type="button" onclick="window.app.closeDrawerMenu()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
@@ -300,6 +297,16 @@
               <span>كشوفات حسابات الموردين</span>
             </div>
             <span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 font-bold">كشوفات</span>
+          </button>
+
+          <button onclick="window.app.openSupplierStatementView()" class="w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-700/70">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <i data-lucide="receipt-text" class="w-4 h-4"></i>
+              </span>
+              <span>كشف حساب تفصيلي لمورد</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 font-bold">كشف</span>
           </button>
 
           <button onclick="window.app.switchView('inventory')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-gray-700/70" data-view="inventory">
@@ -939,8 +946,8 @@
           </button>
         </div>
 
-        <!-- Mode Tabs: Purchase Invoice, General Expense, Supplier Payment, Invoices History, Suppliers Reports -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 p-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl w-full max-w-4xl">
+        <!-- Mode Tabs: Purchase Invoice, General Expense, Supplier Payment, Invoices History, Suppliers Reports, Supplier Ledger -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2 p-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl w-full max-w-5xl">
           <button onclick="window.expensesController.setMode('purchase')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition" data-mode="purchase">
             <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
             <span>مشتريات وتوريد</span>
@@ -960,6 +967,10 @@
           <button onclick="window.expensesController.setMode('suppliers_report')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="suppliers_report">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
             <span>كشوفات الموردين</span>
+          </button>
+          <button onclick="window.expensesController.setMode('supplier_ledger')" class="expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition" data-mode="supplier_ledger">
+            <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+            <span>كشف حساب مورد</span>
           </button>
         </div>
 
@@ -1391,6 +1402,118 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- ==================== CONTAINER 5: SUPPLIER LEDGER (INLINE VIEW) ==================== -->
+        <div id="supplier-ledger-container" class="hidden flex flex-col gap-4 max-w-5xl mx-auto w-full">
+          
+          <!-- Ledger Header -->
+          <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black shrink-0">
+                <i data-lucide="truck" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <span id="sup-ledger-name">المورد</span>
+                    <span class="px-2.5 py-0.5 rounded-lg text-xs bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">كشف حساب معتمد</span>
+                  </h3>
+                  <!-- In-view supplier switcher -->
+                  <select id="sup-ledger-switch-select" onchange="window.expensesController.onLedgerSupplierSwitched(this.value)" class="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 cursor-pointer" title="تبديل المورد">
+                    <!-- Dynamically populated with all suppliers -->
+                  </select>
+                </div>
+                <p id="sup-ledger-phone" class="text-xs text-gray-400 font-mono mt-0.5">هاتف المورد</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+              <button type="button" onclick="window.expensesController.exportSupplierLedgerExcel()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs" title="تصدير كشف الحساب إلى Excel">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>تصدير Excel</span>
+              </button>
+              <button type="button" onclick="window.expensesController.printSupplierLedger()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm" title="طباعة كشف الحساب">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>طباعة الكشف</span>
+              </button>
+              <button type="button" onclick="window.expensesController.closeSupplierLedger()" class="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="العودة لكشوفات الموردين">
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                <span>العودة لكشوفات الموردين</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Financial Breakdown Summary Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div class="bg-rose-50/80 dark:bg-rose-950/40 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 flex flex-col justify-between">
+              <span class="text-xs font-bold text-rose-700 dark:text-rose-300">الرصيد المستحق الحالي</span>
+              <p id="sup-ledger-current-balance" class="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 mt-1 font-mono">0.00 ج.م</p>
+            </div>
+            <div class="bg-indigo-50/70 dark:bg-indigo-950/30 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 flex flex-col justify-between">
+              <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">إجمالي التوريدات</span>
+              <p id="sup-ledger-total-purchases" class="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-1 font-mono">0.00 ج.م</p>
+            </div>
+            <div class="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 flex flex-col justify-between">
+              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">إجمالي المسدد له</span>
+              <p id="sup-ledger-total-payments" class="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">0.00 ج.م</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col justify-between">
+              <span class="text-xs font-bold text-gray-500">عدد فواتير التوريد</span>
+              <p id="sup-ledger-invoices-count" class="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-200 mt-1 font-mono">0 فواتير</p>
+            </div>
+          </div>
+
+          <!-- Filter Controls Bar (Type Filter + Date Range) -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+            <!-- Type Filter Pills -->
+            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <button type="button" onclick="window.expensesController.filterLedger('all')" id="sup-ledger-filter-all" class="sup-ledger-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs">الكل</button>
+              <button type="button" onclick="window.expensesController.filterLedger('purchases')" id="sup-ledger-filter-purchases" class="sup-ledger-tab-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">فواتير التوريد 📥</button>
+              <button type="button" onclick="window.expensesController.filterLedger('payments')" id="sup-ledger-filter-payments" class="sup-ledger-tab-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">سندات السداد 💵</button>
+              <button type="button" onclick="window.expensesController.filterLedger('unpaid')" id="sup-ledger-filter-unpaid" class="sup-ledger-tab-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">فواتير بها متبقي ⏳</button>
+            </div>
+
+            <!-- Date Range -->
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+              <span class="text-xs font-bold text-gray-500">الفترة:</span>
+              <input type="date" id="sup-ledger-from-date" class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+              <span class="text-gray-400">إلى</span>
+              <input type="date" id="sup-ledger-to-date" class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+              <button type="button" onclick="window.expensesController.applyLedgerDateFilter()" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition cursor-pointer">فلترة</button>
+              <button type="button" onclick="window.expensesController.clearLedgerDateFilter()" class="px-3 py-1.5 rounded-xl bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold text-xs cursor-pointer" title="إلغاء فلترة التاريخ">مسح</button>
+            </div>
+          </div>
+
+          <!-- Chronological Table of Transactions -->
+          <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-right border-collapse text-xs">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                    <th class="py-3 px-3.5">التاريخ والوقت</th>
+                    <th class="py-3 px-3.5">النوع</th>
+                    <th class="py-3 px-3.5">رقم المرجع</th>
+                    <th class="py-3 px-3.5">دائن (توريد +)</th>
+                    <th class="py-3 px-3.5">مدين (سداد -)</th>
+                    <th class="py-3 px-3.5">المتبقي</th>
+                    <th class="py-3 px-3.5">تفاصيل / ملاحظات</th>
+                    <th class="py-3 px-3.5 text-center">الأصناف</th>
+                  </tr>
+                </thead>
+                <tbody id="sup-ledger-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center pt-2">
+            <button type="button" onclick="window.expensesController.closeSupplierLedger()" class="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-bold transition flex items-center gap-2 cursor-pointer">
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              <span>العودة لكشوفات الموردين</span>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -3088,113 +3211,6 @@
     </div>
   </div>
 
-  <!-- ==================== SUPPLIER LEDGER (STATEMENT) MODAL ==================== -->
-  <div id="supplier-ledger-modal" onclick="if(event.target === this) window.expensesController.closeSupplierLedgerModal()" class="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
-    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-3xl w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95">
-      
-      <!-- Ledger Modal Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">
-            <i data-lucide="truck" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <span id="sup-ledger-name">المورد</span>
-                <span class="px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">كشف حساب معتمد</span>
-              </h3>
-              <!-- In-modal supplier switcher -->
-              <select id="sup-ledger-switch-select" onchange="window.expensesController.onLedgerSupplierSwitched(this.value)" class="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 cursor-pointer" title="تبديل المورد">
-                <!-- Dynamically populated with all suppliers -->
-              </select>
-            </div>
-            <p id="sup-ledger-phone" class="text-[11px] text-gray-400 font-mono mt-0.5">هاتف المورد</p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button onclick="window.expensesController.exportSupplierLedgerExcel()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm" title="تصدير كشف الحساب إلى Excel">
-            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-            <span>تصدير Excel</span>
-          </button>
-          <button onclick="window.expensesController.printSupplierLedger()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="طباعة كشف الحساب">
-            <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>طباعة الكشف</span>
-          </button>
-          <button onclick="window.expensesController.closeSupplierLedgerModal()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 cursor-pointer">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Financial Breakdown Summary Cards -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
-        <div class="bg-rose-50/80 dark:bg-rose-950/40 p-3 rounded-2xl border border-rose-200 dark:border-rose-900/60">
-          <span class="text-[10px] font-bold text-rose-700 dark:text-rose-300">الرصيد المستحق الحالي</span>
-          <p id="sup-ledger-current-balance" class="text-sm font-black text-rose-600 dark:text-rose-400 mt-0.5 font-mono">0.00 ج.م</p>
-        </div>
-        <div class="bg-indigo-50/70 dark:bg-indigo-950/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
-          <span class="text-[10px] text-indigo-600 dark:text-indigo-400">إجمالي التوريدات</span>
-          <p id="sup-ledger-total-purchases" class="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 font-mono">0.00 ج.م</p>
-        </div>
-        <div class="bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/40">
-          <span class="text-[10px] text-emerald-600 dark:text-emerald-400">إجمالي المسدد له</span>
-          <p id="sup-ledger-total-payments" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">0.00 ج.م</p>
-        </div>
-        <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
-          <span class="text-[10px] text-gray-400">عدد فواتير التوريد</span>
-          <p id="sup-ledger-invoices-count" class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5 font-mono">0 فواتير</p>
-        </div>
-      </div>
-
-      <!-- Filter Controls Bar (Type Filter + Date Range) -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-        <!-- Type Filter Pills -->
-        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          <button type="button" onclick="window.expensesController.filterLedger('all')" id="sup-ledger-filter-all" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs">الكل</button>
-          <button type="button" onclick="window.expensesController.filterLedger('purchases')" id="sup-ledger-filter-purchases" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">فواتير التوريد 📥</button>
-          <button type="button" onclick="window.expensesController.filterLedger('payments')" id="sup-ledger-filter-payments" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">سندات السداد 💵</button>
-          <button type="button" onclick="window.expensesController.filterLedger('unpaid')" id="sup-ledger-filter-unpaid" class="sup-ledger-tab-btn px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">فواتير بها متبقي ⏳</button>
-        </div>
-
-        <!-- Date Range -->
-        <div class="flex items-center gap-1.5 flex-wrap text-xs">
-          <span class="text-[11px] font-bold text-gray-500">الفترة:</span>
-          <input type="date" id="sup-ledger-from-date" class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-0.5 text-xs font-mono">
-          <span class="text-gray-400">إلى</span>
-          <input type="date" id="sup-ledger-to-date" class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-0.5 text-xs font-mono">
-          <button type="button" onclick="window.expensesController.applyLedgerDateFilter()" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition">فلترة</button>
-          <button type="button" onclick="window.expensesController.clearLedgerDateFilter()" class="px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold text-xs" title="إلغاء فلترة التاريخ">مسح</button>
-        </div>
-      </div>
-
-      <!-- Chronological Table of Transactions -->
-      <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700 mt-1">
-        <table class="w-full text-right border-collapse text-xs">
-          <thead>
-            <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
-              <th class="py-2.5 px-3">التاريخ والوقت</th>
-              <th class="py-2.5 px-3">النوع</th>
-              <th class="py-2.5 px-3">رقم المرجع</th>
-              <th class="py-2.5 px-3">دائن (توريد +)</th>
-              <th class="py-2.5 px-3">مدين (سداد -)</th>
-              <th class="py-2.5 px-3">المتبقي</th>
-              <th class="py-2.5 px-3">تفاصيل / ملاحظات</th>
-              <th class="py-2.5 px-3 text-center">الأصناف</th>
-            </tr>
-          </thead>
-          <tbody id="sup-ledger-table-body">
-            <!-- Populated dynamically -->
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-        <button type="button" onclick="window.expensesController.closeSupplierLedgerModal()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إغلاق</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Global Loading Modal -->
   <div id="global-loader" class="fixed inset-0 z-[999] bg-black/60 backdrop-blur-xs flex items-center justify-center hidden">
@@ -3208,21 +3224,21 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.5.0"></script>
-  <script src="js/api.js?v=2.5.0"></script>
-  <script src="js/sync-manager.js?v=2.5.0"></script>
-  <script src="js/pos-scanner.js?v=2.5.0"></script>
-  <script src="js/settings.js?v=2.5.0"></script>
-  <script src="js/cart.js?v=2.5.0"></script>
-  <script src="js/inventory.js?v=2.5.0"></script>
-  <script src="js/purchases.js?v=2.5.0"></script>
-  <script src="js/expenses.js?v=2.5.0"></script>
-  <script src="js/orders.js?v=2.5.0"></script>
-  <script src="js/delivery-settlement.js?v=2.5.0"></script>
-  <script src="js/returns.js?v=2.5.0"></script>
-  <script src="js/reports.js?v=2.5.0"></script>
-  <script src="js/employees.js?v=2.5.0"></script>
-  <script src="js/pwa.js?v=2.5.0"></script>
-  <script src="js/app.js?v=2.5.0"></script>
+  <script src="js/barcode-parser.js?v=2.5.1"></script>
+  <script src="js/api.js?v=2.5.1"></script>
+  <script src="js/sync-manager.js?v=2.5.1"></script>
+  <script src="js/pos-scanner.js?v=2.5.1"></script>
+  <script src="js/settings.js?v=2.5.1"></script>
+  <script src="js/cart.js?v=2.5.1"></script>
+  <script src="js/inventory.js?v=2.5.1"></script>
+  <script src="js/purchases.js?v=2.5.1"></script>
+  <script src="js/expenses.js?v=2.5.1"></script>
+  <script src="js/orders.js?v=2.5.1"></script>
+  <script src="js/delivery-settlement.js?v=2.5.1"></script>
+  <script src="js/returns.js?v=2.5.1"></script>
+  <script src="js/reports.js?v=2.5.1"></script>
+  <script src="js/employees.js?v=2.5.1"></script>
+  <script src="js/pwa.js?v=2.5.1"></script>
+  <script src="js/app.js?v=2.5.1"></script>
 </body>
 </html>

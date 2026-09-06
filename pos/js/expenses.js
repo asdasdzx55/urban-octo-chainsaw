@@ -36,6 +36,7 @@ class ExpensesController {
     const supForm = document.getElementById('expense-supplier-form');
     const historyBox = document.getElementById('purchases-history-container');
     const reportBox = document.getElementById('suppliers-report-container');
+    const ledgerBox = document.getElementById('supplier-ledger-container');
 
     document.querySelectorAll('.expense-mode-btn').forEach(btn => {
       if (btn.getAttribute('data-mode') === mode) {
@@ -50,6 +51,7 @@ class ExpensesController {
     supForm?.classList.add('hidden');
     historyBox?.classList.add('hidden');
     reportBox?.classList.add('hidden');
+    ledgerBox?.classList.add('hidden');
 
     if (mode === 'purchase') {
       purchForm?.classList.remove('hidden');
@@ -64,9 +66,17 @@ class ExpensesController {
     } else if (mode === 'suppliers_report') {
       reportBox?.classList.remove('hidden');
       this.loadSuppliersReport();
+    } else if (mode === 'supplier_ledger') {
+      ledgerBox?.classList.remove('hidden');
+      if (!this.currentSupplierLedger) {
+        this.openSupplierLedger();
+      }
     }
 
     if (window.lucide) window.lucide.createIcons();
+
+    const viewExp = document.getElementById('view-expenses');
+    if (viewExp) viewExp.scrollTop = 0;
   }
 
   renderExpenseCategoriesDropdown() {
@@ -408,6 +418,38 @@ class ExpensesController {
     this.activeSupplierName = supplierName;
     this.ledgerFilter = 'all';
 
+    // Switch view to expenses if needed
+    if (window.app && window.app.currentView !== 'expenses') {
+      window.app.switchView('expenses');
+    }
+
+    // Switch mode to supplier_ledger
+    this.currentMode = 'supplier_ledger';
+    const purchForm = document.getElementById('purchase-invoice-form');
+    const expForm = document.getElementById('expense-general-form');
+    const supForm = document.getElementById('expense-supplier-form');
+    const historyBox = document.getElementById('purchases-history-container');
+    const reportBox = document.getElementById('suppliers-report-container');
+    const ledgerBox = document.getElementById('supplier-ledger-container');
+
+    document.querySelectorAll('.expense-mode-btn').forEach(btn => {
+      if (btn.getAttribute('data-mode') === 'supplier_ledger') {
+        btn.className = 'expense-mode-btn py-2 px-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition';
+      } else {
+        btn.className = 'expense-mode-btn py-2 px-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1.5 transition';
+      }
+    });
+
+    purchForm?.classList.add('hidden');
+    expForm?.classList.add('hidden');
+    supForm?.classList.add('hidden');
+    historyBox?.classList.add('hidden');
+    reportBox?.classList.add('hidden');
+    ledgerBox?.classList.remove('hidden');
+
+    const viewExp = document.getElementById('view-expenses');
+    if (viewExp) viewExp.scrollTop = 0;
+
     try {
       window.app?.showLoading(true, 'جاري جلب كشف الحساب المالي للمورد...');
       const res = await window.api.getSupplierLedger(supplierId, supplierName, fromDate, toDate);
@@ -419,16 +461,16 @@ class ExpensesController {
 
       this.currentSupplierLedger = res;
 
-      const modal = document.getElementById('supplier-ledger-modal');
-      if (!modal) return;
-
       const sup = res.supplier || {};
       const summary = res.summary || {};
 
-      document.getElementById('sup-ledger-name').textContent = sup.name || supplierName;
-      document.getElementById('sup-ledger-phone').textContent = sup.phone ? `هاتف: ${sup.phone}` : 'بدون رقم هاتف';
+      const nameEl = document.getElementById('sup-ledger-name');
+      if (nameEl) nameEl.textContent = sup.name || supplierName;
+
+      const phoneEl = document.getElementById('sup-ledger-phone');
+      if (phoneEl) phoneEl.textContent = sup.phone ? `هاتف: ${sup.phone}` : 'بدون رقم هاتف';
       
-      // Populate inside-modal supplier switcher
+      // Populate supplier switcher inside ledger view
       const switchSelect = document.getElementById('sup-ledger-switch-select');
       if (switchSelect && allSuppliers.length > 0) {
         switchSelect.innerHTML = allSuppliers.map(s => `
@@ -445,19 +487,20 @@ class ExpensesController {
         balEl.className = 'text-sm font-black font-mono mt-0.5 ' + (curBal > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400');
       }
 
-      document.getElementById('sup-ledger-total-purchases').textContent = parseFloat(summary.total_purchases || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
-      document.getElementById('sup-ledger-total-payments').textContent = parseFloat(summary.total_payments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
-      document.getElementById('sup-ledger-invoices-count').textContent = (summary.purchases_count || 0) + ' فواتير';
+      const purchEl = document.getElementById('sup-ledger-total-purchases');
+      if (purchEl) purchEl.textContent = parseFloat(summary.total_purchases || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+
+      const payEl = document.getElementById('sup-ledger-total-payments');
+      if (payEl) payEl.textContent = parseFloat(summary.total_payments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+
+      const countEl = document.getElementById('sup-ledger-invoices-count');
+      if (countEl) countEl.textContent = (summary.purchases_count || 0) + ' فواتير';
 
       // Set input dates if returned
       const fromInput = document.getElementById('sup-ledger-from-date');
       const toInput = document.getElementById('sup-ledger-to-date');
       if (fromInput) fromInput.value = res.filter?.from_date || fromDate || '';
       if (toInput) toInput.value = res.filter?.to_date || toDate || '';
-
-      // Reveal modal first so user sees it immediately
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
 
       try {
         this.renderLedgerTable();
@@ -654,15 +697,11 @@ class ExpensesController {
   }
 
   closeSupplierLedgerModal() {
-    const modal = document.getElementById('supplier-ledger-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-    }
+    this.setMode('suppliers_report');
   }
 
   closeSupplierLedger() {
-    this.closeSupplierLedgerModal();
+    this.setMode('suppliers_report');
   }
 
   printSupplierLedger() {

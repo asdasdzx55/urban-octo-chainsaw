@@ -609,6 +609,12 @@ class App {
     this.closeDrawerMenu();
   }
 
+  openSupplierStatementView(supplierId = null) {
+    this.switchView('expenses');
+    window.expensesController?.openSupplierLedger(supplierId);
+    this.closeDrawerMenu();
+  }
+
   /* ==================== CHECKOUT & DELIVERY MODAL LOGIC ==================== */
   async openCheckoutModal() {
     if (window.cart.items.length === 0) {

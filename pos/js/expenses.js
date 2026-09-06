@@ -264,7 +264,7 @@ class ExpensesController {
             ${lastDate}
           </td>
           <td class="py-3 px-3 text-center">
-            <button type="button" onclick="window.expensesController.openSupplierLedger(${s.id}, '${s.name.replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
+            <button type="button" onclick="window.openSupplierStatement(${s.id})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
               <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
               <span>كشف حساب</span>
             </button>
@@ -380,8 +380,15 @@ class ExpensesController {
       }
     }
 
+    if (supplierId && !supplierName && allSuppliers.length > 0) {
+      const found = allSuppliers.find(s => s.id == supplierId);
+      if (found) supplierName = found.name;
+    }
+
     if (!supplierId && !supplierName) {
-      window.app?.showToast('لا يوجد موردون مسجلون في النظام حالياً لعرض كشف الحساب!', 'warning');
+      const msg = 'لا يوجد موردون مسجلون في النظام حالياً لعرض كشف الحساب!';
+      window.app?.showToast(msg, 'warning');
+      alert(msg);
       return;
     }
 

@@ -1073,7 +1073,15 @@ class App {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.app = new App();
-  window.app.init();
-});
+function initApp() {
+  if (!window.app) {
+    window.app = new App();
+    window.app.init();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

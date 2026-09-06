@@ -127,7 +127,7 @@ class EmployeesController {
           </div>
           <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">لا يوجد عمال مطابقين للبحث</h4>
           <p class="text-xs text-gray-400 mt-1">يمكنك إضافة عامل جديد بالضغط على زر "إضافة عامل جديد" بالأعلى</p>
-          <button onclick="window.employeesController.openAddModal()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 mx-auto shadow-sm">
+          <button onclick="window.openAddEmployeeModal()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 mx-auto shadow-sm">
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>إضافة عامل جديد</span>
           </button>
@@ -205,7 +205,7 @@ class EmployeesController {
 
           <!-- Bottom Action Buttons -->
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="window.employeesController.openPayoutModal(${emp.id}, 'سلفة')" class="py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition">
+            <button onclick="window.openSalaryPayoutModal(${emp.id}, 'سلفة')" class="py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition">
               <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
               <span>صرف سلفة</span>
             </button>

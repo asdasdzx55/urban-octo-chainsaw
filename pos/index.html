@@ -35,6 +35,9 @@
   <!-- Barcode Scanner & Generator Libraries -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  
+  <!-- Chart.js for Financial & Statistical Reports -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- PWA & Mobile Web App Meta -->
   <link rel="manifest" href="manifest.json">
@@ -1936,82 +1939,365 @@
 
     </section>
 
-    <!-- ==================== VIEW 6: SHIFT REPORTS ==================== -->
+    <!-- ==================== VIEW 6: COMPREHENSIVE FINANCIAL & STATISTICAL REPORTS ==================== -->
     <section id="view-reports" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
       
-      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
         
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <!-- Header & Primary Global Actions -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
           <div>
-            <h2 class="text-base font-bold text-gray-900 dark:text-white">تقرير المبيعات وإقفال الوردية</h2>
-            <p class="text-xs text-gray-500">ملخص مبيعات الكاش وإنستاباي وعدد الفواتير</p>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-1 border border-indigo-200 dark:border-indigo-800">
+              <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
+              منظومة التقارير المالية والتحليلية الشاملة
+            </div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 dark:text-white">تحليل صافي الأرباح، المصروفات، المشتريات، والأكثر مبيعاً</h2>
+            <p class="text-xs text-gray-500 mt-0.5">متابعة دقيقة للأداء المالي، الرسوم البيانية، تكلفة البضاعة المباعة، وتوزيع النفقات</p>
           </div>
 
-          <div class="flex items-center gap-2">
-            <!-- Period Tabs -->
-            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
-              <button onclick="window.reportsController.loadReports('today')" class="report-period-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white" data-period="today">اليوم</button>
-              <button onclick="window.reportsController.loadReports('week')" class="report-period-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300" data-period="week">الأسبوع</button>
-              <button onclick="window.reportsController.loadReports('month')" class="report-period-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300" data-period="month">الشهر</button>
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Period Quick Buttons -->
+            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-2xl shrink-0 overflow-x-auto no-scrollbar">
+              <button onclick="window.reportsController.loadReports('today')" class="report-period-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs transition" data-period="today">اليوم</button>
+              <button onclick="window.reportsController.loadReports('week')" class="report-period-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" data-period="week">الأسبوع</button>
+              <button onclick="window.reportsController.loadReports('month')" class="report-period-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" data-period="month">الشهر</button>
+              <button onclick="window.reportsController.loadReports('year')" class="report-period-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" data-period="year">العام</button>
+              <button onclick="window.reportsController.loadReports('all')" class="report-period-btn px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" data-period="all">الكل</button>
             </div>
 
             <!-- Print Z-Report -->
-            <button id="btn-print-zreport" class="px-3.5 py-2 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+            <button id="btn-print-zreport" class="px-3.5 py-2 rounded-2xl bg-gray-900 hover:bg-black dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer shrink-0">
               <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-              طباعة Z-Report
+              <span>طباعة Z-Report</span>
             </button>
           </div>
         </div>
 
-        <!-- 6 Symmetrical KPI Summary Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          
-          <div class="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">إجمالي المبيعات</span>
-            <div id="rep-total-sales" class="text-sm sm:text-lg font-black text-indigo-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-800 flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">مبيعات الكاش</span>
-            <div id="rep-cash-sales" class="text-sm sm:text-lg font-black text-emerald-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-100 dark:border-purple-800 flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-purple-600 dark:text-purple-400">مبيعات إنستاباي</span>
-            <div id="rep-instapay-sales" class="text-sm sm:text-lg font-black text-purple-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800 flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-rose-600 dark:text-rose-400">فودافون كاش</span>
-            <div id="rep-vodafone-sales" class="text-sm sm:text-lg font-black text-rose-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-800 flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400">عدد الفواتير</span>
-            <div id="rep-invoices-count" class="text-sm sm:text-lg font-black text-amber-900 dark:text-white mt-1 font-mono">0</div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800 flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400">الأصناف المباعة</span>
-            <div id="rep-items-count" class="text-sm sm:text-lg font-black text-blue-900 dark:text-white mt-1 font-mono">0 صنف</div>
-          </div>
-
-        </div>
-
-        <!-- Recent Transactions Table Card -->
-        <div class="flex flex-col gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="history" class="w-4 h-4 text-indigo-600"></i>
-              <span>سجل آخر الفواتير والمعاملات</span>
-            </h3>
-            <button onclick="window.reportsController.loadReports()" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1">
-              <i data-lucide="rotate-cw" class="w-3 h-3"></i>
-              تحديث
+        <!-- Custom Date Range Toolbar -->
+        <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-2xl border border-gray-200/80 dark:border-gray-700/80 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+            <span class="font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-500"></i>
+              <span>تحديد فترة مخصصة:</span>
+            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-400 font-medium text-[11px]">من:</span>
+              <input type="date" id="rep-filter-from-date" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-2.5 py-1 text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-400 font-medium text-[11px]">إلى:</span>
+              <input type="date" id="rep-filter-to-date" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-2.5 py-1 text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <button type="button" onclick="window.reportsController.applyCustomDateFilter()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 transition shadow-2xs cursor-pointer">
+              <i data-lucide="filter" class="w-3 h-3"></i>
+              <span>تطبيق الفترة</span>
             </button>
           </div>
 
-          <div id="rep-recent-sales-list" class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+          <div class="text-[11px] text-gray-500 font-mono font-bold" id="rep-active-period-label">
+            الفترة الحالية: اليوم
+          </div>
+        </div>
+
+        <!-- Reports Sub-Tabs Switcher -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 border-b border-gray-100 dark:border-gray-700">
+          <button type="button" onclick="window.reportsController.switchSubTab('profit')" id="rep-tab-btn-profit" class="rep-subtab-btn px-4 py-2.5 rounded-2xl text-xs font-black bg-indigo-600 text-white shadow-xs transition flex items-center gap-2 shrink-0 cursor-pointer">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <span>صافي الأرباح والمبيعات</span>
+          </button>
+          <button type="button" onclick="window.reportsController.switchSubTab('expenses')" id="rep-tab-btn-expenses" class="rep-subtab-btn px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition flex items-center gap-2 shrink-0 cursor-pointer">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-rose-500"></i>
+            <span>المصروفات والرسم البياني</span>
+          </button>
+          <button type="button" onclick="window.reportsController.switchSubTab('purchases')" id="rep-tab-btn-purchases" class="rep-subtab-btn px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition flex items-center gap-2 shrink-0 cursor-pointer">
+            <i data-lucide="truck" class="w-4 h-4 text-amber-500"></i>
+            <span>تقرير المشتريات ككل</span>
+          </button>
+          <button type="button" onclick="window.reportsController.switchSubTab('top_selling')" id="rep-tab-btn-top_selling" class="rep-subtab-btn px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition flex items-center gap-2 shrink-0 cursor-pointer">
+            <i data-lucide="award" class="w-4 h-4 text-emerald-500"></i>
+            <span>الأكثر مبيعاً من كل فئة</span>
+          </button>
+        </div>
+
+        <!-- ==================== SUB-TAB 1: NET PROFIT & SALES ==================== -->
+        <div id="rep-subtab-content-profit" class="flex flex-col gap-5">
+          <!-- 6 Financial Summary Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">إجمالي المبيعات</span>
+              <div id="rep-total-sales" class="text-sm sm:text-base font-black text-indigo-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-gray-400 mt-0.5" id="rep-orders-count-sub">0 فاتورة</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-slate-600 dark:text-slate-400">تكلفة البضاعة (COGS)</span>
+              <div id="rep-total-cogs" class="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-gray-400 mt-0.5">تكلفة المشتريات المباعة</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400">مجمل الربح التجاري</span>
+              <div id="rep-gross-profit" class="text-sm sm:text-base font-black text-blue-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-blue-500 font-bold mt-0.5" id="rep-gross-margin">هامش: 0%</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-rose-600 dark:text-rose-400">المصروفات والرواتب</span>
+              <div id="rep-total-expenses" class="text-sm sm:text-base font-black text-rose-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-rose-500 font-bold mt-0.5">نفقات تشغيلية وسداد</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500/40 flex flex-col justify-between shadow-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-black text-emerald-700 dark:text-emerald-300">صافي الأرباح الفعلي</span>
+                <span id="rep-net-profit-badge" class="px-1.5 py-0.2 rounded-md bg-emerald-600 text-white text-[9px] font-bold font-mono">صافي</span>
+              </div>
+              <div id="rep-net-profit" class="text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-300 mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5" id="rep-net-margin">صافي الهامش: 0%</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400">نقدية الكاش بالدرج</span>
+              <div id="rep-cash-in-drawer" class="text-sm sm:text-base font-black text-amber-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-gray-400 mt-0.5">كاش المبيعات - نثريات الصرف</span>
+            </div>
+          </div>
+
+          <!-- Profit Comparison Chart Card -->
+          <div class="bg-white dark:bg-gray-800/80 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i>
+                <span>مخطط المقارنة المالية: المبيعات vs التكلفة vs المصروفات vs صافي الربح</span>
+              </h3>
+              <span class="text-[11px] text-gray-400 font-mono">Chart.js Live</span>
+            </div>
+            <div class="h-64 sm:h-72 w-full relative">
+              <canvas id="profit-comparison-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Sales By Payment Method Pills -->
+          <div class="bg-gray-50 dark:bg-gray-900/30 p-3.5 rounded-2xl border border-gray-200/80 dark:border-gray-700 flex flex-col gap-2">
+            <span class="text-xs font-bold text-gray-700 dark:text-gray-300">توزيع المبيعات حسب طرق التحصيل:</span>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="rep-payment-methods-grid">
+              <div class="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col">
+                <span class="text-[10px] text-emerald-600 font-bold">💵 كاش (نقدي)</span>
+                <span id="rep-pm-cash" class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono mt-0.5">0.00 ج.م</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col">
+                <span class="text-[10px] text-purple-600 font-bold">⚡ انستا باي (InstaPay)</span>
+                <span id="rep-pm-instapay" class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono mt-0.5">0.00 ج.م</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col">
+                <span class="text-[10px] text-rose-600 font-bold">📱 فودافون كاش</span>
+                <span id="rep-pm-vodafone" class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono mt-0.5">0.00 ج.م</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col">
+                <span class="text-[10px] text-blue-600 font-bold">💳 فيزا وبطاقات</span>
+                <span id="rep-pm-card" class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono mt-0.5">0.00 ج.م</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col">
+                <span class="text-[10px] text-amber-600 font-bold">⏳ آجل ودليفري</span>
+                <span id="rep-pm-credit" class="text-xs sm:text-sm font-black text-gray-900 dark:text-white font-mono mt-0.5">0.00 ج.م</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Sales Table -->
+          <div class="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <i data-lucide="history" class="w-4 h-4 text-indigo-600"></i>
+                <span>سجل المبيعات الأخيرة خلال الفترة</span>
+              </h3>
+              <button onclick="window.reportsController.loadReports()" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1">
+                <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                <span>تحديث</span>
+              </button>
+            </div>
+            <div id="rep-recent-sales-list" class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SUB-TAB 2: EXPENSES & CHARTS ==================== -->
+        <div id="rep-subtab-content-expenses" class="hidden flex flex-col gap-5">
+          <!-- Expense Type & Notes Filter Bar -->
+          <div class="bg-rose-50/50 dark:bg-rose-950/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="flex-1 flex flex-col sm:flex-row items-center gap-2">
+              <div class="relative w-full sm:w-64">
+                <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="rep-expense-search-input" oninput="window.reportsController.onExpenseFilterChanged()" placeholder="اكتب نوع المصروف (كهرباء، إيجار، بضاعة)..." class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs font-bold focus:ring-2 focus:ring-rose-500">
+              </div>
+
+              <select id="rep-expense-category-filter" onchange="window.reportsController.onExpenseFilterChanged()" class="w-full sm:w-52 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-rose-500">
+                <option value="">-- جميع بنود المصروفات --</option>
+                <option value="كهرباء ومياه">كهرباء ومياه</option>
+                <option value="إيجار">إيجار</option>
+                <option value="رواتب وعمالة">رواتب وعمالة</option>
+                <option value="سلف عمال">سلف عمال</option>
+                <option value="صيانة ومعدات">صيانة ومعدات</option>
+                <option value="أكياس ومطبوعات">أكياس ومطبوعات</option>
+                <option value="وجبات وبوفيه">وجبات وبوفيه</option>
+                <option value="نقل وشحن">نقل وشحن</option>
+                <option value="سداد موردين">سداد موردين</option>
+                <option value="مسحوبات الإدارة">مسحوبات الإدارة</option>
+                <option value="نثريات">نثريات عامة</option>
+              </select>
+
+              <button type="button" onclick="window.reportsController.resetExpenseFilters()" class="px-3 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold transition cursor-pointer shrink-0">
+                إلغاء الفلترة ✕
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs text-gray-500 font-bold">إجمالي النوع المختار:</span>
+              <span id="rep-filtered-expenses-total" class="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-black font-mono text-sm shadow-xs">0.00 ج.م</span>
+            </div>
+          </div>
+
+          <!-- Expenses Metric Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-rose-600 dark:text-rose-400">إجمالي المصروفات في الفترة</span>
+                <div id="rep-exp-all-total" class="text-lg sm:text-xl font-black text-rose-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-bold">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-100 dark:border-purple-800 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-purple-600 dark:text-purple-400">عدد إيصالات الصرف</span>
+                <div id="rep-exp-count" class="text-lg sm:text-xl font-black text-purple-900 dark:text-white mt-1 font-mono">0 إيصال</div>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+                <i data-lucide="hash" class="w-5 h-5"></i>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-800 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-amber-600 dark:text-amber-400">متوسط الإيصال الواحد</span>
+                <div id="rep-exp-avg" class="text-lg sm:text-xl font-black text-amber-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                <i data-lucide="calculator" class="w-5 h-5"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expenses Charts (Donut & Timeline) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Donut Chart: Expenses by Category -->
+            <div class="bg-white dark:bg-gray-800/80 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <i data-lucide="pie-chart" class="w-4 h-4 text-rose-500"></i>
+                  <span>رسم بياني: توزيع المصروفات حسب البند والنوع</span>
+                </h4>
+              </div>
+              <div class="h-60 w-full relative flex items-center justify-center">
+                <canvas id="expenses-donut-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Bar Chart: Expenses over Days -->
+            <div class="bg-white dark:bg-gray-800/80 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <i data-lucide="bar-chart" class="w-4 h-4 text-purple-500"></i>
+                  <span>رسم بياني: حركة المصروفات اليومية في الفترة</span>
+                </h4>
+              </div>
+              <div class="h-60 w-full relative">
+                <canvas id="expenses-timeline-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expenses Detailed Table -->
+          <div class="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+              <i data-lucide="list" class="w-4 h-4 text-rose-600"></i>
+              <span>قائمة المصروفات المطابقة للبحث والفلترة</span>
+            </h4>
+            <div id="rep-expenses-table-container" class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SUB-TAB 3: PURCHASES REPORT ==================== -->
+        <div id="rep-subtab-content-purchases" class="hidden flex flex-col gap-5">
+          <!-- Purchases KPI Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-100 dark:border-amber-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400">إجمالي المشتريات والتوريدات</span>
+              <div id="rep-purch-total" class="text-base sm:text-lg font-black text-amber-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-gray-400 mt-0.5" id="rep-purch-invoices-sub">0 فاتورة توريد</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">المسدد للموردين (نقداً / تحويل)</span>
+              <div id="rep-purch-paid" class="text-base sm:text-lg font-black text-emerald-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-emerald-600 mt-0.5">مدفوعات من الخزينة</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-rose-600 dark:text-rose-400">المتبقي والآجل على المحل</span>
+              <div id="rep-purch-debt" class="text-base sm:text-lg font-black text-rose-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
+              <span class="text-[10px] text-rose-500 font-bold mt-0.5">مستحق للموردين</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">نسبة السداد الكلية</span>
+              <div id="rep-purch-paid-ratio" class="text-base sm:text-lg font-black text-indigo-900 dark:text-white mt-1 font-mono">0%</div>
+              <span class="text-[10px] text-gray-400 mt-0.5">من إجمالي فواتير الفترة</span>
+            </div>
+          </div>
+
+          <!-- Purchases Filter & Search -->
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1 max-w-sm">
+              <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <input type="text" id="rep-purch-search-input" oninput="window.reportsController.filterPurchasesTable()" placeholder="ابحث باسم المورد، أو رقم الفاتورة..." class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500">
+            </div>
+          </div>
+
+          <!-- Purchases List Table -->
+          <div class="flex flex-col gap-2">
+            <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+              <i data-lucide="truck" class="w-4 h-4 text-amber-600"></i>
+              <span>جدول فواتير المشتريات الواردة خلال الفترة</span>
+            </h4>
+            <div id="rep-purchases-table-container" class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SUB-TAB 4: TOP SELLING BY CATEGORY ==================== -->
+        <div id="rep-subtab-content-top_selling" class="hidden flex flex-col gap-5">
+          <div class="bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-transparent p-4 rounded-2xl border border-emerald-200/60 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="award" class="w-5 h-5 text-emerald-600"></i>
+                <span>تقرير أفضل المنتجات مبيعاً من كل قسم وفئة</span>
+              </h3>
+              <p class="text-xs text-gray-500 mt-0.5">تصنيف شامل للمبيعات وفق فئات السوبرماركت مع ترتيب الأصناف الأعلى طلباً وإيراداً</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="rep-top-selling-search" oninput="window.reportsController.filterTopSellingDisplay()" placeholder="ابحث باسم الصنف أو الفئة..." class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-bold focus:ring-2 focus:ring-emerald-500">
+            </div>
+          </div>
+
+          <!-- Categories Container (Grid or Accordion of Categories) -->
+          <div id="rep-top-selling-container" class="flex flex-col gap-4">
             <!-- Rendered dynamically -->
           </div>
         </div>

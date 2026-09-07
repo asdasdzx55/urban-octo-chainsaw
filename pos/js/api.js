@@ -169,8 +169,11 @@ class SyrianHomeAPI {
   /**
    * 9. Get POS Shift / Financial Reports
    */
-  async getPosReports(period = 'today') {
-    return await this.get('get_pos_reports', { period: period });
+  async getPosReports(params = 'today') {
+    if (typeof params === 'string') {
+      return await this.get('get_pos_reports', { period: params });
+    }
+    return await this.get('get_pos_reports', params || { period: 'today' });
   }
 
   /**

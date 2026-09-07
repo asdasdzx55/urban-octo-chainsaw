@@ -2143,17 +2143,54 @@ try {
             break;
 
         // ============================================================
-        // 8. تقارير الكاشير والشيفت المالي اللحظي (POS Reports & Shift Summary)
+        // 8. تقارير الكاشير الشاملة والأرباح والمصروفات (Comprehensive POS Reports)
         // ============================================================
         case 'get_pos_reports':
+            $period = trim($_GET['period'] ?? $_POST['period'] ?? 'today');
+            $from_date = trim($_GET['from_date'] ?? $_POST['from_date'] ?? '');
+            $to_date = trim($_GET['to_date'] ?? $_POST['to_date'] ?? '');
+            $expense_category_filter = trim($_GET['expense_category'] ?? $_POST['expense_category'] ?? '');
+            $expense_search_filter = trim($_GET['expense_search'] ?? $_POST['expense_search'] ?? '');
+
             $today = date('Y-m-d');
-            
-            // إجمالي المبيعات اليوم
-            $sales_stmt = $pdo->prepare("SELECT total_price, payment_method, discount_amount, shipping_cost, cashier_name, created_at FROM orders WHERE created_at >= ? AND status != 'ملغي'");
-            $sales_stmt->execute(["{$today} 00:00:00"]);
-            $sales_today = $sales_stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+            $start_datetime = "{$today} 00:00:00";
+            $end_datetime = "{$today} 23:59:59";
+
+            if ($period === 'week') {
+                $start_datetime = date('Y-m-d 00:00:00', strtotime('-6 days'));
+                $end_datetime = date('Y-m-d 23:59:59');
+            } elseif ($period === 'month') {
+                $start_datetime = date('Y-m-01 00:00:00');
+                $end_datetime = date('Y-m-d 23:59:59');
+            } elseif ($period === 'year') {
+                $start_datetime = date('Y-01-01 00:00:00');
+                $end_datetime = date('Y-m-d 23:59:59');
+            } elseif ($period === 'all') {
+                $start_datetime = '2020-01-01 00:00:00';
+                $end_datetime = date('Y-m-d 23:59:59', strtotime('+1 day'));
+            } elseif ($period === 'custom' || (!empty($from_date) && !empty($to_date))) {
+                $start_datetime = (!empty($from_date) ? $from_date : $today) . ' 00:00:00';
+                $end_datetime = (!empty($to_date) ? $to_date : $today) . ' 23:59:59';
+            }
+
+            // 1. فهرس المنتجات لحساب التكلفة والفئات بدقة
+            $prods_cache = [];
+            try {
+                $all_prods = $pdo->query("SELECT id, name, category, cost, price, barcode FROM products")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($all_prods as $p) {
+                    $prods_cache[$p['id']] = $p;
+                    if (!empty($p['barcode'])) $prods_cache['bc_' . $p['barcode']] = $p;
+                }
+            } catch (Exception $e) {}
+
+            // 2. المبيعات وحساب تكلفة البضاعة المباعة (COGS) والأكثر مبيعاً
+            $sales_stmt = $pdo->prepare("SELECT id, invoice_barcode, total_price, payment_method, discount_amount, shipping_cost, cashier_name, created_at, items_json, customer_name FROM orders WHERE created_at >= ? AND created_at <= ? AND status != 'ملغي' ORDER BY id DESC");
+            $sales_stmt->execute([$start_datetime, $end_datetime]);
+            $orders_list = $sales_stmt->fetchAll(PDO::FETCH_ASSOC);
+
             $total_sales_amount = 0;
+            $total_cogs_amount = 0;
+            $total_items_sold = 0;
             $sales_by_method = [
                 'كاش' => 0,
                 'فودافون كاش' => 0,
@@ -2161,12 +2198,14 @@ try {
                 'فيزا' => 0,
                 'آجل' => 0
             ];
-            
-            foreach ($sales_today as $s) {
-                $amt = (float)$s['total_price'];
+            $product_sales_agg = [];
+            $sales_by_date = [];
+
+            foreach ($orders_list as $ord) {
+                $amt = (float)$ord['total_price'];
                 $total_sales_amount += $amt;
-                $pm = $s['payment_method'] ?? 'كاش';
-                
+                $pm = $ord['payment_method'] ?? 'كاش';
+
                 if (mb_strpos($pm, 'فودافون') !== false || mb_strpos($pm, 'محفظة') !== false) {
                     $sales_by_method['فودافون كاش'] += $amt;
                 } elseif (mb_strpos($pm, 'انستا') !== false) {
@@ -2178,23 +2217,127 @@ try {
                 } else {
                     $sales_by_method['كاش'] += $amt;
                 }
+
+                $ord_date = substr($ord['created_at'] ?? $today, 0, 10);
+                $sales_by_date[$ord_date] = ($sales_by_date[$ord_date] ?? 0) + $amt;
+
+                $items = json_decode($ord['items_json'] ?? '[]', true) ?: [];
+                foreach ($items as $it) {
+                    $p_id = (int)($it['product_id'] ?? 0);
+                    $p_bc = trim($it['barcode'] ?? '');
+                    $p_name = trim($it['name'] ?? 'منتج');
+                    $qty = (float)($it['qty'] ?? 1);
+                    $price = (float)($it['price'] ?? 0);
+                    $line_rev = $qty * $price;
+                    $total_items_sold += $qty;
+
+                    // تكلفة الوحدة
+                    $unit_cost = (float)($it['cost'] ?? 0);
+                    if ($unit_cost <= 0 && $p_id > 0 && isset($prods_cache[$p_id])) {
+                        $unit_cost = (float)($prods_cache[$p_id]['cost'] ?? 0);
+                    } elseif ($unit_cost <= 0 && !empty($p_bc) && isset($prods_cache['bc_' . $p_bc])) {
+                        $unit_cost = (float)($prods_cache['bc_' . $p_bc]['cost'] ?? 0);
+                    }
+                    $total_cogs_amount += ($unit_cost * $qty);
+
+                    // فئة المنتج
+                    $cat = 'عام';
+                    if ($p_id > 0 && isset($prods_cache[$p_id])) {
+                        $cat = trim($prods_cache[$p_id]['category'] ?: 'عام');
+                    } elseif (!empty($p_bc) && isset($prods_cache['bc_' . $p_bc])) {
+                        $cat = trim($prods_cache['bc_' . $p_bc]['category'] ?: 'عام');
+                    }
+
+                    $prod_key = $p_id > 0 ? "id_{$p_id}" : (!empty($p_bc) ? "bc_{$p_bc}" : "name_" . md5($p_name));
+                    if (!isset($product_sales_agg[$prod_key])) {
+                        $product_sales_agg[$prod_key] = [
+                            'product_id' => $p_id,
+                            'name' => $p_name,
+                            'category' => $cat,
+                            'barcode' => $p_bc,
+                            'unit_price' => $price,
+                            'total_qty' => 0,
+                            'total_revenue' => 0
+                        ];
+                    }
+                    $product_sales_agg[$prod_key]['total_qty'] += $qty;
+                    $product_sales_agg[$prod_key]['total_revenue'] += $line_rev;
+                }
             }
-            
-            // المصروفات اليومية
-            $exp_stmt = $pdo->prepare("SELECT id, category, amount, note, date, partner_name, payment_method FROM expenses WHERE date >= ? OR created_at >= ?");
-            $exp_stmt->execute(["{$today} 00:00:00", "{$today} 00:00:00"]);
-            $expenses_today = $exp_stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
+            // تجميع وتصنيف الأكثر مبيعاً حسب كل فئة
+            $by_category = [];
+            foreach ($product_sales_agg as $item) {
+                $cat = $item['category'] ?: 'عام';
+                if (!isset($by_category[$cat])) {
+                    $by_category[$cat] = [
+                        'category_name' => $cat,
+                        'total_category_revenue' => 0,
+                        'total_category_qty' => 0,
+                        'products' => []
+                    ];
+                }
+                $by_category[$cat]['total_category_revenue'] += $item['total_revenue'];
+                $by_category[$cat]['total_category_qty'] += $item['total_qty'];
+                $by_category[$cat]['products'][] = $item;
+            }
+
+            foreach ($by_category as &$cat_group) {
+                usort($cat_group['products'], function($a, $b) {
+                    return ($b['total_qty'] <=> $a['total_qty']);
+                });
+                $cat_group['products'] = array_slice($cat_group['products'], 0, 15);
+            }
+            unset($cat_group);
+
+            uasort($by_category, function($a, $b) {
+                return ($b['total_category_revenue'] <=> $a['total_category_revenue']);
+            });
+
+            // 3. المصروفات والرواتب
+            $exp_stmt = $pdo->prepare("SELECT id, category, amount, note, date, supplier_id, partner_name, payment_method, created_at FROM expenses WHERE ((date >= ? AND date <= ?) OR (created_at >= ? AND created_at <= ?)) ORDER BY date DESC, id DESC");
+            $exp_stmt->execute([$start_datetime, $end_datetime, $start_datetime, $end_datetime]);
+            $all_expenses = $exp_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // إضافة صرف الرواتب والسلف
+            try {
+                $sal_stmt = $pdo->prepare("SELECT id, employee_name, payout_type, amount, payment_method, note, payout_date FROM salary_payouts WHERE payout_date >= ? AND payout_date <= ? ORDER BY id DESC");
+                $sal_stmt->execute([substr($start_datetime, 0, 10), substr($end_datetime, 0, 10)]);
+                $salary_payouts = $sal_stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($salary_payouts as $sp) {
+                    $all_expenses[] = [
+                        'id' => 'sal_' . $sp['id'],
+                        'category' => ($sp['payout_type'] === 'advance' ? 'سلف عمال' : 'رواتب وعمالة'),
+                        'amount' => (float)$sp['amount'],
+                        'note' => "[صرف {$sp['employee_name']}] " . ($sp['note'] ?? ''),
+                        'date' => $sp['payout_date'] . ' 12:00:00',
+                        'payment_method' => $sp['payment_method'] ?? 'كاش',
+                        'supplier_id' => null,
+                        'partner_name' => null
+                    ];
+                }
+            } catch (Exception $e) {}
+
+            $expenses_by_category = [];
+            $expenses_by_date = [];
+            $total_all_expenses = 0;
             $total_general_expenses = 0;
             $total_supplier_payouts = 0;
             $total_partner_withdrawals = 0;
             $cash_outflows = 0;
-            
-            foreach ($expenses_today as $exp) {
+            $filtered_expenses = [];
+
+            foreach ($all_expenses as $exp) {
                 $amt = (float)$exp['amount'];
-                $cat = $exp['category'] ?? '';
+                $cat = trim($exp['category'] ?: 'نثريات');
+                $note = trim($exp['note'] ?? '');
+                $exp_date = substr($exp['date'] ?? $exp['created_at'] ?? $today, 0, 10);
                 $is_cash = empty($exp['payment_method']) || $exp['payment_method'] === 'كاش';
-                
+
+                $total_all_expenses += $amt;
+                $expenses_by_category[$cat] = ($expenses_by_category[$cat] ?? 0) + $amt;
+                $expenses_by_date[$exp_date] = ($expenses_by_date[$exp_date] ?? 0) + $amt;
+
                 if ($cat === 'سداد موردين') {
                     $total_supplier_payouts += $amt;
                 } elseif ($cat === 'مسحوبات الإدارة') {
@@ -2202,29 +2345,97 @@ try {
                 } else {
                     $total_general_expenses += $amt;
                 }
-                
+
                 if ($is_cash) {
                     $cash_outflows += $amt;
                 }
+
+                // الفلترة بنوع محدد أو نص بحث
+                $matches_cat = true;
+                if (!empty($expense_category_filter) && $expense_category_filter !== 'all') {
+                    $matches_cat = (mb_stripos($cat, $expense_category_filter) !== false);
+                }
+                $matches_search = true;
+                if (!empty($expense_search_filter)) {
+                    $matches_search = (mb_stripos($cat, $expense_search_filter) !== false || mb_stripos($note, $expense_search_filter) !== false);
+                }
+
+                if ($matches_cat && $matches_search) {
+                    $filtered_expenses[] = $exp;
+                }
             }
-            
-            // السيولة النقدية الفعلية في الدرج (Cash in Drawer)
+
+            // 4. تقرير المشتريات ككل
+            $purchases_list = [];
+            $total_purchases_amount = 0;
+            $total_purchases_paid = 0;
+            $total_purchases_debt = 0;
+            try {
+                $purch_stmt = $pdo->prepare("SELECT * FROM purchases WHERE (invoice_date >= ? AND invoice_date <= ?) OR (created_at >= ? AND created_at <= ?) ORDER BY id DESC");
+                $purch_stmt->execute([$start_datetime, $end_datetime, $start_datetime, $end_datetime]);
+                $purchases_list = $purch_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($purchases_list as $p) {
+                    $tot = (float)($p['total_amount'] ?? 0);
+                    $pd = (float)($p['paid_amount'] ?? 0);
+                    $rem = $tot - $pd;
+                    $total_purchases_amount += $tot;
+                    $total_purchases_paid += $pd;
+                    if ($rem > 0) $total_purchases_debt += $rem;
+                }
+            } catch (Exception $e) {}
+
+            // 5. حسابات الأرباح الصافية
+            $gross_profit = $total_sales_amount - $total_cogs_amount;
+            $net_profit = $gross_profit - $total_all_expenses;
+            $gross_margin = $total_sales_amount > 0 ? round(($gross_profit / $total_sales_amount) * 100, 1) : 0;
+            $net_margin = $total_sales_amount > 0 ? round(($net_profit / $total_sales_amount) * 100, 1) : 0;
             $net_cash_in_drawer = max(0, $sales_by_method['كاش'] - $cash_outflows);
-            
+
             echo json_encode([
                 'success' => true,
                 'server_time' => date('Y-m-d H:i:s'),
-                'today_date' => $today,
-                'orders_count' => count($sales_today),
-                'total_sales' => $total_sales_amount,
-                'sales_by_method' => $sales_by_method,
-                'total_general_expenses' => $total_general_expenses,
-                'total_supplier_payouts' => $total_supplier_payouts,
-                'total_partner_withdrawals' => $total_partner_withdrawals,
-                'total_all_expenses' => ($total_general_expenses + $total_supplier_payouts + $total_partner_withdrawals),
-                'net_cash_in_drawer' => $net_cash_in_drawer,
-                'recent_sales' => array_slice(array_reverse($sales_today), 0, 8),
-                'recent_expenses' => array_slice(array_reverse($expenses_today), 0, 8)
+                'period_info' => [
+                    'period' => $period,
+                    'start_datetime' => $start_datetime,
+                    'end_datetime' => $end_datetime,
+                    'from_date' => substr($start_datetime, 0, 10),
+                    'to_date' => substr($end_datetime, 0, 10)
+                ],
+                'summary' => [
+                    'total_sales' => round($total_sales_amount, 2),
+                    'total_cogs' => round($total_cogs_amount, 2),
+                    'gross_profit' => round($gross_profit, 2),
+                    'gross_margin' => $gross_margin,
+                    'total_all_expenses' => round($total_all_expenses, 2),
+                    'total_general_expenses' => round($total_general_expenses, 2),
+                    'total_supplier_payouts' => round($total_supplier_payouts, 2),
+                    'total_partner_withdrawals' => round($total_partner_withdrawals, 2),
+                    'net_profit' => round($net_profit, 2),
+                    'net_margin' => $net_margin,
+                    'net_cash_in_drawer' => round($net_cash_in_drawer, 2),
+                    'orders_count' => count($orders_list),
+                    'total_items_sold' => round($total_items_sold, 3),
+                    'sales_by_method' => $sales_by_method,
+                    'sales_by_date' => $sales_by_date
+                ],
+                'expenses_report' => [
+                    'total_amount' => round($total_all_expenses, 2),
+                    'filtered_total' => round(array_sum(array_column($filtered_expenses, 'amount')), 2),
+                    'expenses_by_category' => $expenses_by_category,
+                    'expenses_by_date' => $expenses_by_date,
+                    'filtered_expenses' => $filtered_expenses,
+                    'all_categories' => array_keys($expenses_by_category)
+                ],
+                'purchases_report' => [
+                    'total_amount' => round($total_purchases_amount, 2),
+                    'total_paid' => round($total_purchases_paid, 2),
+                    'total_debt' => round($total_purchases_debt, 2),
+                    'invoices_count' => count($purchases_list),
+                    'purchases_list' => $purchases_list
+                ],
+                'top_selling_by_category' => array_values($by_category),
+                'recent_sales' => array_slice($orders_list, 0, 15)
             ], JSON_UNESCAPED_UNICODE);
             break;
 

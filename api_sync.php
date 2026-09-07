@@ -2417,13 +2417,13 @@ try {
                     'orders_count' => count($orders_list),
                     'total_items_sold' => round($total_items_sold, 3),
                     'sales_by_method' => $sales_by_method,
-                    'sales_by_date' => $sales_by_date
+                    'sales_by_date' => !empty($sales_by_date) ? $sales_by_date : (object)[]
                 ],
                 'expenses_report' => [
                     'total_amount' => round($total_all_expenses, 2),
                     'filtered_total' => round(array_sum(array_column($filtered_expenses, 'amount')), 2),
-                    'expenses_by_category' => $expenses_by_category,
-                    'expenses_by_date' => $expenses_by_date,
+                    'expenses_by_category' => !empty($expenses_by_category) ? $expenses_by_category : (object)[],
+                    'expenses_by_date' => !empty($expenses_by_date) ? $expenses_by_date : (object)[],
                     'filtered_expenses' => $filtered_expenses,
                     'all_categories' => array_keys($expenses_by_category)
                 ],

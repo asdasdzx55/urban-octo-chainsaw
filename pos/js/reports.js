@@ -576,8 +576,12 @@ class ReportsController {
       this.charts.expensesDonut = null;
     }
 
-    const labels = Object.keys(byCategory);
-    const data = Object.values(byCategory);
+    let labels = [];
+    let data = [];
+    if (byCategory && typeof byCategory === 'object' && !Array.isArray(byCategory)) {
+      labels = Object.keys(byCategory);
+      data = Object.values(byCategory);
+    }
 
     if (labels.length === 0) {
       labels.push('لا توجد مصروفات');
@@ -639,8 +643,12 @@ class ReportsController {
     const textColor = isDark ? '#cbd5e1' : '#334155';
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
 
-    const labels = Object.keys(byDate).sort();
-    const data = labels.map(d => byDate[d]);
+    let labels = [];
+    let data = [];
+    if (byDate && typeof byDate === 'object' && !Array.isArray(byDate)) {
+      labels = Object.keys(byDate).sort();
+      data = labels.map(d => byDate[d]);
+    }
 
     const ctx = canvas.getContext('2d');
     this.charts.expensesTimeline = new window.Chart(ctx, {

@@ -369,7 +369,7 @@ class App {
     if (product) {
       const isWeight = product.unit_type === 'weight' || product.unit === 'كجم' || product.is_weight;
       if (isWeight) {
-        this.openWeightModal(product, 1.000);
+        this.openWeightModal(product, 0.250, false);
       } else {
         window.posScanner?.playSuccessBeep();
         window.cart?.addItem(product, 1);
@@ -377,9 +377,10 @@ class App {
     }
   }
 
-  /* ==================== SCALE / WEIGHT MODAL ==================== */
-  openWeightModal(product, currentQty = 1.000) {
+  /* ==================== SCALE / WEIGHT MODAL (الوزن بالجرام) ==================== */
+  openWeightModal(product, currentQty = 0.250, isEditingExisting = false) {
     this.currentWeightProduct = product;
+    this.isEditingWeightItem = isEditingExisting;
     const modal = document.getElementById('scale-weight-modal');
     if (!modal) return;
 
@@ -388,7 +389,8 @@ class App {
     
     const input = document.getElementById('scale-weight-input');
     if (input) {
-      input.value = currentQty.toFixed(3);
+      const initialGrams = currentQty ? Math.round(currentQty * 1000) : 250;
+      input.value = initialGrams;
     }
     this.onWeightInputChanged();
 
@@ -409,22 +411,26 @@ class App {
       modal.style.display = 'none';
     }
     this.currentWeightProduct = null;
+    this.isEditingWeightItem = false;
   }
 
   onWeightInputChanged() {
     if (!this.currentWeightProduct) return;
     const input = document.getElementById('scale-weight-input');
     const calcEl = document.getElementById('weight-modal-calc-total');
-    const weight = parseFloat(input?.value || 0);
+    const kgPreviewEl = document.getElementById('weight-modal-kg-preview');
+    const grams = parseFloat(input?.value || 0);
+    const weightKg = grams / 1000;
     const price = parseFloat(this.currentWeightProduct.price || 0);
-    const total = weight * price;
+    const total = weightKg * price;
     if (calcEl) calcEl.textContent = `${total.toFixed(2)} ج.م`;
+    if (kgPreviewEl) kgPreviewEl.textContent = `${weightKg.toFixed(3)} كجم`;
   }
 
-  setWeightPreset(weight) {
+  setWeightPreset(grams) {
     const input = document.getElementById('scale-weight-input');
     if (input) {
-      input.value = parseFloat(weight).toFixed(3);
+      input.value = grams;
       this.onWeightInputChanged();
     }
   }
@@ -432,15 +438,21 @@ class App {
   confirmWeightAndAddToCart() {
     if (!this.currentWeightProduct) return;
     const input = document.getElementById('scale-weight-input');
-    const weight = parseFloat(input?.value || 0);
+    const grams = parseFloat(input?.value || 0);
 
-    if (weight <= 0) {
-      this.showToast('يرجى إدخال وزن صحيح أكبر من 0', 'error');
+    if (!grams || grams <= 0) {
+      this.showToast('يرجى إدخال وزن صحيح بالجرام (أكبر من 0)', 'error');
       return;
     }
 
+    const weightKg = parseFloat((grams / 1000).toFixed(4));
     window.posScanner?.playSuccessBeep();
-    window.cart?.addItem(this.currentWeightProduct, weight);
+
+    if (this.isEditingWeightItem) {
+      window.cart?.updateQty(this.currentWeightProduct.id, weightKg);
+    } else {
+      window.cart?.addItem(this.currentWeightProduct, weightKg);
+    }
     this.closeWeightModal();
   }
 
@@ -448,7 +460,24 @@ class App {
     const item = window.cart?.items?.find(i => i.product_id === productId);
     if (!item) return;
     const prod = this.products.find(p => p.id === productId) || item;
-    this.openWeightModal(prod, item.qty);
+    this.openWeightModal(prod, item.qty, true);
+  }
+
+  quickSaveWithoutPrint() {
+    if (!window.cart || window.cart.items.length === 0) {
+      this.showToast('سلة المشتريات فارغة!', 'warning');
+      return;
+    }
+    const isDelivery = window.cart.orderType === 'delivery';
+    const checkoutModal = document.getElementById('checkout-modal');
+    const isCheckoutOpen = checkoutModal && !checkoutModal.classList.contains('hidden') && checkoutModal.style.display !== 'none';
+
+    if (isDelivery && !isCheckoutOpen) {
+      this.openCheckoutModal();
+      this.showToast('يرجى تحديد الطيار وبيانات التوصيل ثم الضغط على F5 للحفظ', 'info');
+      return;
+    }
+    window.cart.checkout(false);
   }
 
   promptQuickDiscount() {
@@ -1065,7 +1094,34 @@ class App {
       this.openCheckoutModal();
     });
     document.getElementById('btn-close-checkout')?.addEventListener('click', () => this.closeCheckoutModal());
-    document.getElementById('btn-submit-payment')?.addEventListener('click', () => window.cart?.checkout());
+    document.getElementById('btn-submit-payment')?.addEventListener('click', () => window.cart?.checkout(true));
+    document.getElementById('btn-submit-save-only')?.addEventListener('click', () => window.cart?.checkout(false));
+
+    // Global Keyboard Shortcuts (F5 to save invoice without printing & prevent page reload)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F5' || e.keyCode === 116) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // If weight modal is open, confirm weight and add to cart
+        const weightModal = document.getElementById('scale-weight-modal');
+        if (weightModal && !weightModal.classList.contains('hidden') && weightModal.style.display !== 'none') {
+          this.confirmWeightAndAddToCart();
+          return;
+        }
+
+        // If receipt modal is open, dismiss and start new sale
+        const receiptModal = document.getElementById('receipt-modal');
+        if (receiptModal && !receiptModal.classList.contains('hidden') && receiptModal.style.display !== 'none') {
+          receiptModal.classList.add('hidden');
+          window.cart?.newSale();
+          return;
+        }
+
+        // Quick save without printing
+        this.quickSaveWithoutPrint();
+      }
+    });
 
     // Receipt Modal Close & Print
     document.getElementById('btn-close-receipt')?.addEventListener('click', () => {

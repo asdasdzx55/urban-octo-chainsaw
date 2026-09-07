@@ -335,7 +335,7 @@ class POSCart {
   }
 
   /* ==================== CHECKOUT & SUBMIT SALE ==================== */
-  async checkout() {
+  async checkout(shouldPrint = true) {
     if (this.items.length === 0) {
       window.app?.showToast('سلة المشتريات فارغة!', 'error');
       return;
@@ -412,7 +412,7 @@ class POSCart {
     };
 
     try {
-      window.app?.showLoading(true, 'جاري حفظ الفاتورة وتحديث المخزون...');
+      window.app?.showLoading(true, shouldPrint ? 'جاري حفظ وطباعة الفاتورة...' : 'جاري حفظ الفاتورة في السيستم...');
       const result = await window.api.pushSale(payload);
       window.app?.showLoading(false);
 
@@ -467,9 +467,17 @@ class POSCart {
         // Close Checkout modal if open
         document.getElementById('checkout-modal')?.classList.add('hidden');
 
-        // Show Success Thermal Receipt Modal
-        this.showReceiptModal(invoiceData);
-        window.app?.showToast('تم حفظ الفاتورة بنجاح ✅', 'success');
+        if (shouldPrint) {
+          // Show Success Thermal Receipt Modal & Print
+          this.showReceiptModal(invoiceData);
+          try {
+            this.printReceiptDirectly();
+          } catch(e) {}
+          window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وطباعتها بنجاح ✅`, 'success');
+        } else {
+          // Saved without printing (عدم الطباعة)
+          window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح بدون طباعة 💾✅`, 'success');
+        }
 
         // Update local reports and trigger product reload in background
         window.app?.refreshProductsQuietly();
@@ -520,12 +528,20 @@ class POSCart {
       // 3. Deduct stock locally
       this.deductLocalStock(this.items);
 
-      // 4. Reset cart and show receipt
+      // 4. Reset cart
       this.clearCart();
       document.getElementById('checkout-modal')?.classList.add('hidden');
       window.posScanner?.playSuccessBeep();
-      this.showReceiptModal(invoiceData);
-      window.app?.showToast('تم حفظ الفاتورة محلياً وطباعتها (وضع أوفلاين) وستتم مزامنتها تلقائياً 📦✅', 'warning');
+
+      if (shouldPrint) {
+        this.showReceiptModal(invoiceData);
+        try {
+          this.printReceiptDirectly();
+        } catch(e) {}
+        window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً وطباعتها (وضع أوفلاين) 📦🖨️`, 'warning');
+      } else {
+        window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً بدون طباعة (وضع أوفلاين) 💾📦`, 'info');
+      }
     }
   }
 
@@ -642,7 +658,7 @@ class POSCart {
           <tbody>
             ${inv.items && inv.items.map((item, idx) => {
               const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
-              const qtyDisplay = isWeight ? `${parseFloat(item.qty).toFixed(3)} كجم` : `${item.qty} ق`;
+              const qtyDisplay = isWeight ? (item.qty < 1 ? `${Math.round(item.qty * 1000)} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : `${item.qty} ق`;
               const lineTotal = (parseFloat(item.price) * parseFloat(item.qty)).toFixed(2);
               return `
                 <tr>
@@ -970,7 +986,7 @@ class POSCart {
     
     inv.items.forEach(itm => {
       const isWeight = itm.unit_type === 'weight' || itm.unit === 'كجم';
-      const q = isWeight ? `${parseFloat(itm.qty).toFixed(3)} كجم` : `${itm.qty} قطعة`;
+      const q = isWeight ? (itm.qty < 1 ? `${Math.round(itm.qty * 1000)} جم` : `${parseFloat(itm.qty).toFixed(3)} كجم`) : `${itm.qty} قطعة`;
       text += `▪️ ${itm.name}\n   ${q} × ${parseFloat(itm.price).toFixed(2)} = ${(parseFloat(itm.price) * parseFloat(itm.qty)).toFixed(2)} ج.م\n`;
     });
 
@@ -1025,6 +1041,8 @@ class POSCart {
       const step = isWeight ? 0.25 : 1;
       const prevQty = isWeight ? parseFloat((item.qty - step).toFixed(3)) : item.qty - 1;
       const nextQty = isWeight ? parseFloat((item.qty + step).toFixed(3)) : item.qty + 1;
+      const gramsVal = Math.round(item.qty * 1000);
+      const qtyLabel = isWeight ? (item.qty < 1 ? `${gramsVal} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : item.qty;
 
       return `
         <div class="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200/90 dark:border-gray-600/70 shadow-2xs flex items-center justify-between gap-2 cart-item-highlight transition">
@@ -1035,7 +1053,7 @@ class POSCart {
             <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
               <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
               ${item.local_code ? `<span class="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-600 rounded text-[9px] font-mono font-bold">${item.local_code}</span>` : ''}
-              ${isWeight ? `<span class="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold">⚖️ وزن</span>` : ''}
+              ${isWeight ? `<span class="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold">⚖️ ${gramsVal} جم</span>` : ''}
             </div>
           </div>
 
@@ -1043,8 +1061,8 @@ class POSCart {
           <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl p-0.5 shrink-0 border border-gray-200 dark:border-gray-600 shadow-2xs">
             <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition" title="تقليل">-</button>
             
-            <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-mono font-bold text-xs text-gray-900 dark:text-white ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? 'اضغط لتعديل الوزن' : ''}">
-              ${isWeight ? parseFloat(item.qty).toFixed(3) : item.qty}
+            <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-mono font-bold text-xs text-gray-900 dark:text-white ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? `الوزن: ${gramsVal} جم (${parseFloat(item.qty).toFixed(3)} كجم) - اضغط للتعديل بالجرام` : ''}">
+              ${qtyLabel}
             </span>
 
             <button onclick="window.cart.updateQty(${item.product_id}, ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs active:scale-95 transition" title="زيادة">+</button>

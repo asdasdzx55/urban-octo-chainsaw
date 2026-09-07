@@ -453,11 +453,18 @@
             <span id="cart-total-val" class="text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
           </div>
 
-          <!-- Checkout Button -->
-          <button id="btn-proceed-checkout" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer">
-            <i data-lucide="credit-card" class="w-4 h-4"></i>
-            <span>إتمام البيع والدفع (Checkout)</span>
-          </button>
+          <!-- Checkout Buttons: Quick Save (F5) & Full Checkout -->
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.app?.quickSaveWithoutPrint()" class="px-3.5 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-gray-200 dark:border-gray-600 shrink-0 cursor-pointer" title="حفظ الفاتورة فوراً بدون طباعة (F5)">
+              <i data-lucide="save" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+              <span class="hidden sm:inline">حفظ</span>
+              <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-gray-200 dark:bg-gray-800 rounded">F5</span>
+            </button>
+            <button id="btn-proceed-checkout" class="flex-1 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer">
+              <i data-lucide="credit-card" class="w-4 h-4"></i>
+              <span>إتمام البيع والدفع (Checkout)</span>
+            </button>
+          </div>
 
         </div>
 
@@ -2702,11 +2709,23 @@
         </div>
       </div>
 
-      <!-- Confirm Payment Button -->
-      <button id="btn-submit-payment" class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 shrink-0">
-        <i data-lucide="check-circle-2" class="w-5 h-5"></i>
-        <span>تأكيد وطباعة الفاتورة</span>
-      </button>
+      <!-- Payment Actions: Save Without Print (عدم الطباعة) vs Confirm & Print (طباعة) -->
+      <div class="grid grid-cols-2 gap-2.5 shrink-0 pt-1">
+        <!-- Button: Save Without Print (عدم الطباعة) -->
+        <button type="button" id="btn-submit-save-only" onclick="window.cart?.checkout(false)" class="py-3.5 px-3 rounded-2xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-slate-700/20 flex items-center justify-center gap-1.5 transition transform active:scale-98 cursor-pointer" title="حفظ الفاتورة دون فتح نافذة الطباعة (اختصار F5)">
+          <i data-lucide="save" class="w-4 h-4 text-emerald-400"></i>
+          <span class="flex items-center gap-1">
+            <span>حفظ بدون طباعة</span>
+            <span class="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] font-mono text-amber-300 font-bold border border-slate-600">F5</span>
+          </span>
+        </button>
+
+        <!-- Button: Confirm & Print (طباعة) -->
+        <button type="button" id="btn-submit-payment" onclick="window.cart?.checkout(true)" class="py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition transform active:scale-98 cursor-pointer" title="حفظ الفاتورة وطباعة الإيصال فوراً">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>تأكيد وطباعة</span>
+        </button>
+      </div>
 
     </div>
   </div>
@@ -2922,12 +2941,17 @@
         </button>
       </div>
 
-      <!-- Weight Input Box -->
+      <!-- Weight Input Box (بالجرام - جم) -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-bold text-gray-700 dark:text-gray-300">أدخل وزن الصنف (بالكيلو جرام):</label>
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-gray-700 dark:text-gray-300">أدخل وزن الصنف (بالجرام - جم):</label>
+          <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+            يعادل: <span id="weight-modal-kg-preview" class="font-mono">0.250 كجم</span>
+          </span>
+        </div>
         <div class="relative">
-          <input type="number" step="0.005" id="scale-weight-input" oninput="window.app.onWeightInputChanged()" onkeypress="if(event.key === 'Enter') window.app.confirmWeightAndAddToCart()" class="w-full bg-gray-50 dark:bg-gray-700 border-2 border-indigo-500 rounded-2xl ps-4 pe-16 py-3 text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono text-center" placeholder="0.000">
-          <span class="absolute end-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">كجم (Kg)</span>
+          <input type="number" step="1" min="1" id="scale-weight-input" oninput="window.app.onWeightInputChanged()" onkeypress="if(event.key === 'Enter') window.app.confirmWeightAndAddToCart()" class="w-full bg-gray-50 dark:bg-gray-700 border-2 border-indigo-500 rounded-2xl ps-4 pe-24 py-3 text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono text-center" placeholder="مثال: 250">
+          <span class="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">جم (Grams)</span>
         </div>
       </div>
 
@@ -2937,16 +2961,34 @@
         <span id="weight-modal-calc-total" class="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
       </div>
 
-      <!-- Quick Weight Preset Buttons -->
+      <!-- Quick Weight Preset Buttons (بالجرام) -->
       <div class="flex flex-col gap-1.5">
-        <span class="text-[11px] font-bold text-gray-400">أوزان سريعة شائعة:</span>
+        <span class="text-[11px] font-bold text-gray-400">أوزان سريعة شائعة (بالجرام):</span>
         <div class="grid grid-cols-3 gap-2">
-          <button type="button" onclick="window.app.setWeightPreset(0.125)" class="py-2 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition">ثمن (125 جم)</button>
-          <button type="button" onclick="window.app.setWeightPreset(0.250)" class="py-2 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition">ربع كجم (250 جم)</button>
-          <button type="button" onclick="window.app.setWeightPreset(0.500)" class="py-2 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition">نصف كجم (500 جم)</button>
-          <button type="button" onclick="window.app.setWeightPreset(0.750)" class="py-2 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition">¾ كجم (750 جم)</button>
-          <button type="button" onclick="window.app.setWeightPreset(1.000)" class="py-2 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition">1 كجم (1000 جم)</button>
-          <button type="button" onclick="window.app.setWeightPreset(2.000)" class="py-2 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition">2 كجم</button>
+          <button type="button" onclick="window.app.setWeightPreset(125)" class="py-2.5 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition flex flex-col items-center">
+            <span>ثمن (125 جم)</span>
+            <span class="text-[10px] text-gray-400 font-mono">0.125 كجم</span>
+          </button>
+          <button type="button" onclick="window.app.setWeightPreset(250)" class="py-2.5 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition flex flex-col items-center">
+            <span>ربع كجم (250 جم)</span>
+            <span class="text-[10px] text-gray-400 font-mono">0.250 كجم</span>
+          </button>
+          <button type="button" onclick="window.app.setWeightPreset(500)" class="py-2.5 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition flex flex-col items-center">
+            <span>نصف كجم (500 جم)</span>
+            <span class="text-[10px] text-gray-400 font-mono">0.500 كجم</span>
+          </button>
+          <button type="button" onclick="window.app.setWeightPreset(750)" class="py-2.5 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition flex flex-col items-center">
+            <span>¾ كجم (750 جم)</span>
+            <span class="text-[10px] text-gray-400 font-mono">0.750 كجم</span>
+          </button>
+          <button type="button" onclick="window.app.setWeightPreset(1000)" class="py-2.5 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition flex flex-col items-center">
+            <span>1 كجم (1000 جم)</span>
+            <span class="text-[10px] text-gray-400 font-mono">1.000 كجم</span>
+          </button>
+          <button type="button" onclick="window.app.setWeightPreset(2000)" class="py-2.5 px-1 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 text-xs font-bold transition flex flex-col items-center">
+            <span>2 كجم (2000 جم)</span>
+            <span class="text-[10px] text-gray-400 font-mono">2.000 كجم</span>
+          </button>
         </div>
       </div>
 
@@ -3011,6 +3053,18 @@
           <i data-lucide="printer" class="w-4 h-4"></i>
           <span>طباعة فورية 🖨️</span>
         </button>
+      </div>
+
+      <!-- Dismiss / Do Not Print Button -->
+      <div class="flex items-center justify-between gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+        <button type="button" onclick="document.getElementById('receipt-modal')?.classList.add('hidden'); window.cart?.newSale();" class="py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition">
+          <i data-lucide="x" class="w-4 h-4 text-rose-500"></i>
+          <span>إغلاق بدون طباعة (فاتورة جديدة)</span>
+        </button>
+        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+          <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+          <span>تم الحفظ بالسجلات</span>
+        </span>
       </div>
 
       <!-- Fallback Print Button in case browser blocks iframe printing -->

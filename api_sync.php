@@ -2469,6 +2469,59 @@ try {
             ], JSON_UNESCAPED_UNICODE);
             break;
 
+        case 'system_reset':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $mode = trim($data['mode'] ?? '');
+            $confirm_token = trim($data['confirm_token'] ?? '');
+            $wipe_products = !empty($data['wipe_products']);
+
+            if ($confirm_token !== 'CONFIRM_RESET_SYRIA_2026') {
+                echo json_encode(['success' => false, 'error' => 'رمز تأكيد العملية غير صحيح!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            if ($mode === 'zero_quantities_and_balances') {
+                try { $pdo->exec("UPDATE products SET stock = 0, quantity = 0"); } catch (Exception $e) {}
+                try { $pdo->exec("UPDATE suppliers SET balance = 0"); } catch (Exception $e) {}
+                try { $pdo->exec("UPDATE delivery_drivers SET cash_balance = 0"); } catch (Exception $e) {}
+                try { $pdo->exec("UPDATE customers SET total_spent = 0, points = 0, orders_count = 0"); } catch (Exception $e) {}
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => '✅ تم تصفير جميع كميات المخزون وأرصدة الموردين والدليفري بنجاح مع الحفاظ على المنتجات.'
+                ], JSON_UNESCAPED_UNICODE);
+                break;
+
+            } elseif ($mode === 'wipe_sales_and_operations') {
+                $tables = ['orders', 'order_items', 'purchases', 'purchase_items', 'expenses', 'employee_payouts', 'held_carts', 'abandoned_carts'];
+                foreach ($tables as $t) {
+                    try { $pdo->exec("DELETE FROM `{$t}`"); } catch (Exception $e) {}
+                }
+                echo json_encode([
+                    'success' => true,
+                    'message' => '✅ تم حذف فواتير المبيعات والمشتريات والمصروفات بنجاح مع الحفاظ على كتالوج المنتجات والعملاء.'
+                ], JSON_UNESCAPED_UNICODE);
+                break;
+
+            } elseif ($mode === 'factory_reset_all') {
+                $tables = ['orders', 'order_items', 'purchases', 'purchase_items', 'expenses', 'employee_payouts', 'customers', 'suppliers', 'delivery_drivers', 'held_carts', 'abandoned_carts', 'wishlist', 'notifications'];
+                if ($wipe_products) {
+                    $tables[] = 'products';
+                }
+                foreach ($tables as $t) {
+                    try { $pdo->exec("DELETE FROM `{$t}`"); } catch (Exception $e) {}
+                }
+                echo json_encode([
+                    'success' => true,
+                    'message' => '✅ تمت عملية إعادة ضبط المصنع بنجاح.'
+                ], JSON_UNESCAPED_UNICODE);
+                break;
+
+            } else {
+                echo json_encode(['success' => false, 'error' => 'نوع عملية التصفير غير معروف!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
         // ============================================================
         // 15. جلب قائمة الطيارين المتاحين (للكاشير وشاشة الدخول)
         // ============================================================

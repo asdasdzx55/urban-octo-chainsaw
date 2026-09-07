@@ -2040,6 +2040,45 @@ try {
             break;
 
         // ============================================================
+        // 3.6 مزامنة تصنيف مصروف من البرنامج الأساسي
+        // ============================================================
+        case 'sync_expense_category':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $name = trim($data['name'] ?? $data['category'] ?? '');
+            if (!empty($name)) {
+                try {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS expense_categories (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL UNIQUE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                    $pdo->prepare("INSERT IGNORE INTO expense_categories (name) VALUES (?)")->execute([$name]);
+                } catch (Exception $e) {}
+            }
+            echo json_encode(['success' => true, 'message' => "تمت مزامنة تصنيف المصروف ({$name}) بنجاح."], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 3.7 مزامنة حركة مصروف من البرنامج الأساسي
+        // ============================================================
+        case 'sync_expense':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $cat = trim($data['category'] ?? 'نثريات');
+            $amount = (float)($data['amount'] ?? 0);
+            $note = trim($data['note'] ?? '');
+            $pm = trim($data['payment_method'] ?? 'كاش');
+            $date = trim($data['date'] ?? date('Y-m-d H:i:s'));
+            $partner = trim($data['partner_name'] ?? '');
+            
+            if ($amount > 0) {
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO expenses (category, amount, note, date, payment_method, partner_name) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$cat, $amount, $note, $date, $pm, $partner ?: null]);
+                } catch (Exception $e) {}
+            }
+            echo json_encode(['success' => true, 'message' => "تمت مزامنة المصروف بنجاح."], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 4. سحب الطلبات الجديدة لتجهيزها في الكاشير المحلي
         // ============================================================
         case 'get_pending_orders':
@@ -2444,8 +2483,43 @@ try {
         // ============================================================
         case 'get_pos_meta':
             $suppliers = $pdo->query("SELECT id, name, phone, balance FROM suppliers ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-            $categories = $pdo->query("SELECT name FROM expense_categories ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
-            $partners = $pdo->query("SELECT name FROM partners ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+            $categories = [];
+            try {
+                $categories = $pdo->query("SELECT name FROM expense_categories ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (Exception $e) {}
+            
+            $default_expense_cats = [
+                'نثريات',
+                'إيجار',
+                'فواتير (كهرباء/مياه)',
+                'صيانة',
+                'رواتب عاملين',
+                'سلف عاملين',
+                'سداد موردين',
+                'مشتريات بضاعة',
+                'مسحوبات الإدارة',
+                'تيست',
+                'أخرى'
+            ];
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS expense_categories (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(150) NOT NULL UNIQUE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                foreach ($default_expense_cats as $sc) {
+                    $ins = $pdo->prepare("INSERT IGNORE INTO expense_categories (name) VALUES (?)");
+                    $ins->execute([$sc]);
+                }
+                $categories = $pdo->query("SELECT name FROM expense_categories ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (Exception $e) {}
+            if (empty($categories)) {
+                $categories = $default_expense_cats;
+            }
+            
+            $partners = [];
+            try {
+                $partners = $pdo->query("SELECT name FROM partners ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (Exception $e) {}
             
             echo json_encode([
                 'success' => true,

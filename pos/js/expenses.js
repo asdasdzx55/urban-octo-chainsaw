@@ -6,7 +6,7 @@
 class ExpensesController {
   constructor() {
     this.suppliers = [];
-    this.expenseCategories = ['نثريات', 'إيجار', 'كهرباء ومياه', 'صيانة ومعدات', 'أكياس ومطبوعات', 'وجبات وبوفيه', 'نقل وشحن', 'رواتب وعمالة'];
+    this.expenseCategories = ['نثريات', 'إيجار', 'فواتير (كهرباء/مياه)', 'صيانة', 'رواتب عاملين', 'سلف عاملين', 'سداد موردين', 'مشتريات بضاعة', 'مسحوبات الإدارة', 'أخرى', 'تيست'];
     this.currentMode = 'purchase'; // 'purchase', 'expense', 'supplier', 'history'
   }
 

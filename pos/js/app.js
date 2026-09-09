@@ -662,9 +662,14 @@ class App {
   }
 
   toggleDrawerMenu() {
+    const now = Date.now();
+    if (this._drawerToggleLock && (now - this._drawerToggleLock < 300)) return;
+    this._drawerToggleLock = now;
+
     const drawer = document.getElementById('mobile-nav-drawer');
     if (!drawer) return;
-    if (drawer.classList.contains('hidden') || drawer.style.display === 'none') {
+    const isHidden = drawer.classList.contains('hidden') || drawer.style.display === 'none';
+    if (isHidden) {
       this.openDrawerMenu();
     } else {
       this.closeDrawerMenu();
@@ -672,18 +677,22 @@ class App {
   }
 
   openDrawerMenu() {
+    this._drawerToggleLock = Date.now();
     const drawer = document.getElementById('mobile-nav-drawer');
     if (!drawer) return;
     drawer.classList.remove('hidden');
     drawer.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
     if (window.lucide) window.lucide.createIcons();
   }
 
   closeDrawerMenu() {
+    this._drawerToggleLock = Date.now();
     const drawer = document.getElementById('mobile-nav-drawer');
     if (!drawer) return;
     drawer.classList.add('hidden');
     drawer.style.display = 'none';
+    document.body.style.overflow = '';
   }
 
   openSuppliersReport() {
@@ -1119,12 +1128,6 @@ class App {
 
     // Theme toggle
     document.getElementById('btn-theme-toggle')?.addEventListener('click', () => this.toggleTheme());
-
-    // Hamburger Menu button
-    document.getElementById('btn-hamburger-menu')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.toggleDrawerMenu();
-    });
 
     // Navigation buttons
     document.querySelectorAll('.app-view-btn').forEach(btn => {

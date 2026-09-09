@@ -50,6 +50,17 @@ class SettingsController {
     if (document.getElementById('set-api-url')) document.getElementById('set-api-url').value = s.api_url || '';
     if (document.getElementById('set-api-token')) document.getElementById('set-api-token').value = s.api_token || '';
 
+    // Printer behavior settings (بدون صفحة كروم)
+    if (window.printerController) {
+      const ps = window.printerController.settings;
+      if (document.getElementById('set-no-chrome-print')) {
+        document.getElementById('set-no-chrome-print').checked = !ps.auto_open_browser_print;
+      }
+      if (document.getElementById('set-print-mode')) {
+        document.getElementById('set-print-mode').value = ps.print_mode || 'preview';
+      }
+    }
+
     // Payment Fee Inputs
     if (document.getElementById('set-enable-payment-fee')) {
       document.getElementById('set-enable-payment-fee').checked = s.enable_payment_fee !== false;
@@ -85,6 +96,16 @@ class SettingsController {
 
     this.settings = newSettings;
     localStorage.setItem('syrian_home_pos_settings', JSON.stringify(newSettings));
+
+    // Save Printer Controller Preferences
+    if (window.printerController) {
+      const noChrome = document.getElementById('set-no-chrome-print') ? document.getElementById('set-no-chrome-print').checked : true;
+      const printMode = document.getElementById('set-print-mode')?.value || 'preview';
+      window.printerController.savePrinterSettings({
+        auto_open_browser_print: !noChrome,
+        print_mode: printMode
+      });
+    }
 
     // Update Brand Name in Header
     const brandTitle = document.getElementById('brand-store-name');

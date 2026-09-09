@@ -524,12 +524,24 @@ class POSCart {
         document.getElementById('checkout-modal')?.classList.add('hidden');
 
         if (shouldPrint) {
-          // Show Success Thermal Receipt Modal & Print
+          // Show Success Thermal Receipt Modal
           this.showReceiptModal(invoiceData);
-          try {
-            this.printReceiptDirectly();
-          } catch(e) {}
-          window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وطباعتها بنجاح ✅`, 'success');
+
+          const printerSettings = window.printerController ? window.printerController.settings : { auto_open_browser_print: false, print_mode: 'preview' };
+          
+          if (printerSettings.auto_open_browser_print) {
+            try {
+              this.printReceiptDirectly();
+            } catch(e) {}
+            window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وجاري فتح الطباعة ✅`, 'success');
+          } else if (printerSettings.print_mode === 'bluetooth') {
+            window.printerController?.printViaBluetooth(invoiceData);
+          } else if (printerSettings.print_mode === 'rawbt') {
+            window.printerController?.printViaRawBT(invoiceData);
+          } else {
+            // Preview in app only (بدون نافذة كروم)
+            window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح 💾✅`, 'success');
+          }
         } else {
           // Saved without printing (عدم الطباعة)
           window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح بدون طباعة 💾✅`, 'success');
@@ -591,10 +603,18 @@ class POSCart {
 
       if (shouldPrint) {
         this.showReceiptModal(invoiceData);
-        try {
-          this.printReceiptDirectly();
-        } catch(e) {}
-        window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً وطباعتها (وضع أوفلاين) 📦🖨️`, 'warning');
+
+        const printerSettings = window.printerController ? window.printerController.settings : { auto_open_browser_print: false, print_mode: 'preview' };
+        if (printerSettings.auto_open_browser_print) {
+          try {
+            this.printReceiptDirectly();
+          } catch(e) {}
+        } else if (printerSettings.print_mode === 'bluetooth') {
+          window.printerController?.printViaBluetooth(invoiceData);
+        } else if (printerSettings.print_mode === 'rawbt') {
+          window.printerController?.printViaRawBT(invoiceData);
+        }
+        window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً (وضع أوفلاين) 📦✅`, 'warning');
       } else {
         window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً بدون طباعة (وضع أوفلاين) 💾📦`, 'info');
       }
@@ -841,6 +861,13 @@ class POSCart {
     this.renderBarcodes(inv);
 
     modal.classList.remove('hidden');
+
+    // Sync No-Chrome Checkbox State
+    const chkNoChrome = document.getElementById('modal-chk-no-chrome');
+    if (chkNoChrome && window.printerController) {
+      chkNoChrome.checked = !window.printerController.settings.auto_open_browser_print;
+    }
+
     if (window.lucide) window.lucide.createIcons();
   }
 

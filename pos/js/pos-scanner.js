@@ -409,6 +409,13 @@ class POSScanner {
       return;
     }
 
+    // 2.1 If scanning pack barcode in inventory
+    if (window.inventoryController && window.inventoryController.isScanningToPackField) {
+      this.closeCameraModal();
+      window.inventoryController.setScannedPackBarcode(barcode);
+      return;
+    }
+
     // 2.5 If in purchases view -> route to purchasesController camera handler
     if (window.app && window.app.currentView === 'expenses' && window.expensesController?.currentMode === 'purchase') {
       if (this.autoCloseAfterScan) this.closeCameraModal();

@@ -273,6 +273,7 @@ class App {
           (p.name && p.name.toLowerCase().includes(q)) ||
           (p.barcode && p.barcode.toLowerCase().includes(q)) ||
           (p.local_code && p.local_code.toLowerCase().includes(q)) ||
+          (p.has_pack == 1 && ((p.pack_name && p.pack_name.toLowerCase().includes(q)) || (p.pack_barcode && p.pack_barcode.toLowerCase().includes(q)))) ||
           (String(p.id) === q)
         );
       }
@@ -316,16 +317,20 @@ class App {
       const stock = parseFloat(p.stock || 0);
       const isWeight = p.unit_type === 'weight' || p.unit === 'كجم' || p.is_weight;
       const isLowStock = stock <= (isWeight ? 2 : 3);
+      const hasPack = p.has_pack == 1 && parseFloat(p.pack_price || 0) > 0;
 
       return `
         <div onclick="window.app.onProductCardClick(${p.id})" class="product-card p-3 sm:p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-500/80 dark:hover:border-indigo-400 cursor-pointer flex flex-col justify-between gap-2 select-none relative group transition-all duration-150">
           
           <!-- Top Badges Row -->
           <div class="flex items-center justify-between gap-1 text-[10px]">
-            ${isWeight 
-              ? `<span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1"><span>⚖️</span> <span>وزن / كجم</span></span>` 
-              : `<span class="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200/60 dark:border-indigo-800/60 flex items-center gap-1"><span>📦</span> <span>قطعة</span></span>`
-            }
+            <div class="flex items-center gap-1 flex-wrap">
+              ${isWeight 
+                ? `<span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1"><span>⚖️</span> <span>وزن</span></span>` 
+                : `<span class="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200/60 dark:border-indigo-800/60 flex items-center gap-1"><span>📦</span> <span>قطعة</span></span>`
+              }
+              ${hasPack ? `<span class="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-[9px]">دستة</span>` : ''}
+            </div>
             <span class="font-bold px-2 py-0.5 rounded-full font-mono ${isLowStock ? 'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'}">
               ${isWeight ? parseFloat(stock).toFixed(2) + ' كجم' : stock + ' ق'}
             </span>
@@ -341,6 +346,18 @@ class App {
               </p>
             ` : ''}
           </div>
+
+          <!-- Pack Multi-Unit Quick Action -->
+          ${hasPack ? `
+            <div class="flex items-center justify-between bg-amber-50/90 dark:bg-amber-950/60 px-2 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800/60 text-[11px]">
+              <span class="font-bold text-amber-800 dark:text-amber-300 truncate max-w-[110px]" title="${p.pack_name || 'دستة/كرتونة'}">
+                📦 ${p.pack_name || 'دستة'} (${p.pack_qty || 12})
+              </span>
+              <button type="button" onclick="window.app.addPackToCart(event, ${p.id})" class="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs transition active:scale-95 shrink-0" title="إضافة دستة/كرتونة للسلة">
+                ${parseFloat(p.pack_price || 0).toFixed(2)} ج.م +
+              </button>
+            </div>
+          ` : ''}
 
           <!-- Price and Add Button -->
           <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/60 mt-auto">
@@ -374,6 +391,15 @@ class App {
         window.posScanner?.playSuccessBeep();
         window.cart?.addItem(product, 1);
       }
+    }
+  }
+
+  addPackToCart(event, productId) {
+    if (event) event.stopPropagation();
+    const product = this.products.find(p => p.id === productId);
+    if (product) {
+      window.posScanner?.playSuccessBeep();
+      window.cart?.addPackItem(product, 1);
     }
   }
 

@@ -39,13 +39,15 @@ class POSCart {
     const unitType = isWeight ? 'weight' : 'piece';
     const unitLabel = isWeight ? 'كجم' : 'قطعة';
 
-    const existingIndex = this.items.findIndex(i => i.product_id === product.id);
+    const cartKey = String(product.id);
+    const existingIndex = this.items.findIndex(i => !i.is_pack && String(i.product_id) === String(product.id));
     const validQty = parseFloat(parseFloat(qty).toFixed(3));
 
     if (existingIndex > -1) {
       this.items[existingIndex].qty = parseFloat((this.items[existingIndex].qty + validQty).toFixed(3));
     } else {
       this.items.push({
+        cart_key: cartKey,
         product_id: product.id,
         name: product.name,
         qty: validQty,
@@ -54,7 +56,9 @@ class POSCart {
         barcode: product.barcode || '',
         local_code: product.local_code || '',
         unit_type: unitType,
-        unit: unitLabel
+        unit: unitLabel,
+        is_pack: 0,
+        pack_multiplier: 1
       });
     }
 
@@ -63,9 +67,52 @@ class POSCart {
     window.app?.showToast(`تمت إضافة: ${product.name} (${qtyDisplay})`, 'success');
   }
 
+  addPackItem(product, qty = 1) {
+    if (!product) return;
+
+    const cartKey = `${product.id}_pack`;
+    const existingIndex = this.items.findIndex(i => i.is_pack && String(i.product_id) === String(product.id));
+    const validQty = Math.max(1, parseInt(qty, 10) || 1);
+    const packPrice = parseFloat(product.pack_price || product.price || 0);
+    const packMultiplier = parseFloat(product.pack_qty || 1);
+    const packName = (product.pack_name && product.pack_name.trim()) 
+      ? product.pack_name.trim() 
+      : `${product.name} (دستة/كرتونة)`;
+
+    if (existingIndex > -1) {
+      this.items[existingIndex].qty += validQty;
+    } else {
+      this.items.push({
+        cart_key: cartKey,
+        product_id: product.id,
+        name: packName,
+        qty: validQty,
+        price: packPrice,
+        cost: parseFloat(product.cost || 0) * packMultiplier,
+        barcode: product.pack_barcode || product.barcode || '',
+        local_code: product.local_code || '',
+        unit_type: 'pack',
+        unit: 'دستة/كرتونة',
+        is_pack: 1,
+        pack_name: packName,
+        pack_multiplier: packMultiplier
+      });
+    }
+
+    this.render();
+    window.app?.showToast(`تمت إضافة كرتونة/دستة: ${packName} (${validQty}) 📦`, 'success');
+  }
+
   async addProductByBarcode(barcode) {
     const rawCode = String(barcode || '').trim();
     if (!rawCode) return;
+
+    // 0. Check if this barcode matches a pack barcode in cached products
+    let matchedPack = window.app?.products?.find(p => p.has_pack == 1 && String(p.pack_barcode || '').trim() === rawCode);
+    if (matchedPack) {
+      this.addPackItem(matchedPack, 1);
+      return;
+    }
 
     // Parse barcode according to Syrian Home Scale & Retail rules
     const parsed = window.BarcodeParser ? window.BarcodeParser.parse(rawCode) : {
@@ -121,6 +168,11 @@ class POSCart {
       window.app?.showLoading(false);
 
       if (res && res.success && res.product) {
+        if (res.is_pack_match || (res.product.has_pack == 1 && String(res.product.pack_barcode || '').trim() === rawCode)) {
+          this.addPackItem(res.product, 1);
+          return;
+        }
+
         const productToAdd = parsed.isScale ? {
           ...res.product,
           unit_type: 'weight',
@@ -146,20 +198,20 @@ class POSCart {
     }
   }
 
-  updateQty(productId, newQty) {
-    const item = this.items.find(i => i.product_id === productId);
+  updateQty(key, newQty) {
+    const item = this.items.find(i => String(i.cart_key || i.product_id) === String(key) || (i.product_id === key && !i.is_pack));
     if (!item) return;
 
     if (newQty <= 0) {
-      this.removeItem(productId);
+      this.removeItem(key);
     } else {
       item.qty = parseFloat(newQty);
       this.render();
     }
   }
 
-  removeItem(productId) {
-    this.items = this.items.filter(i => i.product_id !== productId);
+  removeItem(key) {
+    this.items = this.items.filter(i => String(i.cart_key || i.product_id) !== String(key) && !(i.product_id === key && !i.is_pack));
     this.render();
   }
 
@@ -407,7 +459,11 @@ class POSCart {
         qty: item.qty,
         price: item.price,
         cost: item.cost,
-        barcode: item.barcode
+        barcode: item.barcode,
+        local_code: item.local_code || '',
+        is_pack: item.is_pack ? 1 : 0,
+        pack_multiplier: item.pack_multiplier || 1,
+        deduct_qty: (item.qty || 1) * (item.pack_multiplier || 1)
       }))
     };
 
@@ -552,7 +608,9 @@ class POSCart {
       if (p) {
         const curStock = parseFloat(p.stock || 0);
         const qty = parseFloat(sold.qty || 1);
-        p.stock = Math.max(0, parseFloat((curStock - qty).toFixed(3)));
+        const mult = parseFloat(sold.pack_multiplier || 1);
+        const deductQty = sold.is_pack ? (qty * mult) : qty;
+        p.stock = Math.max(0, parseFloat((curStock - deductQty).toFixed(3)));
       }
     });
     try {
@@ -658,7 +716,9 @@ class POSCart {
           <tbody>
             ${inv.items && inv.items.map((item, idx) => {
               const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
-              const qtyDisplay = isWeight ? (item.qty < 1 ? `${Math.round(item.qty * 1000)} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : `${item.qty} ق`;
+              const qtyDisplay = item.is_pack 
+                ? `${item.qty} كرتونة` 
+                : (isWeight ? (item.qty < 1 ? `${Math.round(item.qty * 1000)} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : `${item.qty} ق`);
               const lineTotal = (parseFloat(item.price) * parseFloat(item.qty)).toFixed(2);
               return `
                 <tr>
@@ -1054,24 +1114,25 @@ class POSCart {
               <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
               ${item.local_code ? `<span class="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-600 rounded text-[9px] font-mono font-bold">${item.local_code}</span>` : ''}
               ${isWeight ? `<span class="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold">⚖️ ${gramsVal} جم</span>` : ''}
+              ${item.is_pack ? `<span class="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded text-[9px] font-bold">📦 كرتونة (خصم ${item.pack_multiplier || 1})</span>` : ''}
             </div>
           </div>
 
           <!-- Quantity / Weight Control -->
           <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl p-0.5 shrink-0 border border-gray-200 dark:border-gray-600 shadow-2xs">
-            <button onclick="window.cart.updateQty(${item.product_id}, ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition" title="تقليل">-</button>
+            <button onclick="window.cart.updateQty('${item.cart_key || item.product_id}', ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition" title="تقليل">-</button>
             
             <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-mono font-bold text-xs text-gray-900 dark:text-white ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? `الوزن: ${gramsVal} جم (${parseFloat(item.qty).toFixed(3)} كجم) - اضغط للتعديل بالجرام` : ''}">
               ${qtyLabel}
             </span>
 
-            <button onclick="window.cart.updateQty(${item.product_id}, ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs active:scale-95 transition" title="زيادة">+</button>
+            <button onclick="window.cart.updateQty('${item.cart_key || item.product_id}', ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs active:scale-95 transition" title="زيادة">+</button>
           </div>
 
           <!-- Total & Remove -->
           <div class="text-left shrink-0 min-w-[55px]">
             <div class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${(item.price * item.qty).toFixed(2)}</div>
-            <button onclick="window.cart.removeItem(${item.product_id})" class="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline transition cursor-pointer">حذف ✕</button>
+            <button onclick="window.cart.removeItem('${item.cart_key || item.product_id}')" class="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline transition cursor-pointer">حذف ✕</button>
           </div>
 
         </div>

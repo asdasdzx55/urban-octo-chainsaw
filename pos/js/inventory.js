@@ -66,6 +66,7 @@ class InventoryController {
   constructor() {
     this.selectedProduct = null;
     this.isScanningToInputField = false;
+    this.isScanningToPackField = false;
     this.initCategoryDatalists();
   }
 
@@ -168,6 +169,19 @@ class InventoryController {
     document.getElementById('inv-prod-barcode').value = '';
     document.getElementById('inv-prod-localcode').value = '';
 
+    // Reset Pack Fields
+    const chkPack = document.getElementById('inv-prod-haspack');
+    if (chkPack) chkPack.checked = false;
+    const packContainer = document.getElementById('inv-pack-fields-container');
+    if (packContainer) {
+      packContainer.classList.add('hidden');
+      packContainer.style.display = 'none';
+    }
+    if (document.getElementById('inv-prod-packname')) document.getElementById('inv-prod-packname').value = '';
+    if (document.getElementById('inv-prod-packbarcode')) document.getElementById('inv-prod-packbarcode').value = '';
+    if (document.getElementById('inv-prod-packqty')) document.getElementById('inv-prod-packqty').value = '12';
+    if (document.getElementById('inv-prod-packprice')) document.getElementById('inv-prod-packprice').value = '0.00';
+
     formBox.classList.remove('hidden');
     formBox.style.display = 'flex';
     formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -208,6 +222,44 @@ class InventoryController {
     }
   }
 
+  togglePackFields() {
+    const chk = document.getElementById('inv-prod-haspack');
+    const container = document.getElementById('inv-pack-fields-container');
+    if (!container) return;
+    if (chk && chk.checked) {
+      container.classList.remove('hidden');
+      container.style.display = 'grid';
+      document.getElementById('inv-prod-packname')?.focus();
+    } else {
+      container.classList.add('hidden');
+      container.style.display = 'none';
+    }
+  }
+
+  generateRandomPackBarcode() {
+    let code = '6229' + Math.floor(10000000 + Math.random() * 90000000);
+    const barcodeInput = document.getElementById('inv-prod-packbarcode');
+    if (barcodeInput) {
+      barcodeInput.value = code;
+      window.app?.showToast(`تم توليد باركود دستة تلقائي: ${code}`, 'info');
+    }
+  }
+
+  scanPackBarcodeWithCamera() {
+    this.isScanningToPackField = true;
+    window.posScanner?.openCameraModal();
+  }
+
+  setScannedPackBarcode(barcode) {
+    this.isScanningToPackField = false;
+    const input = document.getElementById('inv-prod-packbarcode');
+    if (input) {
+      input.value = barcode.trim();
+      window.app?.showToast(`تم مسح باركود الدستة: ${barcode} ✅`, 'success');
+      input.focus();
+    }
+  }
+
   loadProductToForm(p) {
     this.selectedProduct = p;
     const formBox = document.getElementById('inv-product-edit-form');
@@ -243,6 +295,25 @@ class InventoryController {
     document.getElementById('inv-prod-stock').value = parseFloat(p.stock || 0);
     document.getElementById('inv-prod-barcode').value = p.barcode || '';
     document.getElementById('inv-prod-localcode').value = p.local_code || '';
+
+    // Populate Pack Fields
+    const hasPack = p.has_pack == 1 || p.has_pack === true || p.has_pack === '1';
+    const chkPack = document.getElementById('inv-prod-haspack');
+    if (chkPack) chkPack.checked = !!hasPack;
+    const packContainer = document.getElementById('inv-pack-fields-container');
+    if (packContainer) {
+      if (hasPack) {
+        packContainer.classList.remove('hidden');
+        packContainer.style.display = 'grid';
+      } else {
+        packContainer.classList.add('hidden');
+        packContainer.style.display = 'none';
+      }
+    }
+    if (document.getElementById('inv-prod-packname')) document.getElementById('inv-prod-packname').value = p.pack_name || '';
+    if (document.getElementById('inv-prod-packbarcode')) document.getElementById('inv-prod-packbarcode').value = p.pack_barcode || '';
+    if (document.getElementById('inv-prod-packqty')) document.getElementById('inv-prod-packqty').value = p.pack_qty || 12;
+    if (document.getElementById('inv-prod-packprice')) document.getElementById('inv-prod-packprice').value = parseFloat(p.pack_price || 0).toFixed(2);
 
     formBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     window.posScanner?.playSuccessBeep();
@@ -308,6 +379,13 @@ class InventoryController {
     const barcode = document.getElementById('inv-prod-barcode')?.value.trim() || '';
     const localCode = document.getElementById('inv-prod-localcode')?.value.trim() || '';
 
+    // Pack / Dozen Fields
+    const hasPack = document.getElementById('inv-prod-haspack')?.checked ? 1 : 0;
+    const packName = document.getElementById('inv-prod-packname')?.value.trim() || '';
+    const packBarcode = document.getElementById('inv-prod-packbarcode')?.value.trim() || '';
+    const packQty = parseFloat(document.getElementById('inv-prod-packqty')?.value || 12);
+    const packPrice = parseFloat(document.getElementById('inv-prod-packprice')?.value || 0);
+
     if (!name) {
       window.app?.showToast('اسم المنتج مطلوب!', 'error');
       return;
@@ -326,7 +404,12 @@ class InventoryController {
       stock: stock,
       barcode: barcode,
       local_code: localCode,
-      all_barcodes: barcode
+      all_barcodes: barcode,
+      has_pack: hasPack,
+      pack_name: packName,
+      pack_barcode: packBarcode,
+      pack_qty: packQty,
+      pack_price: packPrice
     };
 
     // Save unit type mapping in persistent local store so it NEVER reverts on refresh
@@ -339,7 +422,12 @@ class InventoryController {
       ...payload,
       unit_type: unitType,
       unit: isWeight ? 'كجم' : 'قطعة',
-      is_weight: isWeight
+      is_weight: isWeight,
+      has_pack: hasPack,
+      pack_name: packName,
+      pack_barcode: packBarcode,
+      pack_qty: packQty,
+      pack_price: packPrice
     };
 
     try {

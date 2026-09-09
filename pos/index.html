@@ -911,6 +911,59 @@
                 <input type="text" id="inv-prod-localcode" placeholder="مثال: ITEM-101" class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
               </div>
             </div>
+          </div>
+
+          <!-- Section 4: Pack / Dozen Multi-Unit Card (نظام بيع الدستة والكرتونة والجملة) -->
+          <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl border border-amber-200 dark:border-amber-900/50 flex flex-col gap-3">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+              <h4 class="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <i data-lucide="package" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span>نظام بيع الدستة / الكرتونة / الجملة (Multi-Unit Pack)</span>
+              </h4>
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="inv-prod-haspack" onchange="window.inventoryController.togglePackFields()" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-400 bg-gray-50 border-gray-300">
+                <span class="text-xs font-bold text-gray-700 dark:text-gray-200">تفعيل بيع الدستة/الكرتونة لهذا الصنف</span>
+              </label>
+            </div>
+
+            <div id="inv-pack-fields-container" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+              <!-- Pack Name -->
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">اسم الدستة / الكرتونة:</label>
+                <input type="text" id="inv-prod-packname" placeholder="مثال: كرتونة 12 قطعة أو علبة 5ك" class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+              </div>
+
+              <!-- Pack Barcode -->
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">باركود الدستة المخصص:</label>
+                  <button type="button" onclick="window.inventoryController.generateRandomPackBarcode()" class="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline">
+                    توليد باركود 🎲
+                  </button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" id="inv-prod-packbarcode" placeholder="امسح باركود الكرتونة..." class="flex-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
+                  <button type="button" onclick="window.inventoryController.scanPackBarcodeWithCamera()" class="lg:hidden w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition shrink-0 flex items-center justify-center shadow-xs" title="فتح الكاميرا لمسح باركود الدستة">
+                    <i data-lucide="camera" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pack Qty Multiplier -->
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-bold text-indigo-600 dark:text-indigo-400">الكمية بالدستة (الخصم من المخزن):</label>
+                <input type="number" step="0.5" min="1" id="inv-prod-packqty" placeholder="12" class="w-full bg-gray-50 dark:bg-gray-700/60 border border-indigo-300 dark:border-indigo-700 rounded-xl px-3 py-2 text-sm font-black text-indigo-600 font-mono">
+                <span class="text-[10px] text-gray-400">تخصم من رصيد المخزن لمطابقة الجرد</span>
+              </div>
+
+              <!-- Pack Selling Price -->
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-bold text-emerald-600 dark:text-emerald-400">سعر بيع الدستة (ج.م):</label>
+                <input type="number" step="0.5" min="0" id="inv-prod-packprice" placeholder="0.00" class="w-full bg-gray-50 dark:bg-gray-700/60 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-2 text-sm font-black text-emerald-600 font-mono">
+                <span class="text-[10px] text-gray-400">سعر بيع الكرتونة أو الدستة للزبون</span>
+              </div>
+            </div>
+          </div>
           <!-- Save, Delete and Cancel Actions -->
           <div class="flex items-center justify-between gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
             <div>

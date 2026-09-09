@@ -160,6 +160,17 @@ class App {
     const set = new Set();
     const subMap = {};
 
+    // 1. Pull from CategoryController if available
+    if (window.categoryController) {
+      const taxonomy = window.categoryController.getTaxonomy();
+      for (const [main, subs] of Object.entries(taxonomy)) {
+        set.add(main);
+        if (!subMap[main]) subMap[main] = new Set();
+        subs.forEach(s => subMap[main].add(s));
+      }
+    }
+
+    // 2. Also ensure all product categories are covered
     this.products.forEach(p => {
       const cat = (p.category && p.category.trim()) || 'عام';
       const sub = (p.sub_category || p.subcategory || '').trim();
@@ -169,8 +180,16 @@ class App {
       if (sub) subMap[cat].add(sub);
     });
 
-    this.categories = Array.from(set);
+    this.categories = Array.from(set).sort((a, b) => {
+      if (a === 'عام') return 1;
+      if (b === 'عام') return -1;
+      return a.localeCompare(b, 'ar');
+    });
     this.subCategoriesMap = subMap;
+  }
+
+  extractTaxonomy() {
+    this.extractCategories();
   }
 
   renderCategories() {
@@ -194,6 +213,13 @@ class App {
         </button>
       `;
     });
+
+    // Quick Add Category Button on Categories Bar
+    html += `
+      <button onclick="window.categoryController?.openCategoryManagerModal()" class="px-3 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border border-dashed border-indigo-300 dark:border-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center gap-1 cursor-pointer shrink-0" title="إدارة وإنشاء تصنيفات جديدة">
+        <span>➕ تصنيف جديد</span>
+      </button>
+    `;
 
     container.innerHTML = html;
 

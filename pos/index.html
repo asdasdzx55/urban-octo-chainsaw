@@ -753,11 +753,15 @@
             <p class="text-xs text-gray-500 mt-0.5">امسح باركود المنتج للتعديل أو اضغط على إضافة صنف جديد</p>
           </div>
 
-          <!-- Actions: Refresh Catalog & Add New Product -->
+          <!-- Actions: Refresh Catalog, Category Manager & Add New Product -->
           <div class="flex items-center gap-2">
             <button onclick="window.app.fetchProducts(true)" class="px-3.5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition" title="سحب ومزامنة كل الأصناف من السيرفر">
               <i data-lucide="refresh-cw" class="w-4 h-4"></i>
               <span>مزامنة من السيرفر</span>
+            </button>
+            <button type="button" onclick="window.categoryController?.openCategoryManagerModal()" class="px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition transform active:scale-95 cursor-pointer shadow-xs" title="إدارة وإنشاء التصنيفات الرئيسية والفرعية">
+              <i data-lucide="folder-tree" class="w-4 h-4"></i>
+              <span>إدارة التصنيفات 📁</span>
             </button>
             <button id="btn-add-new-product" onclick="window.inventoryController.openNewProductForm()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 transition transform active:scale-95">
               <i data-lucide="plus-circle" class="w-4 h-4"></i>
@@ -809,24 +813,26 @@
 
               <!-- Main Category -->
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-indigo-600 dark:text-indigo-400">التصنيف الأساسي: <span class="text-rose-500">*</span></label>
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-bold text-indigo-600 dark:text-indigo-400">التصنيف الأساسي: <span class="text-rose-500">*</span></label>
+                  <button type="button" onclick="window.categoryController?.openCategoryManagerModal()" class="text-[10px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-bold hover:underline cursor-pointer flex items-center gap-0.5">
+                    <span>+ تصنيف رئيسي</span>
+                  </button>
+                </div>
                 <input type="text" id="inv-prod-category" list="list-main-categories" oninput="window.inventoryController.onMainCategoryChanged()" placeholder="اختر أو اكتب تصنيف رئيسي..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
                 <datalist id="list-main-categories">
-                  <option value="أجبان وألبان"></option>
-                  <option value="مكسرات وتسالي وحلويات"></option>
-                  <option value="عطارة وتوابل وزيوت"></option>
-                  <option value="مخبوزات ومعجنات"></option>
-                  <option value="لحوم ودواجن ومصنعات"></option>
-                  <option value="مشروبات وعصائر ومياه"></option>
-                  <option value="معلبات ومواد غذائية"></option>
-                  <option value="منظفات وعناية منزلية"></option>
-                  <option value="عام"></option>
+                  <!-- Populated dynamically -->
                 </datalist>
               </div>
 
               <!-- Sub Category -->
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">التصنيف الفرعي:</label>
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">التصنيف الفرعي:</label>
+                  <button type="button" onclick="window.categoryController?.openCategoryManagerModal(document.getElementById('inv-prod-category')?.value, true)" class="text-[10px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-bold hover:underline cursor-pointer flex items-center gap-0.5">
+                    <span>+ تصنيف فرعي</span>
+                  </button>
+                </div>
                 <input type="text" id="inv-prod-subcategory" list="list-sub-categories" placeholder="اختر أو اكتب تصنيف فرعي..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
                 <datalist id="list-sub-categories">
                   <!-- Populated dynamically -->
@@ -3808,6 +3814,99 @@
   </div>
 
 
+  <!-- ==================== CATEGORIES & SUBCATEGORIES MANAGER MODAL ==================== -->
+  <div id="category-manager-modal" onclick="if(event.target === this) window.categoryController.closeCategoryManagerModal()" class="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-2xl w-full flex flex-col gap-4 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+            <i data-lucide="folder-tree" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span>إدارة وإنشاء التصنيفات (الرئيسية والفرعية)</span>
+            </h3>
+            <p class="text-[11px] text-gray-400">إنشاء أقسام جديدة ومزامنتها مع شجرة الكتالوج وشاشة تعديل الأصناف</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span id="cat-manager-total-count" class="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-mono text-[11px] font-bold border border-indigo-100 dark:border-indigo-900">
+            0 رئيسي • 0 فرعي
+          </span>
+          <button type="button" onclick="window.categoryController.closeCategoryManagerModal()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section: Add Forms (Cards) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        
+        <!-- Card 1: Add Main Category -->
+        <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 flex flex-col gap-2">
+          <h4 class="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+            <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+            <span>إضافة تصنيف رئيسي جديد</span>
+          </h4>
+          <p class="text-[10.5px] text-gray-500">مثل: تمور وفاكهة، أدوات منزلية، بهارات سورية</p>
+          
+          <div class="flex items-center gap-1.5 mt-1">
+            <input type="text" id="cat-modal-main-name" onkeypress="if(event.key === 'Enter') window.categoryController.submitNewMainCategory()" placeholder="اسم التصنيف الرئيسي..." class="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white">
+            <button type="button" onclick="window.categoryController.submitNewMainCategory()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 shrink-0">
+              إضافة +
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Add Subcategory -->
+        <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 flex flex-col gap-2">
+          <h4 class="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+            <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+            <span>إضافة تصنيف فرعي يتبع رئيسي</span>
+          </h4>
+          <p class="text-[10.5px] text-gray-500">اختر التصنيف الأساسي ثم اكتب القسم الفرعي</p>
+
+          <div class="flex flex-col gap-1.5 mt-1">
+            <select id="cat-modal-parent-select" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-900 dark:text-white">
+              <option value="">-- اختر التصنيف الرئيسي التابع له --</option>
+            </select>
+            
+            <div class="flex items-center gap-1.5">
+              <input type="text" id="cat-modal-sub-name" onkeypress="if(event.key === 'Enter') window.categoryController.submitNewSubCategory()" placeholder="اسم التصنيف الفرعي (مثل: رطب سكري)..." class="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 dark:text-white">
+              <button type="button" onclick="window.categoryController.submitNewSubCategory()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 shrink-0">
+                إضافة +
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Search Box inside Modal -->
+      <div class="relative">
+        <i data-lucide="search" class="w-3.5 h-3.5 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input type="text" id="cat-manager-search-input" oninput="window.categoryController.renderManagerUI(this.value)" placeholder="ابحث في قائمة التصنيفات الرئيسية والفرعية..." class="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl ps-8 pe-3 py-2 text-xs font-medium">
+      </div>
+
+      <!-- Categories Tree / Cards Container -->
+      <div id="cat-manager-tree-list" class="flex flex-col gap-2.5 max-h-[380px] overflow-y-auto pe-1">
+        <!-- Rendered dynamically by categoryController -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <span class="text-[11px] text-gray-400">💡 يمكنك الضغط على اسم أي تصنيف لتعيينه مباشرة للصنف في شاشة التعديل</span>
+        <button type="button" onclick="window.categoryController.closeCategoryManagerModal()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold transition cursor-pointer">
+          إغلاق
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Global Loading Modal -->
   <div id="global-loader" class="fixed inset-0 z-[999] bg-black/60 backdrop-blur-xs flex items-center justify-center hidden">
     <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-3 max-w-xs mx-4 text-center">
@@ -3820,21 +3919,22 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.5.3"></script>
-  <script src="js/api.js?v=2.5.3"></script>
-  <script src="js/sync-manager.js?v=2.5.3"></script>
-  <script src="js/pos-scanner.js?v=2.5.3"></script>
-  <script src="js/settings.js?v=2.5.3"></script>
-  <script src="js/cart.js?v=2.5.3"></script>
-  <script src="js/inventory.js?v=2.5.3"></script>
-  <script src="js/purchases.js?v=2.5.3"></script>
-  <script src="js/expenses.js?v=2.5.3"></script>
-  <script src="js/orders.js?v=2.5.3"></script>
-  <script src="js/delivery-settlement.js?v=2.5.3"></script>
-  <script src="js/returns.js?v=2.5.3"></script>
-  <script src="js/reports.js?v=2.5.3"></script>
-  <script src="js/employees.js?v=2.5.3"></script>
-  <script src="js/pwa.js?v=2.5.3"></script>
-  <script src="js/app.js?v=2.5.3"></script>
+  <script src="js/barcode-parser.js?v=2.5.4"></script>
+  <script src="js/api.js?v=2.5.4"></script>
+  <script src="js/sync-manager.js?v=2.5.4"></script>
+  <script src="js/pos-scanner.js?v=2.5.4"></script>
+  <script src="js/settings.js?v=2.5.4"></script>
+  <script src="js/cart.js?v=2.5.4"></script>
+  <script src="js/categories.js?v=2.5.4"></script>
+  <script src="js/inventory.js?v=2.5.4"></script>
+  <script src="js/purchases.js?v=2.5.4"></script>
+  <script src="js/expenses.js?v=2.5.4"></script>
+  <script src="js/orders.js?v=2.5.4"></script>
+  <script src="js/delivery-settlement.js?v=2.5.4"></script>
+  <script src="js/returns.js?v=2.5.4"></script>
+  <script src="js/reports.js?v=2.5.4"></script>
+  <script src="js/employees.js?v=2.5.4"></script>
+  <script src="js/pwa.js?v=2.5.4"></script>
+  <script src="js/app.js?v=2.5.4"></script>
 </body>
 </html>

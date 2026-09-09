@@ -71,7 +71,11 @@ class InventoryController {
   }
 
   initCategoryDatalists() {
-    // Populate Main Categories Datalist
+    if (window.categoryController) {
+      window.categoryController.updateDatalists();
+      return;
+    }
+    // Fallback if categoryController not yet ready
     const mainList = document.getElementById('list-main-categories');
     if (mainList) {
       const allMains = Object.keys(SUPERMARKET_TAXONOMY);
@@ -80,12 +84,22 @@ class InventoryController {
   }
 
   onMainCategoryChanged() {
+    if (window.categoryController) {
+      window.categoryController.refreshSubCategoryDatalist();
+      return;
+    }
     const mainCat = document.getElementById('inv-prod-category')?.value.trim() || '';
     const subList = document.getElementById('list-sub-categories');
     if (!subList) return;
 
     const subSuggestions = SUPERMARKET_TAXONOMY[mainCat] || [];
     subList.innerHTML = subSuggestions.map(sub => `<option value="${sub}"></option>`).join('');
+  }
+
+  openCategoryManagerModal(preselectedMain = '', forSub = false) {
+    if (window.categoryController) {
+      window.categoryController.openCategoryManagerModal(preselectedMain, forSub);
+    }
   }
 
   async searchProductForAudit(query) {
@@ -453,9 +467,10 @@ class InventoryController {
 
         // Save & Refresh Catalog
         localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
-        window.app.extractCategories();
-        window.app.renderCategories();
-        window.app.renderProducts();
+        window.categoryController?.registerCategoryIfNew(category, subCategory);
+        window.app?.extractTaxonomy();
+        window.app?.renderCategories();
+        window.app?.renderProducts();
 
         // Hide form
         document.getElementById('inv-product-edit-form')?.classList.add('hidden');
@@ -484,9 +499,10 @@ class InventoryController {
       }
 
       localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
-      window.app.extractCategories();
-      window.app.renderCategories();
-      window.app.renderProducts();
+      window.categoryController?.registerCategoryIfNew(category, subCategory);
+      window.app?.extractTaxonomy();
+      window.app?.renderCategories();
+      window.app?.renderProducts();
 
       document.getElementById('inv-product-edit-form')?.classList.add('hidden');
       if (document.getElementById('inv-search-input')) {

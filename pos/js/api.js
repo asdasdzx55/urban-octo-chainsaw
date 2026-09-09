@@ -407,7 +407,22 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 29. System Reset & Data Wipe (إعادة ضبط وتصفير النظام من الإعدادات)
+   * 29. Categories & Subcategories API (جلب ومزامنة وحذف التصنيفات الرئيسية والفرعية)
+   */
+  async getCategories() {
+    return await this.get('get_categories');
+  }
+
+  async syncCategory(categoryPayload) {
+    return await this.post('sync_category', categoryPayload);
+  }
+
+  async deleteCategory(categoryPayload) {
+    return await this.post('delete_category', categoryPayload);
+  }
+
+  /**
+   * 30. System Reset & Data Wipe (إعادة ضبط وتصفير النظام من الإعدادات)
    * Modes:
    *  - zero_quantities_and_balances
    *  - wipe_sales_and_operations

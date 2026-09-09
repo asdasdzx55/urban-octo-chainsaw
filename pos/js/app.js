@@ -578,7 +578,7 @@ class App {
     });
 
     // Update View Containers
-    ['pos', 'orders', 'returns', 'inventory', 'expenses', 'employees', 'reports', 'settings'].forEach(v => {
+    ['pos', 'orders', 'returns', 'inventory', 'categories', 'expenses', 'employees', 'reports', 'settings'].forEach(v => {
       const el = document.getElementById(`view-${v}`);
       if (el) {
         if (v === viewName) {
@@ -601,6 +601,8 @@ class App {
       window.cart?.syncCompletedOrdersFromCloud().then(() => {
         window.returnsController?.renderRecentInvoicesList();
       });
+    } else if (viewName === 'categories') {
+      window.categoryController?.renderCategoryView();
     } else if (viewName === 'reports') {
       window.reportsController?.loadReports('today');
     } else if (viewName === 'expenses') {

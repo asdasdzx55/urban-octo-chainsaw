@@ -163,10 +163,11 @@ class CategoriesController {
   }
 
   updateDatalists() {
+    const mains = this.getAllMainCategories();
+
     // 1. Update Main Categories Datalist
     const mainDatalist = document.getElementById('list-main-categories');
     if (mainDatalist) {
-      const mains = this.getAllMainCategories();
       mainDatalist.innerHTML = mains.map(cat => `<option value="${cat}"></option>`).join('');
     }
 
@@ -174,15 +175,29 @@ class CategoriesController {
     const selectEl = document.getElementById('cat-modal-parent-select');
     if (selectEl) {
       const currentVal = selectEl.value;
-      const mains = this.getAllMainCategories();
       selectEl.innerHTML = `
         <option value="">-- اختر التصنيف الرئيسي التابع له --</option>
         ${mains.map(cat => `<option value="${cat}" ${cat === currentVal ? 'selected' : ''}>${cat}</option>`).join('')}
       `;
     }
 
-    // 3. Update Sub Categories Datalist for currently selected main category in product form
+    // 3. Update dedicated Categories Page select
+    const pageSelect = document.getElementById('cat-page-parent-select');
+    if (pageSelect) {
+      const currentVal = pageSelect.value;
+      pageSelect.innerHTML = `
+        <option value="">-- اختر القسم الرئيسي --</option>
+        ${mains.map(cat => `<option value="${cat}" ${cat === currentVal ? 'selected' : ''}>${cat}</option>`).join('')}
+      `;
+    }
+
+    // 4. Update Sub Categories Datalist for currently selected main category in product form
     this.refreshSubCategoryDatalist();
+
+    // 5. Update Categories Page view if active
+    if (document.getElementById('view-categories') && !document.getElementById('view-categories').classList.contains('hidden')) {
+      this.renderCategoryView();
+    }
   }
 
   refreshSubCategoryDatalist() {
@@ -371,29 +386,15 @@ class CategoriesController {
     }
   }
 
-  /* ==================== CATEGORY MANAGER MODAL UI ==================== */
+  /* ==================== CATEGORY MANAGER UI & VIEW CONTROLS ==================== */
 
   openCategoryManagerModal(preselectedMain = '', forSub = false) {
-    const modal = document.getElementById('category-manager-modal');
-    if (!modal) return;
-
-    this.updateDatalists();
-
+    window.app?.switchView('categories');
     if (preselectedMain) {
-      const sel = document.getElementById('cat-modal-parent-select');
-      if (sel) sel.value = preselectedMain;
+      setTimeout(() => {
+        this.openSubAdderOnPage(preselectedMain);
+      }, 60);
     }
-
-    if (forSub) {
-      document.getElementById('cat-modal-sub-name')?.focus();
-    } else {
-      document.getElementById('cat-modal-main-name')?.focus();
-    }
-
-    this.renderManagerUI();
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    if (window.lucide) window.lucide.createIcons();
   }
 
   closeCategoryManagerModal() {
@@ -457,8 +458,13 @@ class CategoriesController {
     }
 
     this.closeCategoryManagerModal();
+    window.app?.switchView('inventory');
+    const formEl = document.getElementById('inv-product-edit-form');
+    if (formEl && formEl.classList.contains('hidden')) {
+      window.inventoryController?.openNewProductForm();
+    }
     const label = subCat ? `${mainCat} > ${subCat}` : mainCat;
-    window.app?.showToast(`تم اختيار التصنيف: ${label} ✅`, 'success');
+    window.app?.showToast(`تم اختيار التصنيف: ${label} وجاري نقلك لنموذج الصنف ✅`, 'success');
   }
 
   renderManagerUI(filterQuery = '') {
@@ -540,6 +546,164 @@ class CategoriesController {
                 <button type="button" onclick="window.categoryController.deleteCategory('${main}', '${sub}')" class="text-gray-400 hover:text-rose-600 font-bold px-0.5 cursor-pointer" title="حذف هذا القسم الفرعي">✕</button>
               </span>
             `).join('') : '<span class="text-[10px] text-gray-400 italic">لا توجد أقسام فرعية بعد (اضغط + فرعي لإضافة تصنيف فرعي)</span>'}
+          </div>
+
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  /* ==================== DEDICATED FULL PAGE VIEW CONTROLS ==================== */
+
+  submitPageMainCategory() {
+    const input = document.getElementById('cat-page-main-name');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) {
+      window.app?.showToast('يرجى كتابة اسم التصنيف الرئيسي!', 'error');
+      return;
+    }
+
+    this.createMainCategory(name).then(ok => {
+      if (ok) {
+        input.value = '';
+        this.renderCategoryView();
+      }
+    });
+  }
+
+  submitPageSubCategory() {
+    const parentSel = document.getElementById('cat-page-parent-select');
+    const subInput = document.getElementById('cat-page-sub-name');
+    if (!parentSel || !subInput) return;
+
+    const mainCat = parentSel.value.trim();
+    const subCat = subInput.value.trim();
+
+    if (!mainCat) {
+      window.app?.showToast('يرجى اختيار القسم الرئيسي أولاً!', 'error');
+      parentSel.focus();
+      return;
+    }
+
+    if (!subCat) {
+      window.app?.showToast('يرجى كتابة اسم القسم الفرعي!', 'error');
+      subInput.focus();
+      return;
+    }
+
+    this.createSubCategory(mainCat, subCat).then(ok => {
+      if (ok) {
+        subInput.value = '';
+        this.renderCategoryView();
+      }
+    });
+  }
+
+  openSubAdderOnPage(mainCat) {
+    const sel = document.getElementById('cat-page-parent-select');
+    if (sel) sel.value = mainCat;
+    const subInput = document.getElementById('cat-page-sub-name');
+    if (subInput) {
+      subInput.focus();
+      subInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  renderCategoryView(filterQuery = '') {
+    const listEl = document.getElementById('cat-page-tree-list');
+    const mainsCountEl = document.getElementById('cat-page-mains-count');
+    const subsCountEl = document.getElementById('cat-page-subs-count');
+    const prodsCountEl = document.getElementById('cat-page-prods-count');
+    if (!listEl) return;
+
+    const q = (filterQuery || document.getElementById('cat-page-search-input')?.value || '').trim().toLowerCase();
+    const mains = this.getAllMainCategories();
+
+    let totalSubsCount = 0;
+    mains.forEach(m => {
+      totalSubsCount += (this.taxonomy[m] ? this.taxonomy[m].size : 0);
+    });
+
+    const totalProds = window.app?.products ? window.app.products.length : 0;
+
+    if (mainsCountEl) mainsCountEl.textContent = mains.length;
+    if (subsCountEl) subsCountEl.textContent = totalSubsCount;
+    if (prodsCountEl) prodsCountEl.textContent = totalProds;
+
+    const filteredMains = mains.filter(m => {
+      if (!q) return true;
+      if (m.toLowerCase().includes(q)) return true;
+      const subs = Array.from(this.taxonomy[m] || []);
+      return subs.some(s => s.toLowerCase().includes(q));
+    });
+
+    if (filteredMains.length === 0) {
+      listEl.innerHTML = `
+        <div class="col-span-full p-12 text-center text-gray-400 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700">
+          <i data-lucide="folder-x" class="w-12 h-12 mx-auto mb-2 opacity-30 text-indigo-400"></i>
+          <p class="text-sm font-bold">لا توجد أقسام مطابقة للبحث</p>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    listEl.innerHTML = filteredMains.map(main => {
+      const subs = Array.from(this.taxonomy[main] || []).sort((a, b) => a.localeCompare(b, 'ar'));
+      const prodsCount = window.app?.products ? window.app.products.filter(p => (p.category || 'عام') === main).length : 0;
+
+      return `
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col justify-between gap-3 transition hover:border-indigo-300 dark:hover:border-indigo-700">
+          
+          <!-- Main Category Header -->
+          <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-gray-100 dark:border-gray-700/60">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-8 h-8 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
+                📁
+              </span>
+              <div class="min-w-0">
+                <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate" title="${main}">${main}</h4>
+                <span class="text-[11px] text-gray-400 font-medium">${subs.length} أقسام فرعية • ${prodsCount} أصناف</span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95" title="اختيار هذا القسم وتطبيقه في شاشة المخزون والصنف">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>تطبيق</span>
+              </button>
+              <button type="button" onclick="window.categoryController.openSubAdderOnPage('${main}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95" title="إضافة قسم فرعي يتبع هذا القسم">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>فرعي</span>
+              </button>
+              <button type="button" onclick="window.categoryController.deleteCategory('${main}')" class="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer" title="حذف هذا القسم الرئيسي بالكامل">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sub Categories Chips -->
+          <div class="flex flex-wrap items-center gap-1.5 min-h-[35px]">
+            ${subs.length > 0 ? subs.map(sub => `
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-700 dark:text-gray-300 font-medium">
+                <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '${sub}')" class="hover:text-indigo-600 hover:underline cursor-pointer flex items-center gap-1" title="اختيار هذا التصنيف وتطبيقه على الصنف">
+                  <span>🏷️ ${sub}</span>
+                </button>
+                <button type="button" onclick="window.categoryController.deleteCategory('${main}', '${sub}')" class="text-gray-400 hover:text-rose-600 font-bold px-0.5 cursor-pointer ml-0.5" title="حذف هذا القسم الفرعي">✕</button>
+              </span>
+            `).join('') : '<span class="text-xs text-gray-400 italic">لا توجد أقسام فرعية بعد (اضغط + فرعي لإضافة فروع)</span>'}
+          </div>
+
+          <!-- Footer button: Show Products of this category in POS -->
+          <div class="pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
+            <button type="button" onclick="window.app.filterByCategory('${main}'); window.app.switchView('pos');" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer">
+              <span>عرض الأصناف في البيع (${prodsCount})</span>
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
 
         </div>

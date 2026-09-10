@@ -110,6 +110,75 @@
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0 lg:h-screen lg:overflow-hidden">
 
+  <!-- ==================== POS SECURITY & ADMIN LOGIN OVERLAY ==================== -->
+  <div id="pos-auth-overlay" class="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 select-none transition-all duration-300">
+    <div class="max-w-sm w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5">
+      
+      <!-- Store & Lock Icon -->
+      <div class="relative w-20 h-20 mx-auto">
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-indigo-600 to-amber-500 flex items-center justify-center text-white text-3xl shadow-xl shadow-indigo-500/25 border border-indigo-400/30">
+          <i data-lucide="shield-check" class="w-10 h-10"></i>
+        </div>
+        <div class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shadow-md border-2 border-slate-900">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-lg sm:text-xl font-black text-white">سوبر ماركت المنزل السوري</h2>
+        <p class="text-xs text-amber-400 font-bold mt-1">نظام الكاشير ونقاط البيع المحمي</p>
+        <p class="text-[11px] text-slate-400 mt-1">أدخل كلمة مرور الأدمن لفتح الكاشير وبدء العمل</p>
+      </div>
+
+      <!-- Error Alert -->
+      <div id="pos-auth-error" class="hidden bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold p-3 rounded-xl">
+      </div>
+
+      <!-- Password Input Form -->
+      <form id="pos-auth-form" onsubmit="event.preventDefault(); window.posAuth?.handleLogin();" class="space-y-4 text-right">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة مرور الأدمن:</label>
+          <div class="relative flex items-center">
+            <input type="password" id="pos-auth-password" inputmode="numeric" autocomplete="current-password" required placeholder="أدخل كلمة المرور..."
+                   class="w-full bg-slate-950 border border-slate-700 text-white text-center text-lg tracking-widest font-mono rounded-xl px-10 py-3 focus:outline-none focus:border-indigo-500 transition shadow-inner">
+            <button type="button" onclick="window.posAuth?.togglePasswordVisibility()" class="absolute left-3 text-slate-400 hover:text-white p-1 transition" title="إظهار / إخفاء">
+              <i data-lucide="eye" id="pos-auth-eye-icon" class="w-5 h-5"></i>
+            </button>
+            <span class="absolute right-3 text-slate-400">
+              <i data-lucide="key-round" class="w-5 h-5"></i>
+            </span>
+          </div>
+        </div>
+
+        <!-- Touch Numpad (لوحة أرقام سريعة للأجهزة اللمسية) -->
+        <div class="grid grid-cols-3 gap-1.5 pt-1">
+          <button type="button" onclick="window.posAuth?.numpadClick('1')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">1</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('2')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">2</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('3')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">3</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('4')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">4</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('5')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">5</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('6')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">6</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('7')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">7</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('8')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">8</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('9')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">9</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('clear')" class="py-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-bold rounded-xl text-xs transition cursor-pointer">مسح C</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('0')" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 text-white font-bold rounded-xl text-base transition cursor-pointer">0</button>
+          <button type="button" onclick="window.posAuth?.numpadClick('backspace')" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-sm transition cursor-pointer">⌫</button>
+        </div>
+
+        <button type="submit" id="pos-auth-submit-btn" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>دخول الكاشير</span>
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+        </button>
+      </form>
+
+      <div class="pt-2 border-t border-slate-800/80 text-[11px] text-slate-400">
+        <span>سوبر ماركت المنزل السوري • متصل بقاعدة البيانات السحابية</span>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ==================== TOP NAVIGATION HEADER ==================== -->
   <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 px-3 sm:px-6 flex items-center justify-between shadow-xs max-w-full overflow-hidden shrink-0">
     
@@ -207,6 +276,11 @@
       <!-- Settings Button (Desktop Only) -->
       <button onclick="window.app.switchView('settings')" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition hidden lg:flex items-center justify-center cursor-pointer" title="إعدادات المتجر وبيانات الفاتورة">
         <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Lock Screen / Logout Button -->
+      <button type="button" onclick="window.posAuth?.lockScreen()" class="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 transition hidden sm:flex items-center justify-center cursor-pointer shadow-2xs" title="قفل شاشة الكاشير (خروج)">
+        <i data-lucide="lock" class="w-4 h-4"></i>
       </button>
 
       <!-- Mobile Navigation Drawer Toggle Button (Mobile / Tablet) -->
@@ -386,7 +460,12 @@
           <span>تثبيت التطبيق على الموبايل 📲</span>
         </button>
 
-        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.4.0</p>
+        <button type="button" onclick="window.posAuth?.lockScreen()" class="w-full py-2.5 px-3 rounded-2xl bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition text-xs font-bold flex items-center justify-center gap-2 border border-rose-200 dark:border-rose-800 cursor-pointer">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>قفل شاشة الكاشير (تسجيل خروج) 🔒</span>
+        </button>
+
+        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.5.4</p>
       </div>
 
     </div>
@@ -4215,6 +4294,7 @@
   <script src="js/reports.js?v=2.5.6"></script>
   <script src="js/employees.js?v=2.5.6"></script>
   <script src="js/pwa.js?v=2.5.6"></script>
+  <script src="js/auth.js?v=2.5.6"></script>
   <script src="js/app.js?v=2.5.6"></script>
 </body>
 </html>

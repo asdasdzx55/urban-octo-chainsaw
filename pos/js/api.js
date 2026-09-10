@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Syrian Home Supermarket - REST API Client Layer
  * Handles communication with https://syrianhouse.almagd555.com/api_sync.php
  */
@@ -88,6 +88,13 @@ class SyrianHomeAPI {
       this.isOnline = false;
       throw error;
     }
+  }
+
+  /**
+   * 0. Verify Admin Password for POS Login / Lock Screen
+   */
+  async verifyAdminPassword(password) {
+    return await this.post('verify_admin_password', { password });
   }
 
   /**

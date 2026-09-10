@@ -1824,14 +1824,22 @@ try {
             $sub_name = trim($data['sub_category'] ?? '');
 
             if ($cat_id > 0) {
-                $chk = $pdo->prepare("SELECT parent_id FROM categories WHERE id = ? LIMIT 1");
+                $chk = $pdo->prepare("SELECT name, parent_id FROM categories WHERE id = ? LIMIT 1");
                 $chk->execute([$cat_id]);
-                $pid = $chk->fetchColumn();
-                if ($pid !== false && $pid !== null && (int)$pid > 0) {
-                    $pdo->prepare("DELETE FROM categories WHERE id = ?")->execute([$cat_id]);
-                } else {
-                    $pdo->prepare("DELETE FROM categories WHERE parent_id = ?")->execute([$cat_id]);
-                    $pdo->prepare("DELETE FROM categories WHERE id = ?")->execute([$cat_id]);
+                $c_row = $chk->fetch(PDO::FETCH_ASSOC);
+                if ($c_row) {
+                    $c_name = $c_row['name'];
+                    $pid = $c_row['parent_id'];
+                    if ($pid !== false && $pid !== null && (int)$pid > 0) {
+                        // Subcategory deletion
+                        $pdo->prepare("UPDATE products SET sub_category = NULL WHERE sub_category = ?")->execute([$c_name]);
+                        $pdo->prepare("DELETE FROM categories WHERE id = ?")->execute([$cat_id]);
+                    } else {
+                        // Main category deletion
+                        $pdo->prepare("UPDATE products SET category = 'عام', sub_category = NULL WHERE category = ?")->execute([$c_name]);
+                        $pdo->prepare("DELETE FROM categories WHERE parent_id = ?")->execute([$cat_id]);
+                        $pdo->prepare("DELETE FROM categories WHERE id = ?")->execute([$cat_id]);
+                    }
                 }
             } elseif (!empty($sub_name) && !empty($cat_name)) {
                 $chk = $pdo->prepare("SELECT id FROM categories WHERE name = ? AND (parent_id IS NULL OR parent_id = 0) LIMIT 1");
@@ -1840,8 +1848,10 @@ try {
                 if ($p_id) {
                     $pdo->prepare("DELETE FROM categories WHERE name = ? AND parent_id = ?")->execute([$sub_name, $p_id]);
                 }
+                $pdo->prepare("UPDATE products SET sub_category = NULL WHERE sub_category = ? AND category = ?")->execute([$sub_name, $cat_name]);
             } elseif (!empty($sub_name)) {
                 $pdo->prepare("DELETE FROM categories WHERE name = ? AND parent_id IS NOT NULL AND parent_id > 0")->execute([$sub_name]);
+                $pdo->prepare("UPDATE products SET sub_category = NULL WHERE sub_category = ?")->execute([$sub_name]);
             } elseif (!empty($cat_name)) {
                 $chk = $pdo->prepare("SELECT id FROM categories WHERE name = ? LIMIT 1");
                 $chk->execute([$cat_name]);
@@ -1850,8 +1860,9 @@ try {
                     $pdo->prepare("DELETE FROM categories WHERE parent_id = ?")->execute([$c_id]);
                     $pdo->prepare("DELETE FROM categories WHERE id = ?")->execute([$c_id]);
                 }
+                $pdo->prepare("UPDATE products SET category = 'عام', sub_category = NULL WHERE category = ?")->execute([$cat_name]);
             }
-            echo json_encode(['success' => true, 'message' => 'طھظ… ط­ط°ظپ ط§ظ„طھطµظ†ظٹظپ ط¨ظ†ط¬ط§ط­.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['success' => true, 'message' => 'تم حذف التصنيف وتحديث المنتجات بنجاح.'], JSON_UNESCAPED_UNICODE);
             break;
 
         // ============================================================

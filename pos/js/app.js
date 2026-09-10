@@ -161,19 +161,28 @@ class App {
     const subMap = {};
 
     // 1. Pull from CategoryController if available
+    let validTaxonomy = null;
     if (window.categoryController) {
-      const taxonomy = window.categoryController.getTaxonomy();
-      for (const [main, subs] of Object.entries(taxonomy)) {
+      validTaxonomy = window.categoryController.getTaxonomy();
+      for (const [main, subs] of Object.entries(validTaxonomy)) {
         set.add(main);
         if (!subMap[main]) subMap[main] = new Set();
         subs.forEach(s => subMap[main].add(s));
       }
     }
 
-    // 2. Also ensure all product categories are covered
+    // 2. Also ensure all product categories are covered, sanitizing deleted ones
     this.products.forEach(p => {
-      const cat = (p.category && p.category.trim()) || 'عام';
+      let cat = (p.category && p.category.trim()) || 'عام';
       const sub = (p.sub_category || p.subcategory || '').trim();
+
+      // If category was deleted from taxonomy, sanitize product category to 'عام'
+      if (validTaxonomy && Object.keys(validTaxonomy).length > 0 && !validTaxonomy[cat] && cat !== 'عام') {
+        p.category = 'عام';
+        p.sub_category = '';
+        p.subcategory = '';
+        cat = 'عام';
+      }
 
       set.add(cat);
       if (!subMap[cat]) subMap[cat] = new Set();
@@ -515,6 +524,23 @@ class App {
     this.openWeightModal(prod, item.qty, true);
   }
 
+  quickSaveWithPrint() {
+    if (!window.cart || window.cart.items.length === 0) {
+      this.showToast('سلة المشتريات فارغة!', 'warning');
+      return;
+    }
+    const isDelivery = window.cart.orderType === 'delivery';
+    const checkoutModal = document.getElementById('checkout-modal');
+    const isCheckoutOpen = checkoutModal && !checkoutModal.classList.contains('hidden') && checkoutModal.style.display !== 'none';
+
+    if (isDelivery && !isCheckoutOpen) {
+      this.openCheckoutModal();
+      this.showToast('يرجى تحديد الطيار وبيانات التوصيل ثم الضغط على F5 للحفظ والطباعة', 'info');
+      return;
+    }
+    window.cart.checkout(true);
+  }
+
   quickSaveWithoutPrint() {
     if (!window.cart || window.cart.items.length === 0) {
       this.showToast('سلة المشتريات فارغة!', 'warning');
@@ -526,10 +552,147 @@ class App {
 
     if (isDelivery && !isCheckoutOpen) {
       this.openCheckoutModal();
-      this.showToast('يرجى تحديد الطيار وبيانات التوصيل ثم الضغط على F5 للحفظ', 'info');
+      this.showToast('يرجى تحديد الطيار وبيانات التوصيل ثم الضغط على F4 للحفظ', 'info');
       return;
     }
     window.cart.checkout(false);
+  }
+
+  /* ==================== DETAILED SEARCH & PRICE FILTER (F7) ==================== */
+  toggleAdvancedSearch(forceState = null) {
+    const panel = document.getElementById('advanced-search-panel');
+    if (!panel) return;
+    const isCurrentlyHidden = panel.classList.contains('hidden');
+    const shouldShow = forceState !== null ? forceState : isCurrentlyHidden;
+
+    if (shouldShow) {
+      panel.classList.remove('hidden');
+      // Populate categories select
+      const catSelect = document.getElementById('adv-category-select');
+      if (catSelect) {
+        const mains = window.categoryController ? window.categoryController.getAllMainCategories() : this.categories;
+        const currentVal = catSelect.value;
+        catSelect.innerHTML = `
+          <option value="">-- كل التصنيفات --</option>
+          ${mains.map(c => `<option value="${c}" ${c === currentVal ? 'selected' : ''}>${c}</option>`).join('')}
+        `;
+      }
+      setTimeout(() => {
+        document.getElementById('adv-price-min')?.focus();
+      }, 50);
+      this.showToast('شريط البحث التفصيلي وتصفية الأسعار 🔍 (F7)', 'info');
+    } else {
+      panel.classList.add('hidden');
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  applyDetailedSearch() {
+    const minVal = parseFloat(document.getElementById('adv-price-min')?.value);
+    const maxVal = parseFloat(document.getElementById('adv-price-max')?.value);
+    const catVal = (document.getElementById('adv-category-select')?.value || '').trim();
+    const query = (document.getElementById('product-search-input')?.value || '').trim().toLowerCase();
+
+    const minPrice = !isNaN(minVal) ? minVal : null;
+    const maxPrice = !isNaN(maxVal) ? maxVal : null;
+
+    const filtered = this.products.filter(p => {
+      // 1. Category Filter
+      if (catVal && (p.category || 'عام') !== catVal) {
+        return false;
+      }
+      // 2. Price Filter
+      const price = parseFloat(p.price || 0);
+      if (minPrice !== null && price < minPrice) {
+        return false;
+      }
+      if (maxPrice !== null && price > maxPrice) {
+        return false;
+      }
+      // 3. Text Search (Name, Barcode, SKU)
+      if (query) {
+        const name = (p.name || '').toLowerCase();
+        const barcode = (p.barcode || '').toLowerCase();
+        const sku = (p.sku || '').toLowerCase();
+        if (!name.includes(query) && !barcode.includes(query) && !sku.includes(query)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    this.renderProductsWithList(filtered);
+  }
+
+  resetDetailedSearch() {
+    const minEl = document.getElementById('adv-price-min');
+    const maxEl = document.getElementById('adv-price-max');
+    const catEl = document.getElementById('adv-category-select');
+    if (minEl) minEl.value = '';
+    if (maxEl) maxEl.value = '';
+    if (catEl) catEl.value = '';
+    this.renderProducts();
+    this.showToast('تمت إعادة ضبط فلاتر البحث التفصيلي', 'info');
+  }
+
+  renderProductsWithList(list) {
+    const grid = document.getElementById('products-grid');
+    if (!grid) return;
+    if (list.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full py-16 text-center text-gray-400">
+          <i data-lucide="package-search" class="w-12 h-12 mx-auto mb-2 opacity-40 text-indigo-400"></i>
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">لا توجد منتجات مطابقة للبحث أو نطاق السعر المحدد</p>
+          <button onclick="window.app.resetDetailedSearch()" class="mt-3 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-xs hover:bg-indigo-700 transition">
+            إلغاء الفلتر وعرض الكل
+          </button>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    grid.innerHTML = list.map(p => {
+      const price = parseFloat(p.price || 0);
+      const stock = parseFloat(p.stock || 0);
+      const isWeight = p.unit_type === 'weight' || p.unit === 'كجم' || p.is_weight;
+      const isOutOfStock = stock <= 0;
+
+      return `
+        <div onclick="window.app.onProductClicked(${p.id})" 
+             class="group relative bg-white dark:bg-gray-800 rounded-2xl p-2.5 border border-gray-200/80 dark:border-gray-700/80 shadow-2xs hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-150 flex flex-col justify-between cursor-pointer select-none ${isOutOfStock ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : 'active:scale-98'}">
+          
+          <div class="flex items-start justify-between gap-1.5 mb-1.5">
+            <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${isWeight ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400'} truncate max-w-[110px]">
+              ${p.category || 'عام'}
+            </span>
+            <span class="text-[10px] font-mono font-semibold ${stock <= 3 ? 'text-rose-500 font-bold' : 'text-gray-400 dark:text-gray-500'}">
+              المتاح: ${stock}
+            </span>
+          </div>
+
+          <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-tight mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" title="${p.name}">
+            ${p.name}
+          </h3>
+
+          <div class="pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between mt-auto">
+            <div class="flex flex-col">
+              <span class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                ${price.toFixed(2)} <span class="text-[10px] font-normal text-gray-500">ج.م</span>
+              </span>
+              ${isWeight ? '<span class="text-[9px] text-amber-600 dark:text-amber-400 font-bold">⚖️ وزن ميزان</span>' : ''}
+            </div>
+
+            <button type="button" class="w-7 h-7 rounded-xl bg-indigo-50 group-hover:bg-indigo-600 text-indigo-600 group-hover:text-white dark:bg-gray-700 dark:group-hover:bg-indigo-600 dark:text-gray-300 dark:group-hover:text-white flex items-center justify-center transition-all shadow-2xs">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   promptQuickDiscount() {
@@ -583,8 +746,10 @@ class App {
       if (el) {
         if (v === viewName) {
           el.classList.remove('hidden');
+          el.classList.add('flex');
         } else {
           el.classList.add('hidden');
+          el.classList.remove('flex');
         }
       }
     });
@@ -1154,8 +1319,9 @@ class App {
     document.getElementById('btn-submit-payment')?.addEventListener('click', () => window.cart?.checkout(true));
     document.getElementById('btn-submit-save-only')?.addEventListener('click', () => window.cart?.checkout(false));
 
-    // Global Keyboard Shortcuts (F5 to save invoice without printing & prevent page reload)
+    // Global Keyboard Shortcuts (F5: Save & Print, F4: Save Only, F7: Detailed Search)
     window.addEventListener('keydown', (e) => {
+      // F5: Quick save WITH printing
       if (e.key === 'F5' || e.keyCode === 116) {
         e.preventDefault();
         e.stopPropagation();
@@ -1175,8 +1341,24 @@ class App {
           return;
         }
 
-        // Quick save without printing
+        this.quickSaveWithPrint();
+        return;
+      }
+
+      // F4: Quick save WITHOUT printing
+      if (e.key === 'F4' || e.keyCode === 115) {
+        e.preventDefault();
+        e.stopPropagation();
         this.quickSaveWithoutPrint();
+        return;
+      }
+
+      // F7: Toggle Detailed Search with Price Range Filter
+      if (e.key === 'F7' || e.keyCode === 118) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleAdvancedSearch();
+        return;
       }
     });
 

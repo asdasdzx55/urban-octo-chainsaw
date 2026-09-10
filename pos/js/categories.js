@@ -77,12 +77,8 @@ class CategoriesController {
 
   buildInitialTaxonomy() {
     this.taxonomy = {};
-    // Seed with default taxonomy
-    for (const [main, subs] of Object.entries(DEFAULT_SUPERMARKET_TAXONOMY)) {
-      this.taxonomy[main] = new Set(subs);
-    }
 
-    // Overlay cached categories from localStorage if present
+    // Load cached categories from localStorage if present
     try {
       const cached = JSON.parse(localStorage.getItem('pos_categories_cache') || '[]');
       if (Array.isArray(cached) && cached.length > 0) {
@@ -93,19 +89,26 @@ class CategoriesController {
       console.warn('Failed to parse cached categories:', e);
     }
 
+    // If still empty (first run ever), ensure at least 'عام' exists
+    if (Object.keys(this.taxonomy).length === 0) {
+      this.taxonomy['عام'] = new Set(['متنوع']);
+    }
+
     this.updateDatalists();
   }
 
   rebuildTaxonomyFromRaw(rawList) {
     if (!Array.isArray(rawList)) return;
 
-    // Map by ID
+    const newTaxonomy = {};
     const idMap = new Map();
+
+    // Map main categories first
     rawList.forEach(c => {
       idMap.set(c.id, c.name);
       if (!c.parent_id || c.parent_id == 0) {
-        if (!this.taxonomy[c.name]) {
-          this.taxonomy[c.name] = new Set();
+        if (!newTaxonomy[c.name]) {
+          newTaxonomy[c.name] = new Set();
         }
       }
     });
@@ -115,13 +118,19 @@ class CategoriesController {
       if (c.parent_id && c.parent_id > 0) {
         const parentName = idMap.get(c.parent_id);
         if (parentName) {
-          if (!this.taxonomy[parentName]) {
-            this.taxonomy[parentName] = new Set();
+          if (!newTaxonomy[parentName]) {
+            newTaxonomy[parentName] = new Set();
           }
-          this.taxonomy[parentName].add(c.name);
+          newTaxonomy[parentName].add(c.name);
         }
       }
     });
+
+    if (Object.keys(newTaxonomy).length === 0) {
+      newTaxonomy['عام'] = new Set(['متنوع']);
+    }
+
+    this.taxonomy = newTaxonomy;
   }
 
   async loadCategoriesFromServer() {
@@ -329,7 +338,7 @@ class CategoriesController {
       return;
     }
 
-    // Local deduction
+    // 1. Local deduction in taxonomy
     if (isSub) {
       if (this.taxonomy[mainCat]) {
         this.taxonomy[mainCat].delete(subCat);
@@ -338,10 +347,58 @@ class CategoriesController {
       delete this.taxonomy[mainCat];
     }
 
+    // Ensure 'عام' exists if everything was deleted
+    if (Object.keys(this.taxonomy).length === 0) {
+      this.taxonomy['عام'] = new Set(['متنوع']);
+    }
+
+    // 2. Remove from rawCategories & localStorage cache
+    if (Array.isArray(this.rawCategories)) {
+      if (isSub) {
+        this.rawCategories = this.rawCategories.filter(c => !(c.name === subCat && c.parent_id));
+      } else {
+        const mainObj = this.rawCategories.find(c => c.name === mainCat && (!c.parent_id || c.parent_id == 0));
+        const mainId = mainObj ? mainObj.id : null;
+        this.rawCategories = this.rawCategories.filter(c => {
+          if (c.name === mainCat && (!c.parent_id || c.parent_id == 0)) return false;
+          if (mainId && c.parent_id == mainId) return false;
+          return true;
+        });
+      }
+      localStorage.setItem('pos_categories_cache', JSON.stringify(this.rawCategories));
+    }
+
+    // 3. Update products in memory & localStorage so they don't revive the category
+    if (window.app?.products && Array.isArray(window.app.products)) {
+      let prodsUpdated = false;
+      window.app.products.forEach(p => {
+        if (!isSub) {
+          if ((p.category || '').trim() === mainCat) {
+            p.category = 'عام';
+            p.sub_category = '';
+            p.subcategory = '';
+            prodsUpdated = true;
+          }
+        } else {
+          if ((p.category || '').trim() === mainCat && ((p.sub_category || '').trim() === subCat || (p.subcategory || '').trim() === subCat)) {
+            p.sub_category = '';
+            p.subcategory = '';
+            prodsUpdated = true;
+          }
+        }
+      });
+      if (prodsUpdated) {
+        try {
+          localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+        } catch (e) {}
+      }
+    }
+
     this.updateDatalists();
     this.renderManagerUI();
+    this.renderCategoryView();
 
-    // Server deletion
+    // 4. Server deletion
     try {
       window.app?.showLoading(true, 'جاري حذف التصنيف من السيرفر...');
       const payload = isSub 
@@ -360,6 +417,34 @@ class CategoriesController {
     if (window.app) {
       window.app.extractTaxonomy?.();
       window.app.renderCategories?.();
+      window.app.renderProducts?.();
+    }
+  }
+
+  async importSupermarketDefaults() {
+    if (!confirm('هل تريد استيراد تصنيفات وأقسام السوبرماركت المقترحة وحفظها في المتجر؟')) {
+      return;
+    }
+    window.app?.showLoading(true, 'جاري استيراد أقسام السوبر ماركت المقترحة...');
+    try {
+      for (const [main, subs] of Object.entries(DEFAULT_SUPERMARKET_TAXONOMY)) {
+        if (!this.taxonomy[main]) {
+          this.taxonomy[main] = new Set();
+        }
+        await window.api?.syncCategory({ main_category: main });
+        for (const sub of subs) {
+          this.taxonomy[main].add(sub);
+          await window.api?.syncCategory({ main_category: main, sub_category: sub });
+        }
+      }
+      await this.loadCategoriesFromServer();
+      window.app?.showLoading(false);
+      window.app?.showToast('تم استيراد تصنيفات السوبر ماركت بنجاح ✅', 'success');
+      this.renderCategoryView();
+    } catch (e) {
+      window.app?.showLoading(false);
+      window.app?.showToast('تم استيراد التصنيفات محلياً 📦', 'info');
+      this.renderCategoryView();
     }
   }
 

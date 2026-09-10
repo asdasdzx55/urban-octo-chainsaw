@@ -527,20 +527,15 @@ class POSCart {
           // Show Success Thermal Receipt Modal
           this.showReceiptModal(invoiceData);
 
-          const printerSettings = window.printerController ? window.printerController.settings : { auto_open_browser_print: false, print_mode: 'preview' };
-          
-          if (printerSettings.auto_open_browser_print) {
-            try {
-              this.printReceiptDirectly();
-            } catch(e) {}
-            window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وجاري فتح الطباعة ✅`, 'success');
-          } else if (printerSettings.print_mode === 'bluetooth') {
-            window.printerController?.printViaBluetooth(invoiceData);
-          } else if (printerSettings.print_mode === 'rawbt') {
-            window.printerController?.printViaRawBT(invoiceData);
+          if (window.printerController) {
+            const pSettings = window.printerController.settings || {};
+            if (pSettings.auto_print !== false && pSettings.print_mode !== 'preview') {
+              window.printerController.printReceipt(invoiceData);
+            } else {
+              window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح 💾✅`, 'success');
+            }
           } else {
-            // Preview in app only (بدون نافذة كروم)
-            window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح 💾✅`, 'success');
+            this.printReceiptDirectly();
           }
         } else {
           // Saved without printing (عدم الطباعة)
@@ -604,15 +599,13 @@ class POSCart {
       if (shouldPrint) {
         this.showReceiptModal(invoiceData);
 
-        const printerSettings = window.printerController ? window.printerController.settings : { auto_open_browser_print: false, print_mode: 'preview' };
-        if (printerSettings.auto_open_browser_print) {
-          try {
-            this.printReceiptDirectly();
-          } catch(e) {}
-        } else if (printerSettings.print_mode === 'bluetooth') {
-          window.printerController?.printViaBluetooth(invoiceData);
-        } else if (printerSettings.print_mode === 'rawbt') {
-          window.printerController?.printViaRawBT(invoiceData);
+        if (window.printerController) {
+          const pSettings = window.printerController.settings || {};
+          if (pSettings.auto_print !== false && pSettings.print_mode !== 'preview') {
+            window.printerController.printReceipt(invoiceData);
+          }
+        } else {
+          this.printReceiptDirectly();
         }
         window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً (وضع أوفلاين) 📦✅`, 'warning');
       } else {
@@ -877,20 +870,30 @@ class POSCart {
     setTimeout(() => { this.isPrinting = false; }, 2000);
 
     if (!this.lastInvoice) {
-      window.print();
+      window.app?.showToast('لا توجد فاتورة مفتوحة للطباعة', 'warning');
       return;
     }
-    this.printInvoice(this.lastInvoice);
+
+    if (window.printerController) {
+      window.printerController.printReceipt(this.lastInvoice);
+    } else {
+      this.printInvoice(this.lastInvoice);
+    }
   }
 
   getReceiptPrintStyles() {
+    const is58 = window.printerController?.settings?.paper_width === '58mm';
+    const pageW = is58 ? '58mm' : '80mm';
+    const maxW = is58 ? '52mm' : '74mm';
+    const baseMargin = is58 ? '1mm' : '2mm';
+
     return `
-      @page { size: 80mm auto; margin: 2mm; }
+      @page { size: ${pageW} auto; margin: ${baseMargin}; }
       * { box-sizing: border-box; }
       html, body {
         width: 100%;
         margin: 0;
-        padding: 1mm 2mm;
+        padding: 1mm ${baseMargin};
         background: #ffffff !important;
         color: #000000 !important;
         font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -901,7 +904,7 @@ class POSCart {
       }
       .bw-receipt {
         width: 100%;
-        max-width: 74mm;
+        max-width: ${maxW};
         margin: 0 auto;
         padding: 0;
         background: #fff !important;

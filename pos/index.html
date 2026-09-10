@@ -2746,61 +2746,118 @@
             </div>
           </div>
 
-          <!-- Card 2: Printer & Server API Config -->
+          <!-- Card 2: Thermal Printer & Direct PC Silent Printing -->
           <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-              <i data-lucide="printer" class="w-4 h-4 text-indigo-600"></i>
-              إعدادات الطابعة والربط المركزي (API)
-            </h3>
-
-            <!-- Paper Width -->
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">عرض ورق الفاتورة الحرارية:</label>
-              <select id="set-paper-width" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
-                <option value="80mm">طابعة كاشير 80 مم (80mm Thermal Receipt - قياسي)</option>
-                <option value="58mm">طابعة كاشير مدمجة 58 مم (58mm Mini POS)</option>
-              </select>
+            <div class="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="printer" class="w-4 h-4 text-indigo-600"></i>
+                <span>إعدادات طابعة الفواتير والطباعة الفورية (بدون كروم)</span>
+              </h3>
+              <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+                ⚡ طباعة فائقة السرعة
+              </span>
             </div>
 
-            <!-- Print Mode & Behavior (الطباعة بدون صفحة كروم) -->
-            <div class="flex flex-col gap-2 p-3.5 bg-white dark:bg-gray-800 rounded-xl border border-indigo-100 dark:border-indigo-900">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i>
-                  طريقة طباعة الفاتورة وسلوك الدفع:
-                </span>
-                <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold">مباشر</span>
-              </div>
-
-              <!-- Checkbox: No Chrome Page -->
-              <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700 dark:text-gray-300">
-                <input type="checkbox" id="set-no-chrome-print" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
-                <span>إلغاء فتح نافذة كروم التلقائية عند إنهاء البيع (معاينة بالتطبيق فقط)</span>
+            <!-- Printer Method / Mode Selection -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-500"></i>
+                <span>طريقة الطباعة / نوع الطابعة المعتمدة:</span>
               </label>
+              <select id="set-print-mode" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-100 shadow-xs focus:ring-2 focus:ring-indigo-500">
+                <option value="kiosk_pc">💻 طابعة الكمبيوتر المعرفة الافتراضية (طباعة صامتة فورية بدون نافذة كروم - Kiosk Mode)</option>
+                <option value="usb">🔌 طابعة USB موصولة بالكمبيوتر مباشرة (WebUSB ESC/POS مباشر)</option>
+                <option value="bluetooth">📶 طابعة بلوتوث حرارية لاسلكية (Direct Web Bluetooth ESC/POS)</option>
+                <option value="rawbt">📲 تطبيق RawBT للأندرويد (طابعات USB وبلوتوث بالهاتف/التابلت)</option>
+                <option value="browser">🖨️ نافذة متصفح كروم التقليدية (Chrome Print Dialog)</option>
+                <option value="preview">📱 معاينة داخل التطبيق فقط (بدون أي أمر طباعة)</option>
+              </select>
+              <p class="text-[11px] text-gray-500 leading-normal">
+                اختر <b>"طابعة الكمبيوتر المعرفة"</b> للطباعة مباشرة على طابعة الكاشير الافتراضية للويندوز بدون أن تفتح نافذة متصفح كروم نهائياً.
+              </p>
+            </div>
 
-              <!-- Preferred Mode Select -->
-              <div class="flex flex-col gap-1 mt-1">
-                <label class="text-[11px] text-gray-500 font-medium">الطباعة الافتراضية عند الضغط على طباعة:</label>
-                <select id="set-print-mode" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
-                  <option value="preview">📱 معاينة داخل التطبيق فقط (بدون فتح كروم نهائياً)</option>
-                  <option value="bluetooth">📶 طابعة بلوتوث حرارية مباشرة (Direct Bluetooth ESC/POS)</option>
-                  <option value="rawbt">📲 تطبيق RawBT للأندرويد (طابعات USB وبلوتوث بالهاتف)</option>
-                  <option value="browser">🖨️ طباعة متصفح كروم العادية (Chrome Print Dialog)</option>
+            <!-- Paper Width & Number of Copies Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Paper Width -->
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">عرض رول الورق الحراري:</label>
+                <select id="set-paper-width" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+                  <option value="80mm">طابعة كاشير 80 مم (80mm - رول عريض قياسي)</option>
+                  <option value="58mm">طابعة كاشير مدمجة 58 مم (58mm - رول صغير)</option>
                 </select>
               </div>
 
-              <!-- Bluetooth Pair Button -->
-              <div class="flex items-center gap-2 pt-1">
-                <button type="button" onclick="window.printerController?.connectBluetooth()" class="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
-                  <i data-lucide="bluetooth" class="w-3.5 h-3.5"></i>
-                  <span>اقتران طابعة بلوتوث جديدة</span>
-                </button>
-                <button type="button" onclick="window.printerController?.showKioskGuideModal()" class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
-                  <i data-lucide="info" class="w-3.5 h-3.5"></i>
-                  <span>شرح الطباعة الصامتة (Kiosk)</span>
-                </button>
+              <!-- Copies -->
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">عدد النسخ المطبوعة:</label>
+                <select id="set-print-copies" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+                  <option value="1">نسخة واحدة (للعميل فقط)</option>
+                  <option value="2">نسختان (نسخة للعميل + نسخة للمحل)</option>
+                </select>
               </div>
             </div>
+
+            <!-- Print Behavior Toggles -->
+            <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2.5">
+              <label class="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-gray-800 dark:text-gray-200 select-none">
+                <input type="checkbox" id="set-auto-print" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" checked>
+                <span>طباعة الفاتورة تلقائياً عند إنهاء الدفع أو اختصار F5</span>
+              </label>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
+                <label class="flex items-center gap-2 cursor-pointer text-[11px] font-semibold text-gray-600 dark:text-gray-400 select-none">
+                  <input type="checkbox" id="set-auto-cut" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" checked>
+                  <span>قص الورق تلقائياً (Auto Cut)</span>
+                </label>
+
+                <label class="flex items-center gap-2 cursor-pointer text-[11px] font-semibold text-gray-600 dark:text-gray-400 select-none">
+                  <input type="checkbox" id="set-open-drawer" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
+                  <span>فتح درج الكاشير تلقائياً</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Printer Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <!-- Test Print -->
+              <button type="button" onclick="window.settingsController?.testPrint()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>🖨️ تجربة الطباعة الآن</span>
+              </button>
+
+              <!-- Download Kiosk Shortcut Bat -->
+              <button type="button" onclick="window.settingsController?.downloadKioskShortcut()" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 transition active:scale-95 cursor-pointer" title="تنزيل اختصار لسطح المكتب يفتح الكاشير بوضع الطباعة الصامتة الفورية">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>🚀 تنزيل أداة الطباعة الصامتة للكمبيوتر (.bat)</span>
+              </button>
+
+              <!-- Bluetooth Pair -->
+              <button type="button" onclick="window.printerController?.connectBluetooth()" class="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <i data-lucide="bluetooth" class="w-3.5 h-3.5"></i>
+                <span>اقتران بلوتوث</span>
+              </button>
+
+              <!-- USB Pair -->
+              <button type="button" onclick="window.printerController?.connectUSB()" class="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <i data-lucide="usb" class="w-3.5 h-3.5"></i>
+                <span>اقتران USB</span>
+              </button>
+
+              <!-- Guide Modal -->
+              <button type="button" onclick="window.printerController?.showKioskGuideModal()" class="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+                <span>شرح الطباعة الصامتة</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2.5: Server API Central Sync -->
+          <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <i data-lucide="cloud" class="w-4 h-4 text-indigo-600"></i>
+              الربط المركزي وسيرفر المزامنة (API Central Sync)
+            </h3>
 
             <!-- API URL -->
             <div class="flex flex-col gap-1">
@@ -3738,34 +3795,46 @@
         <!-- Rendered dynamically -->
       </div>
 
-      <!-- Action Buttons Grid: Direct Bluetooth, RawBT, Chrome Print & WhatsApp -->
+      <!-- Action Buttons Grid: Instant PC Silent Print, Bluetooth, RawBT, USB, Chrome Print & WhatsApp -->
       <div class="flex flex-col gap-2 pt-1">
-        <!-- Direct No-Chrome Options -->
-        <div class="grid grid-cols-2 gap-2">
-          <!-- Button 1: Direct Bluetooth (بدون كروم) -->
-          <button type="button" onclick="window.printerController?.printViaBluetooth(window.cart?.lastInvoice)" class="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="طباعة مباشرة لطابعة البلوتوث بدون فتح صفحة كروم">
-            <i data-lucide="bluetooth" class="w-4 h-4"></i>
-            <span>طباعة بلوتوث 📶</span>
+        <!-- Main Print Button (Uses User's Selected Mode in Settings) -->
+        <button type="button" onclick="window.cart?.printReceiptDirectly()" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold text-sm shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer">
+          <i data-lucide="printer" class="w-5 h-5"></i>
+          <span>🖨️ طباعة الفاتورة الآن (بالطريقة الافتراضية)</span>
+        </button>
+
+        <!-- Specific Destination Print Buttons -->
+        <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+          <!-- Button 1: PC Direct Silent (بدون كروم) -->
+          <button type="button" onclick="window.printerController?.printViaKioskPC(window.cart?.lastInvoice)" class="py-2 px-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-800 flex flex-col items-center justify-center gap-1 transition cursor-pointer" title="طباعة مباشرة لطابعة الكمبيوتر المعرفة بدون نافذة كروم">
+            <i data-lucide="monitor" class="w-4 h-4"></i>
+            <span>طابعة الكمبيوتر 💻</span>
           </button>
 
-          <!-- Button 2: Direct RawBT (أندرويد) -->
-          <button type="button" onclick="window.printerController?.printViaRawBT(window.cart?.lastInvoice)" class="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-bold text-xs shadow-md shadow-sky-600/20 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="طباعة فورية عبر تطبيق RawBT للأندرويد">
+          <!-- Button 2: Direct Bluetooth (بدون كروم) -->
+          <button type="button" onclick="window.printerController?.printViaBluetooth(window.cart?.lastInvoice)" class="py-2 px-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 font-bold border border-purple-200 dark:border-purple-800 flex flex-col items-center justify-center gap-1 transition cursor-pointer" title="طباعة مباشرة لطابعة البلوتوث">
+            <i data-lucide="bluetooth" class="w-4 h-4"></i>
+            <span>بلوتوث 📶</span>
+          </button>
+
+          <!-- Button 3: Direct RawBT (أندرويد) -->
+          <button type="button" onclick="window.printerController?.printViaRawBT(window.cart?.lastInvoice)" class="py-2 px-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950 dark:hover:bg-sky-900 text-sky-700 dark:text-sky-300 font-bold border border-sky-200 dark:border-sky-800 flex flex-col items-center justify-center gap-1 transition cursor-pointer" title="طباعة عبر تطبيق RawBT للأندرويد">
             <i data-lucide="smartphone" class="w-4 h-4"></i>
-            <span>طباعة RawBT 📲</span>
+            <span>RawBT 📲</span>
           </button>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <!-- Button 3: WhatsApp Share -->
-          <button type="button" onclick="window.cart.shareReceiptWhatsApp()" class="py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="إرسال الفاتورة عبر واتساب">
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <!-- Button 4: WhatsApp Share -->
+          <button type="button" onclick="window.cart.shareReceiptWhatsApp()" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="إرسال الفاتورة عبر واتساب">
             <i data-lucide="share-2" class="w-4 h-4"></i>
             <span>واتساب 💬</span>
           </button>
 
-          <!-- Button 4: Standard Chrome Print -->
-          <button type="button" id="btn-print-receipt" onclick="window.cart?.printReceiptDirectly()" class="py-2.5 px-3 rounded-2xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="طباعة عبر نافذة متصفح كروم">
+          <!-- Button 5: Standard Chrome Print -->
+          <button type="button" onclick="window.cart?.printInvoice(window.cart?.lastInvoice)" class="py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="فتح نافذة طباعة كروم العادية">
             <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>طباعة كروم 🖨️</span>
+            <span>نافذة كروم 📄</span>
           </button>
         </div>
       </div>
@@ -3833,23 +3902,36 @@
         </div>
 
         <!-- PC Kiosk Section -->
-        <div class="p-3.5 bg-amber-50/60 dark:bg-amber-950/40 rounded-2xl border border-amber-100 dark:border-amber-900 flex flex-col gap-1.5">
+        <div class="p-3.5 bg-amber-50/60 dark:bg-amber-950/40 rounded-2xl border border-amber-100 dark:border-amber-900 flex flex-col gap-2">
           <span class="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs">
-            💻 على جهاز الكمبيوتر ونقاط البيع (Kiosk Printing):
+            💻 على جهاز الكمبيوتر ونقاط البيع (الطباعة الصامتة الفورية بدون كروم):
           </span>
-          <p>لجعل متصفح كروم يطبع الفاتورة فوراً دون ظهور نافذة المعاينة:</p>
-          <ol class="list-decimal list-inside space-y-1 pe-1 font-medium">
-            <li>انقر بالزر الأيمن على اختصار متصفح كروم واضغط <b>Properties (خصائص)</b>.</li>
-            <li>في خانة <b>Target (الهدف)</b> أضف في نهاية السطر مسافة ثم: <code class="bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded font-mono font-bold text-[11px]">--kiosk-printing</code></li>
-            <li>اضغط موافق وافتح كروم، ستطبع الفواتير مباشرة دون أي نافذة لكروم!</li>
-          </ol>
+          <p>طابعة الكمبيوتر المعرفة في الويندوز تطبع فورياً وبشكل صامت بدون أي نافذة منبثقة عند تشغيل المتصفح بوضع Kiosk Printing.</p>
+          
+          <!-- Direct 1-Click Download Button -->
+          <div class="pt-1">
+            <button type="button" onclick="window.printerController?.downloadWindowsSilentKioskBat()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition active:scale-95 cursor-pointer">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>🚀 اضغط هنا لتنزيل أداة تشغيل الكاشير الصامت للويندوز (.bat)</span>
+            </button>
+            <p class="text-[10px] text-gray-500 mt-1 text-center">قم بنقل الملف المنزّل إلى سطح المكتب واضغط عليه مرتين، وسيفتح الكاشير ويطبع فورياً بدون كروم!</p>
+          </div>
+
+          <div class="pt-1 border-t border-amber-200/60 dark:border-amber-900/60">
+            <p class="font-bold text-[11px]">أو التفعيل اليدوي عبر اختصار كروم:</p>
+            <ol class="list-decimal list-inside space-y-0.5 text-[11px] font-medium">
+              <li>انقر بالزر الأيمن على اختصار كروم واضغط <b>Properties (خصائص)</b>.</li>
+              <li>في خانة <b>Target (الهدف)</b> أضف في نهاية السطر مسافة ثم: <code class="bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded font-mono font-bold text-[11px]">--kiosk-printing</code></li>
+              <li>اضغط موافق وافتح كروم، ستطبع الفواتير مباشرة دون أي نافذة لكروم!</li>
+            </ol>
+          </div>
         </div>
 
       </div>
 
       <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-        <button type="button" onclick="window.printerController?.closeKioskGuideModal()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition">
-          فهمت ذلك، حسناً 👍
+        <button type="button" onclick="window.printerController?.closeKioskGuideModal()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition">
+          فهمت ذلك، إغلاق 👍
         </button>
       </div>
     </div>
@@ -4356,9 +4438,9 @@
   <script src="js/api.js?v=2.5.6"></script>
   <script src="js/sync-manager.js?v=2.5.6"></script>
   <script src="js/pos-scanner.js?v=2.5.6"></script>
-  <script src="js/settings.js?v=2.5.6"></script>
-  <script src="js/printer.js?v=2.5.6"></script>
-  <script src="js/cart.js?v=2.5.6"></script>
+  <script src="js/printer.js?v=3.0.0"></script>
+  <script src="js/settings.js?v=3.0.0"></script>
+  <script src="js/cart.js?v=3.0.0"></script>
   <script src="js/categories.js?v=2.5.6"></script>
   <script src="js/inventory.js?v=2.5.6"></script>
   <script src="js/purchases.js?v=2.5.6"></script>

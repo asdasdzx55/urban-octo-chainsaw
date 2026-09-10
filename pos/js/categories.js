@@ -421,6 +421,107 @@ class CategoriesController {
     }
   }
 
+  // تعديل وتغيير اسم القسم (رئيسي أو فرعي)
+  async editCategory(mainCat, subCat = null) {
+    const isSub = !!subCat;
+    const currentName = isSub ? subCat : mainCat;
+    const promptMsg = isSub
+      ? `✏️ تعديل اسم القسم الفرعي التابع لـ (${mainCat}):`
+      : `✏️ تعديل اسم القسم الرئيسي (${mainCat}):`;
+
+    const newName = prompt(promptMsg, currentName);
+    if (!newName || !newName.trim() || newName.trim() === currentName) {
+      return;
+    }
+    const cleanNewName = newName.trim();
+
+    // 1. تحديث شجرة الأقسام في الذاكرة
+    if (!isSub) {
+      if (this.taxonomy[cleanNewName] && cleanNewName !== mainCat) {
+        alert('يوجد قسم رئيسي آخر يحمل هذا الاسم بالفعل!');
+        return;
+      }
+      const existingSubs = this.taxonomy[mainCat] || new Set();
+      delete this.taxonomy[mainCat];
+      this.taxonomy[cleanNewName] = existingSubs;
+    } else {
+      if (this.taxonomy[mainCat]) {
+        this.taxonomy[mainCat].delete(subCat);
+        this.taxonomy[mainCat].add(cleanNewName);
+      }
+    }
+
+    // 2. تحديث الكاش المحلي
+    if (Array.isArray(this.rawCategories)) {
+      if (!isSub) {
+        this.rawCategories.forEach(c => {
+          if (c.name === mainCat && (!c.parent_id || c.parent_id == 0)) {
+            c.name = cleanNewName;
+          }
+        });
+      } else {
+        const pObj = this.rawCategories.find(c => c.name === mainCat && (!c.parent_id || c.parent_id == 0));
+        const pId = pObj ? pObj.id : null;
+        this.rawCategories.forEach(c => {
+          if (c.name === subCat && (c.parent_id == pId || !pId)) {
+            c.name = cleanNewName;
+          }
+        });
+      }
+      localStorage.setItem('pos_categories_cache', JSON.stringify(this.rawCategories));
+    }
+
+    // 3. تحديث المنتجات التابعة للاسم الجديد في الذاكرة والكاش
+    if (window.app?.products && Array.isArray(window.app.products)) {
+      let prodsUpdated = false;
+      window.app.products.forEach(p => {
+        if (!isSub) {
+          if ((p.category || '').trim() === mainCat) {
+            p.category = cleanNewName;
+            prodsUpdated = true;
+          }
+        } else {
+          if ((p.category || '').trim() === mainCat && ((p.sub_category || '').trim() === subCat || (p.subcategory || '').trim() === subCat)) {
+            p.sub_category = cleanNewName;
+            p.subcategory = cleanNewName;
+            prodsUpdated = true;
+          }
+        }
+      });
+      if (prodsUpdated) {
+        try {
+          localStorage.setItem('syrian_home_products', JSON.stringify(window.app.products));
+        } catch (e) {}
+      }
+    }
+
+    // 4. تحديث الواجهات فورياً
+    this.updateDatalists();
+    this.renderManagerUI();
+    this.renderCategoryView();
+    if (window.app) {
+      window.app.extractTaxonomy?.();
+      window.app.renderCategories?.();
+      window.app.renderProducts?.();
+    }
+
+    // 5. مزامنة التعديل مع السيرفر
+    try {
+      window.app?.showLoading(true, 'جاري حفظ التعديل في السيرفر...');
+      await window.api?.renameCategory({
+        old_name: currentName,
+        new_name: cleanNewName,
+        is_sub: isSub ? 1 : 0,
+        parent_name: mainCat
+      });
+      window.app?.showLoading(false);
+      window.app?.showToast(`تم تعديل الاسم إلى "${cleanNewName}" بنجاح ✍️`, 'success');
+    } catch (e) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`تم التعديل محلياً ✍️`, 'info');
+    }
+  }
+
   async importSupermarketDefaults() {
     if (!confirm('هل تريد استيراد تصنيفات وأقسام السوبرماركت المقترحة وحفظها في المتجر؟')) {
       return;
@@ -755,30 +856,39 @@ class CategoriesController {
               </div>
             </div>
 
-            <!-- Actions -->
-            <div class="flex items-center gap-1 shrink-0">
-              <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap" title="اختيار هذا القسم وتطبيقه في شاشة المخزون والصنف">
-                <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                <span>تطبيق</span>
+            <!-- Action Buttons: Clear and explicit (Edit, Add Sub, Delete) -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <!-- زر التعديل -->
+              <button type="button" onclick="window.categoryController.editCategory('${main}')" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap" title="تعديل اسم هذا القسم الرئيسي">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                <span>تعديل</span>
               </button>
-              <button type="button" onclick="window.categoryController.openSubAdderOnPage('${main}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap" title="إضافة قسم فرعي يتبع هذا القسم">
+
+              <!-- زر إضافة فرعي -->
+              <button type="button" onclick="window.categoryController.openSubAdderOnPage('${main}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap" title="إضافة قسم فرعي يتبع هذا القسم">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                <span>فرعي</span>
+                <span>+ فرعي</span>
               </button>
-              <button type="button" onclick="window.categoryController.deleteCategory('${main}')" class="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer shrink-0" title="حذف هذا القسم الرئيسي بالكامل">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
+
+              <!-- زر الحذف -->
+              <button type="button" onclick="window.categoryController.deleteCategory('${main}')" class="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap" title="حذف هذا القسم الرئيسي بالكامل">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>حذف</span>
               </button>
             </div>
           </div>
 
-          <!-- Sub Categories Chips -->
-          <div class="flex flex-wrap items-center gap-1.5 min-h-[35px]">
+          <!-- Sub Categories Chips with Edit and Delete -->
+          <div class="flex flex-wrap items-center gap-1.5 min-h-[38px] py-1">
             ${subs.length > 0 ? subs.map(sub => `
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-700 dark:text-gray-300 font-medium">
-                <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '${sub}')" class="hover:text-indigo-600 hover:underline cursor-pointer flex items-center gap-1" title="اختيار هذا التصنيف وتطبيقه على الصنف">
-                  <span>🏷️ ${sub}</span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-700 dark:text-gray-300 font-medium shadow-2xs">
+                <span class="font-bold text-gray-800 dark:text-gray-200">🏷️ ${sub}</span>
+                <button type="button" onclick="window.categoryController.editCategory('${main}', '${sub}')" class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 p-1 rounded-lg cursor-pointer transition" title="تعديل اسم الفرعي (${sub})">
+                  <i data-lucide="pencil" class="w-3 h-3"></i>
                 </button>
-                <button type="button" onclick="window.categoryController.deleteCategory('${main}', '${sub}')" class="text-gray-400 hover:text-rose-600 font-bold px-0.5 cursor-pointer ml-0.5" title="حذف هذا القسم الفرعي">✕</button>
+                <button type="button" onclick="window.categoryController.deleteCategory('${main}', '${sub}')" class="text-rose-600 hover:text-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 p-1 rounded-lg cursor-pointer transition" title="حذف الفرعي (${sub})">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                </button>
               </span>
             `).join('') : '<span class="text-xs text-gray-400 italic">لا توجد أقسام فرعية بعد (اضغط + فرعي لإضافة فروع)</span>'}
           </div>
@@ -788,6 +898,10 @@ class CategoriesController {
             <button type="button" onclick="window.app.filterByCategory('${main}'); window.app.switchView('pos');" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer">
               <span>عرض الأصناف في البيع (${prodsCount})</span>
               <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '')" class="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 flex items-center gap-1 cursor-pointer" title="تطبيق هذا القسم في شاشة إضافة صنف جديد">
+              <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+              <span>تطبيق في صنف</span>
             </button>
           </div>
 

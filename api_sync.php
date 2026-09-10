@@ -1866,6 +1866,40 @@ try {
             break;
 
         // ============================================================
+        // 3.6 تعديل وتغيير اسم التصنيف (Rename Category)
+        // ============================================================
+        case 'rename_category':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $old_name = trim($data['old_name'] ?? '');
+            $new_name = trim($data['new_name'] ?? '');
+            $is_sub = !empty($data['is_sub']);
+            $parent_name = trim($data['parent_name'] ?? '');
+
+            if (empty($old_name) || empty($new_name)) {
+                echo json_encode(['success' => false, 'error' => 'الاسم القديم والجديد مطلوبان.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            if ($is_sub && !empty($parent_name)) {
+                $p_stmt = $pdo->prepare("SELECT id FROM categories WHERE name = ? AND (parent_id IS NULL OR parent_id = 0) LIMIT 1");
+                $p_stmt->execute([$parent_name]);
+                $p_id = $p_stmt->fetchColumn();
+                if ($p_id) {
+                    $pdo->prepare("UPDATE categories SET name = ? WHERE name = ? AND parent_id = ?")->execute([$new_name, $old_name, $p_id]);
+                }
+                $pdo->prepare("UPDATE products SET sub_category = ? WHERE sub_category = ? AND category = ?")->execute([$new_name, $old_name, $parent_name]);
+            } else {
+                $pdo->prepare("UPDATE categories SET name = ? WHERE name = ? AND (parent_id IS NULL OR parent_id = 0)")->execute([$new_name, $old_name]);
+                $pdo->prepare("UPDATE products SET category = ? WHERE category = ?")->execute([$new_name, $old_name]);
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => "تم تعديل اسم التصنيف من ({$old_name}) إلى ({$new_name}) بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 4. ط³ط­ط¨ ط§ظ„ط·ظ„ط¨ط§طھ ط§ظ„ط¬ط¯ظٹط¯ط© ظ„طھط¬ظ‡ظٹط²ظ‡ط§ ظپظٹ ط§ظ„ظƒط§ط´ظٹط± ط§ظ„ظ…ط­ظ„ظٹ
         // ============================================================
         case 'get_pending_orders':

@@ -428,6 +428,10 @@ class SyrianHomeAPI {
     return await this.post('delete_category', categoryPayload);
   }
 
+  async renameCategory(categoryPayload) {
+    return await this.post('rename_category', categoryPayload);
+  }
+
   /**
    * 30. System Reset & Data Wipe (ط¥ط¹ط§ط¯ط© ط¶ط¨ط· ظˆطھطµظپظٹط± ط§ظ„ظ†ط¸ط§ظ… ظ…ظ† ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ)
    * Modes:

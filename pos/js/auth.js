@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Syrian Home POS - Security & Authentication Controller (v2.5.4)
  * يتيح قفل الكاشير بكلمة مرور الأدمن الرسمية مع دعم المزامنة السحابية والعمل دون إنترنت
  */
@@ -32,9 +32,16 @@ class PosAuthController {
 
   getSession() {
     try {
-      const raw = sessionStorage.getItem(this.sessionKey);
+      // Check localStorage first so login survives page reload / F5, fallback to sessionStorage
+      const raw = localStorage.getItem(this.sessionKey) || sessionStorage.getItem(this.sessionKey);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.authenticated) {
+        // Keep both in sync
+        try { sessionStorage.setItem(this.sessionKey, raw); } catch(e) {}
+        return parsed;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -44,7 +51,7 @@ class PosAuthController {
     this.isAuthenticated = false;
     const overlay = document.getElementById('pos-auth-overlay');
     if (overlay) {
-      overlay.classList.remove('hidden');
+      overlay.classList.remove('hidden', 'opacity-0');
       overlay.classList.add('flex');
       const passInput = document.getElementById('pos-auth-password');
       if (passInput) {
@@ -57,6 +64,7 @@ class PosAuthController {
   }
 
   lockScreen() {
+    localStorage.removeItem(this.sessionKey);
     sessionStorage.removeItem(this.sessionKey);
     this.showLockScreen();
     if (window.app?.closeDrawerMenu) {
@@ -145,11 +153,13 @@ class PosAuthController {
       if (isVerified) {
         this.isAuthenticated = true;
         this.currentUser = userName;
-        sessionStorage.setItem(this.sessionKey, JSON.stringify({
+        const sessionData = JSON.stringify({
           authenticated: true,
           user: userName,
           time: new Date().toISOString()
-        }));
+        });
+        localStorage.setItem(this.sessionKey, sessionData);
+        sessionStorage.setItem(this.sessionKey, sessionData);
 
         const overlay = document.getElementById('pos-auth-overlay');
         if (overlay) {

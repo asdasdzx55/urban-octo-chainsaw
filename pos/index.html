@@ -106,12 +106,25 @@
       }
       window.expensesController?.openSupplierLedger(supplierId, supplierName);
     };
+
+    // Fast Auth Check: Prevent lock screen flash/reappear on reload if user is authenticated
+    (function() {
+      try {
+        var s = localStorage.getItem('syrian_pos_session_v1') || sessionStorage.getItem('syrian_pos_session_v1');
+        if (s) {
+          var p = JSON.parse(s);
+          if (p && p.authenticated) {
+            window.__POS_INITIAL_AUTH__ = true;
+          }
+        }
+      } catch(e) {}
+    })();
   </script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0 lg:h-screen lg:overflow-hidden">
 
   <!-- ==================== POS SECURITY & ADMIN LOGIN OVERLAY ==================== -->
-  <div id="pos-auth-overlay" class="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 select-none transition-all duration-300">
+  <div id="pos-auth-overlay" class="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl hidden items-center justify-center p-4 select-none transition-all duration-300">
     <div class="max-w-sm w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5">
       
       <!-- Store & Lock Icon -->
@@ -1144,12 +1157,12 @@
     </section>
 
     <!-- ==================== VIEW: CATEGORIES & TAXONOMY MANAGEMENT ==================== -->
-    <section id="view-categories" class="hidden flex-1 flex flex-col gap-5 max-w-[1680px] w-full mx-auto h-full overflow-y-auto min-h-0 px-4 sm:px-8 py-4 pb-28 lg:pb-8">
+    <section id="view-categories" class="hidden flex-1 flex flex-col gap-5 max-w-[1680px] w-full mx-auto h-full overflow-y-auto overflow-x-hidden min-h-0 px-3 sm:px-6 py-4 pb-32 lg:pb-16">
       
       <!-- Header Banner & Navigation Shortcuts -->
-      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-5 overflow-hidden">
         
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-gray-100 dark:border-gray-700">
           <div>
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 mb-1 border border-indigo-200 dark:border-indigo-800">
               <i data-lucide="folder-tree" class="w-3.5 h-3.5"></i>
@@ -1160,21 +1173,21 @@
           </div>
 
           <!-- Quick Navigation Actions -->
-          <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="window.categoryController?.importSupermarketDefaults()" class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer shadow-2xs" title="استيراد تصنيفات مقترحة لسوبر ماركت متكامل">
-              <i data-lucide="download" class="w-4 h-4"></i>
+          <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <button type="button" onclick="window.categoryController?.importSupermarketDefaults()" class="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer shadow-2xs" title="استيراد تصنيفات مقترحة لسوبر ماركت متكامل">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>📥 استيراد أقسام مقترحة</span>
             </button>
-            <button type="button" onclick="window.categoryController?.loadCategoriesFromServer().then(() => window.categoryController?.renderCategoryView())" class="px-3.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="تحديث وسحب الأقسام من السيرفر">
-              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            <button type="button" onclick="window.categoryController?.loadCategoriesFromServer().then(() => window.categoryController?.renderCategoryView())" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer" title="تحديث وسحب الأقسام من السيرفر">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
               <span>مزامنة الأقسام</span>
             </button>
-            <button type="button" onclick="window.app.switchView('inventory')" class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-800 transition cursor-pointer" title="الانتقال لشاشة المخزون والجرد">
-              <i data-lucide="boxes" class="w-4 h-4"></i>
+            <button type="button" onclick="window.app.switchView('inventory')" class="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-800 transition cursor-pointer" title="الانتقال لشاشة المخزون والجرد">
+              <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
               <span>المخزون والجرد</span>
             </button>
-            <button type="button" onclick="window.app.switchView('pos')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer" title="العودة لشاشة البيع">
-              <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+            <button type="button" onclick="window.app.switchView('pos')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer" title="العودة لشاشة البيع">
+              <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
               <span>شاشة البيع</span>
             </button>
           </div>
@@ -1214,21 +1227,23 @@
         </div>
 
         <!-- Two Fast Creation Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
           
           <!-- Card 1: Add Main Category -->
-          <div class="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col gap-3 shadow-2xs">
-            <div class="flex items-center gap-2">
-              <span class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
-                📁
-              </span>
-              <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">إضافة قسم رئيسي جديد</h3>
+          <div class="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col justify-between gap-3 shadow-2xs overflow-hidden">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
+                  📁
+                </span>
+                <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">إضافة قسم رئيسي جديد</h3>
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">القسم الرئيسي يظهر كشريط تبويب أعلى شاشة الكاشير لتصفية الأصناف بسهولة.</p>
             </div>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400">القسم الرئيسي يظهر كشريط تبويب أعلى شاشة الكاشير لتصفية الأصناف بسهولة.</p>
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-1">
-              <input type="text" id="cat-page-main-name" onkeypress="if(event.key === 'Enter') window.categoryController?.submitPageMainCategory()" placeholder="اسم القسم الرئيسي (مثل: أجبان، بهارات، مثلجات...)" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:border-indigo-500 focus:outline-none">
-              <button type="button" onclick="window.categoryController?.submitPageMainCategory()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer shrink-0">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-auto">
+              <input type="text" id="cat-page-main-name" onkeypress="if(event.key === 'Enter') window.categoryController?.submitPageMainCategory()" placeholder="اسم القسم الرئيسي (مثل: أجبان، بهارات، مثلجات...)" class="flex-1 min-w-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+              <button type="button" onclick="window.categoryController?.submitPageMainCategory()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>إضافة قسم رئيسي</span>
               </button>
@@ -1236,22 +1251,24 @@
           </div>
 
           <!-- Card 2: Add Subcategory -->
-          <div class="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col gap-3 shadow-2xs">
-            <div class="flex items-center gap-2">
-              <span class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs">
-                🏷️
-              </span>
-              <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">إضافة قسم فرعي تابع لقسم رئيسي</h3>
+          <div class="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 flex flex-col justify-between gap-3 shadow-2xs overflow-hidden">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs">
+                  🏷️
+                </span>
+                <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">إضافة قسم فرعي تابع لقسم رئيسي</h3>
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">التصنيف الفرعي يساعد على تنظيم المنتجات وتحديد فروعها داخل كل قسم رئيسي.</p>
             </div>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400">التصنيف الفرعي يساعد على تنظيم المنتجات وتحديد فروعها داخل كل قسم رئيسي.</p>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-              <select id="cat-page-parent-select" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:border-emerald-500 focus:outline-none">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-auto">
+              <select id="cat-page-parent-select" class="w-full sm:w-5/12 min-w-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:border-emerald-500 focus:outline-none">
                 <option value="">-- اختر القسم الرئيسي --</option>
               </select>
-              <div class="flex items-center gap-1.5">
-                <input type="text" id="cat-page-sub-name" onkeypress="if(event.key === 'Enter') window.categoryController?.submitPageSubCategory()" placeholder="اسم الفرعي (مثل: جبنة بيضاء...)" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:border-emerald-500 focus:outline-none">
-                <button type="button" onclick="window.categoryController?.submitPageSubCategory()" class="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition active:scale-95 cursor-pointer shrink-0">
+              <div class="flex-1 flex items-center gap-1.5 min-w-0">
+                <input type="text" id="cat-page-sub-name" onkeypress="if(event.key === 'Enter') window.categoryController?.submitPageSubCategory()" placeholder="اسم الفرعي (مثل: جبنة بيضاء...)" class="flex-1 min-w-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:border-emerald-500 focus:outline-none">
+                <button type="button" onclick="window.categoryController?.submitPageSubCategory()" class="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap">
                   <i data-lucide="plus" class="w-4 h-4"></i>
                   <span>إضافة فرعي</span>
                 </button>
@@ -1280,7 +1297,7 @@
           </div>
 
           <!-- The List Container dynamically populated by renderCategoryView -->
-          <div id="cat-page-tree-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 min-h-[160px]">
+          <div id="cat-page-tree-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[160px] pb-12">
             <!-- Dynamic Category Cards -->
           </div>
         </div>

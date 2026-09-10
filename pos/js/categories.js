@@ -741,31 +741,31 @@ class CategoriesController {
       const prodsCount = window.app?.products ? window.app.products.filter(p => (p.category || 'عام') === main).length : 0;
 
       return `
-        <div class="p-4 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col justify-between gap-3 transition hover:border-indigo-300 dark:hover:border-indigo-700">
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col justify-between gap-3 transition hover:border-indigo-300 dark:hover:border-indigo-700 overflow-hidden">
           
           <!-- Main Category Header -->
           <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-gray-100 dark:border-gray-700/60">
-            <div class="flex items-center gap-2.5 min-w-0">
+            <div class="flex items-center gap-2 min-w-0">
               <span class="w-8 h-8 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
                 📁
               </span>
               <div class="min-w-0">
                 <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate" title="${main}">${main}</h4>
-                <span class="text-[11px] text-gray-400 font-medium">${subs.length} أقسام فرعية • ${prodsCount} أصناف</span>
+                <span class="text-[11px] text-gray-400 font-medium block truncate">${subs.length} أقسام فرعية • ${prodsCount} أصناف</span>
               </div>
             </div>
 
             <!-- Actions -->
             <div class="flex items-center gap-1 shrink-0">
-              <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95" title="اختيار هذا القسم وتطبيقه في شاشة المخزون والصنف">
+              <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap" title="اختيار هذا القسم وتطبيقه في شاشة المخزون والصنف">
                 <i data-lucide="check" class="w-3.5 h-3.5"></i>
                 <span>تطبيق</span>
               </button>
-              <button type="button" onclick="window.categoryController.openSubAdderOnPage('${main}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95" title="إضافة قسم فرعي يتبع هذا القسم">
+              <button type="button" onclick="window.categoryController.openSubAdderOnPage('${main}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap" title="إضافة قسم فرعي يتبع هذا القسم">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 <span>فرعي</span>
               </button>
-              <button type="button" onclick="window.categoryController.deleteCategory('${main}')" class="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer" title="حذف هذا القسم الرئيسي بالكامل">
+              <button type="button" onclick="window.categoryController.deleteCategory('${main}')" class="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer shrink-0" title="حذف هذا القسم الرئيسي بالكامل">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
               </button>
             </div>

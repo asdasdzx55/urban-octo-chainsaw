@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Syrian Home Supermarket - REST API Client Layer
- * Handles communication with https://supermarkrt.almagd555.com/api_sync.php
+ * Handles communication with https://syrianhouse.almagd555.com/api_sync.php
  */
 
 class SyrianHomeAPI {
@@ -9,10 +9,10 @@ class SyrianHomeAPI {
       if (window.location.origin.includes('almagd555.com') || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         this.baseUrl = `${window.location.origin}/api_sync.php`;
       } else {
-        this.baseUrl = 'https://supermarkrt.almagd555.com/api_sync.php';
+        this.baseUrl = 'https://syrianhouse.almagd555.com/api_sync.php';
       }
     } else {
-      this.baseUrl = 'https://supermarkrt.almagd555.com/api_sync.php';
+      this.baseUrl = 'https://syrianhouse.almagd555.com/api_sync.php';
     }
     this.apiKey = 'syrian_home_pos_secret_token_2026';
     this.isOnline = true;
@@ -22,7 +22,7 @@ class SyrianHomeAPI {
    * Helper method for GET requests with API Key
    */
   async get(action, params = {}) {
-    const url = new URL(this.baseUrl, typeof window !== 'undefined' && window.location ? window.location.href : 'https://supermarkrt.almagd555.com');
+    const url = new URL(this.baseUrl, typeof window !== 'undefined' && window.location ? window.location.href : 'https://syrianhouse.almagd555.com');
     url.searchParams.set('action', action);
     url.searchParams.set('api_key', this.apiKey);
 
@@ -60,7 +60,7 @@ class SyrianHomeAPI {
    * Helper method for POST requests with API Key
    */
   async post(action, bodyData = {}) {
-    const url = new URL(this.baseUrl, typeof window !== 'undefined' && window.location ? window.location.href : 'https://supermarkrt.almagd555.com');
+    const url = new URL(this.baseUrl, typeof window !== 'undefined' && window.location ? window.location.href : 'https://syrianhouse.almagd555.com');
     url.searchParams.set('action', action);
     url.searchParams.set('api_key', this.apiKey);
 
@@ -212,7 +212,7 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 15. Submit Purchase Invoice (تسجيل فاتورة مشتريات / توريد وزيادة المخزون)
+   * 15. Submit Purchase Invoice (طھط³ط¬ظٹظ„ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ / طھظˆط±ظٹط¯ ظˆط²ظٹط§ط¯ط© ط§ظ„ظ…ط®ط²ظˆظ†)
    */
   async pushPurchase(purchasePayload) {
     return await this.post('push_purchase', purchasePayload);
@@ -233,14 +233,14 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 17.1 Sync / Add / Update Supplier (إضافة أو تعديل مورد سحابياً)
+   * 17.1 Sync / Add / Update Supplier (ط¥ط¶ط§ظپط© ط£ظˆ طھط¹ط¯ظٹظ„ ظ…ظˆط±ط¯ ط³ط­ط§ط¨ظٹط§ظ‹)
    */
   async syncSupplier(supplierPayload) {
     return await this.post('sync_supplier', supplierPayload);
   }
 
   /**
-   * 17.2 Get Supplier Ledger / Statement (كشف حساب مالي تفصيلي للمورد مع فلترة التاريخ)
+   * 17.2 Get Supplier Ledger / Statement (ظƒط´ظپ ط­ط³ط§ط¨ ظ…ط§ظ„ظٹ طھظپطµظٹظ„ظٹ ظ„ظ„ظ…ظˆط±ط¯ ظ…ط¹ ظپظ„طھط±ط© ط§ظ„طھط§ط±ظٹط®)
    */
   async getSupplierLedger(supplierId, supplierName = '', fromDate = '', toDate = '') {
     const params = { supplier_id: supplierId };
@@ -251,63 +251,63 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 17.3 Get Suppliers Comprehensive Report (تقرير إجمالي الموردين والمديونيات)
+   * 17.3 Get Suppliers Comprehensive Report (طھظ‚ط±ظٹط± ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ظˆط±ط¯ظٹظ† ظˆط§ظ„ظ…ط¯ظٹظˆظ†ظٹط§طھ)
    */
   async getSuppliersReport() {
     return await this.get('get_suppliers_report');
   }
 
   /**
-   * 18. Get Delivery Drivers List (جلب قائمة طياري الدليفري)
+   * 18. Get Delivery Drivers List (ط¬ظ„ط¨ ظ‚ط§ط¦ظ…ط© ط·ظٹط§ط±ظٹ ط§ظ„ط¯ظ„ظٹظپط±ظٹ)
    */
   async getDeliveryDrivers() {
     return await this.get('get_delivery_drivers');
   }
 
   /**
-   * 19. Sync / Add Delivery Driver (إضافة أو تعديل طيار دليفري)
+   * 19. Sync / Add Delivery Driver (ط¥ط¶ط§ظپط© ط£ظˆ طھط¹ط¯ظٹظ„ ط·ظٹط§ط± ط¯ظ„ظٹظپط±ظٹ)
    */
   async syncDeliveryDriver(driverPayload) {
     return await this.post('sync_delivery_driver', driverPayload);
   }
 
   /**
-   * 20. Assign Order to Driver (إسناد طلب لطيار بالاسم)
+   * 20. Assign Order to Driver (ط¥ط³ظ†ط§ط¯ ط·ظ„ط¨ ظ„ط·ظٹط§ط± ط¨ط§ظ„ط§ط³ظ…)
    */
   async assignDeliveryDriver(assignPayload) {
     return await this.post('assign_delivery_driver', assignPayload);
   }
 
   /**
-   * 21. Settle Delivery Account (تصفية عهدة طيار دليفري)
+   * 21. Settle Delivery Account (طھطµظپظٹط© ط¹ظ‡ط¯ط© ط·ظٹط§ط± ط¯ظ„ظٹظپط±ظٹ)
    */
   async settleDeliveryAccount(settlePayload) {
     return await this.post('settle_delivery_account', settlePayload);
   }
 
   /**
-   * 22. Get Driver Orders & Stats (جلب أوردرات وإحصائيات طيار دليفري محدد)
+   * 22. Get Driver Orders & Stats (ط¬ظ„ط¨ ط£ظˆط±ط¯ط±ط§طھ ظˆط¥ط­طµط§ط¦ظٹط§طھ ط·ظٹط§ط± ط¯ظ„ظٹظپط±ظٹ ظ…ط­ط¯ط¯)
    */
   async getDriverOrders(driverName, driverId = null) {
     return await this.get('get_driver_orders', { driver_name: driverName, driver_id: driverId });
   }
 
   /**
-   * 22.1 Get Unassigned Delivery Orders (جلب طلبات التوصيل المعلقة وبدون طيار)
+   * 22.1 Get Unassigned Delivery Orders (ط¬ظ„ط¨ ط·ظ„ط¨ط§طھ ط§ظ„طھظˆطµظٹظ„ ط§ظ„ظ…ط¹ظ„ظ‚ط© ظˆط¨ط¯ظˆظ† ط·ظٹط§ط±)
    */
   async getUnassignedDeliveryOrders() {
     return await this.get('get_unassigned_delivery_orders');
   }
 
   /**
-   * 22.2 Settle Ad-hoc / Temporary Delivery (تقفيل أوردر دليفري مؤقت بملاحظة وتوريد النقدية)
+   * 22.2 Settle Ad-hoc / Temporary Delivery (طھظ‚ظپظٹظ„ ط£ظˆط±ط¯ط± ط¯ظ„ظٹظپط±ظٹ ظ…ط¤ظ‚طھ ط¨ظ…ظ„ط§ط­ط¸ط© ظˆطھظˆط±ظٹط¯ ط§ظ„ظ†ظ‚ط¯ظٹط©)
    */
   async settleAdhocDelivery(settlePayload) {
     return await this.post('settle_adhoc_delivery', settlePayload);
   }
 
   /**
-   * 22.3 Get Customer Info by Phone (جلب بيانات العميل المسجل بالهاتف تلقائياً)
+   * 22.3 Get Customer Info by Phone (ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظٹظ„ ط§ظ„ظ…ط³ط¬ظ„ ط¨ط§ظ„ظ‡ط§طھظپ طھظ„ظ‚ط§ط¦ظٹط§ظ‹)
    */
   async getCustomerByPhone(phone) {
     return await this.get('get_customer_by_phone', { phone: phone });
@@ -318,49 +318,49 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 22.4 Search Customers (البحث في قاعدة بيانات العملاء بالاسم أو الهاتف أو العنوان)
+   * 22.4 Search Customers (ط§ظ„ط¨ط­ط« ظپظٹ ظ‚ط§ط¹ط¯ط© ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظ„ط§ط، ط¨ط§ظ„ط§ط³ظ… ط£ظˆ ط§ظ„ظ‡ط§طھظپ ط£ظˆ ط§ظ„ط¹ظ†ظˆط§ظ†)
    */
   async searchCustomers(query = '', page = 1, limit = 50) {
     return await this.get('search_customers', { q: query, page: page, limit: limit });
   }
 
   /**
-   * 22.5 Sync All Customers from Web Orders (استخراج وتجميع بيانات العملاء من كافة الطلبات السابقة)
+   * 22.5 Sync All Customers from Web Orders (ط§ط³طھط®ط±ط§ط¬ ظˆطھط¬ظ…ظٹط¹ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظ„ط§ط، ظ…ظ† ظƒط§ظپط© ط§ظ„ط·ظ„ط¨ط§طھ ط§ظ„ط³ط§ط¨ظ‚ط©)
    */
   async syncAllWebCustomers() {
     return await this.post('sync_all_web_customers');
   }
 
   /**
-   * 22.6 Save / Update Customer Data (حفظ أو تعديل بيانات عميل)
+   * 22.6 Save / Update Customer Data (ط­ظپط¸ ط£ظˆ طھط¹ط¯ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط¹ظ…ظٹظ„)
    */
   async saveCustomer(customerData) {
     return await this.post('save_customer', customerData);
   }
 
   /**
-   * 22.7 Delete Customer (حذف عميل)
+   * 22.7 Delete Customer (ط­ط°ظپ ط¹ظ…ظٹظ„)
    */
   async deleteCustomer(customerId) {
     return await this.post('delete_customer', { id: customerId });
   }
 
   /**
-   * 23. Get Employees List (جلب قائمة العمال والموظفين مع ملخص الرواتب والسلف)
+   * 23. Get Employees List (ط¬ظ„ط¨ ظ‚ط§ط¦ظ…ط© ط§ظ„ط¹ظ…ط§ظ„ ظˆط§ظ„ظ…ظˆط¸ظپظٹظ† ظ…ط¹ ظ…ظ„ط®طµ ط§ظ„ط±ظˆط§طھط¨ ظˆط§ظ„ط³ظ„ظپ)
    */
   async getEmployees(activeOnly = false) {
     return await this.get('get_employees', { active_only: activeOnly ? 1 : 0 });
   }
 
   /**
-   * 24. Sync / Add / Update Employee (إضافة أو تعديل بيانات عامل)
+   * 24. Sync / Add / Update Employee (ط¥ط¶ط§ظپط© ط£ظˆ طھط¹ط¯ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط¹ط§ظ…ظ„)
    */
   async syncEmployee(employeePayload) {
     return await this.post('sync_employee', employeePayload);
   }
 
   /**
-   * 25. Delete / Deactivate Employee (حذف نهائي أو إيقاف عامل)
+   * 25. Delete / Deactivate Employee (ط­ط°ظپ ظ†ظ‡ط§ط¦ظٹ ط£ظˆ ط¥ظٹظ‚ط§ظپ ط¹ط§ظ…ظ„)
    */
   async deleteEmployee(employeeId, name = '', force = true) {
     return await this.post('delete_employee', {
@@ -371,7 +371,7 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 25b. Toggle Employee Active Status (إيقاف مؤقت أو إعادة تنشيط عامل)
+   * 25b. Toggle Employee Active Status (ط¥ظٹظ‚ط§ظپ ظ…ط¤ظ‚طھ ط£ظˆ ط¥ط¹ط§ط¯ط© طھظ†ط´ظٹط· ط¹ط§ظ…ظ„)
    */
   async toggleEmployeeStatus(employeeId, isActive) {
     return await this.post('delete_employee', {
@@ -382,14 +382,14 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 26. Record Salary Payout / Advance (تسجيل صرف سلفة، راتب، مكافأة، خصم، يومية)
+   * 26. Record Salary Payout / Advance (طھط³ط¬ظٹظ„ طµط±ظپ ط³ظ„ظپط©طŒ ط±ط§طھط¨طŒ ظ…ظƒط§ظپط£ط©طŒ ط®طµظ…طŒ ظٹظˆظ…ظٹط©)
    */
   async recordSalaryPayout(payoutPayload) {
     return await this.post('record_salary_payout', payoutPayload);
   }
 
   /**
-   * 27. Get Employee Financial Ledger (كشف حساب مالي تفصيلي لعامل)
+   * 27. Get Employee Financial Ledger (ظƒط´ظپ ط­ط³ط§ط¨ ظ…ط§ظ„ظٹ طھظپطµظٹظ„ظٹ ظ„ط¹ط§ظ…ظ„)
    */
   async getEmployeeLedger(employeeId, monthYear = '') {
     const params = { employee_id: employeeId };
@@ -398,7 +398,7 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 28. Get General Salary Payouts Log (سجل مدفوعات الرواتب والسلف العامة)
+   * 28. Get General Salary Payouts Log (ط³ط¬ظ„ ظ…ط¯ظپظˆط¹ط§طھ ط§ظ„ط±ظˆط§طھط¨ ظˆط§ظ„ط³ظ„ظپ ط§ظ„ط¹ط§ظ…ط©)
    */
   async getSalaryPayouts(monthYear = '', limit = 50) {
     const params = { limit: limit };
@@ -407,7 +407,7 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 29. Categories & Subcategories API (جلب ومزامنة وحذف التصنيفات الرئيسية والفرعية)
+   * 29. Categories & Subcategories API (ط¬ظ„ط¨ ظˆظ…ط²ط§ظ…ظ†ط© ظˆط­ط°ظپ ط§ظ„طھطµظ†ظٹظپط§طھ ط§ظ„ط±ط¦ظٹط³ظٹط© ظˆط§ظ„ظپط±ط¹ظٹط©)
    */
   async getCategories() {
     return await this.get('get_categories');
@@ -422,7 +422,7 @@ class SyrianHomeAPI {
   }
 
   /**
-   * 30. System Reset & Data Wipe (إعادة ضبط وتصفير النظام من الإعدادات)
+   * 30. System Reset & Data Wipe (ط¥ط¹ط§ط¯ط© ط¶ط¨ط· ظˆطھطµظپظٹط± ط§ظ„ظ†ط¸ط§ظ… ظ…ظ† ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ)
    * Modes:
    *  - zero_quantities_and_balances
    *  - wipe_sales_and_operations
@@ -442,3 +442,4 @@ class SyrianHomeAPI {
 }
 
 window.api = new SyrianHomeAPI();
+

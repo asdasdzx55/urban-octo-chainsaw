@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Syrian Home POS - Store, Printing, Payment Fees & Data Management Controller (v2.5.2)
  * Manages store branding, thermal printing, dynamic payment method taxes/fees, and system reset operations.
  */
@@ -6,16 +6,16 @@
 class SettingsController {
   constructor() {
     this.defaults = {
-      store_name: 'سوبر ماركت المنزل السوري',
+      store_name: 'ط³ظˆط¨ط± ظ…ط§ط±ظƒطھ ط§ظ„ظ…ظ†ط²ظ„ ط§ظ„ط³ظˆط±ظٹ',
       store_phone: '01000000000',
       store_phone2: '',
-      store_address: 'فرع السوبر ماركت الرئيسي',
-      receipt_sub: 'أشهى المنتجات والمنتجات السورية الأصلية',
-      receipt_footer: 'شكراً لزيارتكم سوبر ماركت المنزل السوري • يُرجى الاحتفاظ بالفاتورة للاسترجاع',
+      store_address: 'ظپط±ط¹ ط§ظ„ط³ظˆط¨ط± ظ…ط§ط±ظƒطھ ط§ظ„ط±ط¦ظٹط³ظٹ',
+      receipt_sub: 'ط£ط´ظ‡ظ‰ ط§ظ„ظ…ظ†طھط¬ط§طھ ظˆط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ط³ظˆط±ظٹط© ط§ظ„ط£طµظ„ظٹط©',
+      receipt_footer: 'ط´ظƒط±ط§ظ‹ ظ„ط²ظٹط§ط±طھظƒظ… ط³ظˆط¨ط± ظ…ط§ط±ظƒطھ ط§ظ„ظ…ظ†ط²ظ„ ط§ظ„ط³ظˆط±ظٹ â€¢ ظٹظڈط±ط¬ظ‰ ط§ظ„ط§ط­طھظپط§ط¸ ط¨ط§ظ„ظپط§طھظˆط±ط© ظ„ظ„ط§ط³طھط±ط¬ط§ط¹',
       paper_width: '80mm',
-      api_url: 'https://supermarkrt.almagd555.com/api_sync.php',
+      api_url: 'https://syrianhouse.almagd555.com/api_sync.php',
       api_token: 'syrian_home_pos_secret_token_2026',
-      // Payment Method Fees / Taxes (ضرائب ورسوم وسائل الدفع الإلكتروني)
+      // Payment Method Fees / Taxes (ط¶ط±ط§ط¦ط¨ ظˆط±ط³ظˆظ… ظˆط³ط§ط¦ظ„ ط§ظ„ط¯ظپط¹ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ)
       enable_payment_fee: true,
       instapay_fee_type: 'percent', // 'percent' or 'fixed'
       instapay_fee_val: 0,
@@ -50,7 +50,7 @@ class SettingsController {
     if (document.getElementById('set-api-url')) document.getElementById('set-api-url').value = s.api_url || '';
     if (document.getElementById('set-api-token')) document.getElementById('set-api-token').value = s.api_token || '';
 
-    // Printer behavior settings (بدون صفحة كروم)
+    // Printer behavior settings (ط¨ط¯ظˆظ† طµظپط­ط© ظƒط±ظˆظ…)
     if (window.printerController) {
       const ps = window.printerController.settings;
       if (document.getElementById('set-no-chrome-print')) {
@@ -118,7 +118,7 @@ class SettingsController {
     }
 
     window.posScanner?.playSuccessBeep?.();
-    window.app?.showToast('تم حفظ إعدادات المتجر ورسوم الدفع بنجاح ✅', 'success');
+    window.app?.showToast('طھظ… ط­ظپط¸ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط± ظˆط±ط³ظˆظ… ط§ظ„ط¯ظپط¹ ط¨ظ†ط¬ط§ط­ âœ…', 'success');
   }
 
   getStoreInfo() {
@@ -146,21 +146,21 @@ class SettingsController {
     let confirmMsg = '';
 
     if (mode === 'zero_quantities_and_balances') {
-      modeTitle = 'تصفير الحسابات والكميات فقط';
-      confirmMsg = 'هل أنت متأكد من تصفير جميع كميات المخزون (Stock = 0) وتصفير أرصدة الموردين والدليفري وعدادات العملاء؟\n\n(ملاحظة: سيتم الحفاظ التام على قائمة المنتجات والأسعار والباركود وقوائم العملاء والموردين).';
+      modeTitle = 'طھطµظپظٹط± ط§ظ„ط­ط³ط§ط¨ط§طھ ظˆط§ظ„ظƒظ…ظٹط§طھ ظپظ‚ط·';
+      confirmMsg = 'ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† طھطµظپظٹط± ط¬ظ…ظٹط¹ ظƒظ…ظٹط§طھ ط§ظ„ظ…ط®ط²ظˆظ† (Stock = 0) ظˆطھطµظپظٹط± ط£ط±طµط¯ط© ط§ظ„ظ…ظˆط±ط¯ظٹظ† ظˆط§ظ„ط¯ظ„ظٹظپط±ظٹ ظˆط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¹ظ…ظ„ط§ط،طں\n\n(ظ…ظ„ط§ط­ط¸ط©: ط³ظٹطھظ… ط§ظ„ط­ظپط§ط¸ ط§ظ„طھط§ظ… ط¹ظ„ظ‰ ظ‚ط§ط¦ظ…ط© ط§ظ„ظ…ظ†طھط¬ط§طھ ظˆط§ظ„ط£ط³ط¹ط§ط± ظˆط§ظ„ط¨ط§ط±ظƒظˆط¯ ظˆظ‚ظˆط§ط¦ظ… ط§ظ„ط¹ظ…ظ„ط§ط، ظˆط§ظ„ظ…ظˆط±ط¯ظٹظ†).';
     } else if (mode === 'wipe_sales_and_operations') {
-      modeTitle = 'حذف سجلات الفواتير والمبيعات والعمليات';
-      confirmMsg = 'تحذير هام: هل أنت متأكد من حذف جميع سجلات فواتير المبيعات، المشتريات، المصروفات العامة، وحركات السلات المتروكة؟\n\n(ملاحظة: سيتم الحفاظ التام على كتالوج المنتجات وقائمة العملاء).';
+      modeTitle = 'ط­ط°ظپ ط³ط¬ظ„ط§طھ ط§ظ„ظپظˆط§طھظٹط± ظˆط§ظ„ظ…ط¨ظٹط¹ط§طھ ظˆط§ظ„ط¹ظ…ظ„ظٹط§طھ';
+      confirmMsg = 'طھط­ط°ظٹط± ظ‡ط§ظ…: ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ط¬ظ…ظٹط¹ ط³ط¬ظ„ط§طھ ظپظˆط§طھظٹط± ط§ظ„ظ…ط¨ظٹط¹ط§طھطŒ ط§ظ„ظ…ط´طھط±ظٹط§طھطŒ ط§ظ„ظ…طµط±ظˆظپط§طھ ط§ظ„ط¹ط§ظ…ط©طŒ ظˆط­ط±ظƒط§طھ ط§ظ„ط³ظ„ط§طھ ط§ظ„ظ…طھط±ظˆظƒط©طں\n\n(ظ…ظ„ط§ط­ط¸ط©: ط³ظٹطھظ… ط§ظ„ط­ظپط§ط¸ ط§ظ„طھط§ظ… ط¹ظ„ظ‰ ظƒطھط§ظ„ظˆط¬ ط§ظ„ظ…ظ†طھط¬ط§طھ ظˆظ‚ط§ط¦ظ…ط© ط§ظ„ط¹ظ…ظ„ط§ط،).';
     } else if (mode === 'factory_reset_all') {
-      modeTitle = 'إعادة ضبط المصنع ومسح شامل للبيانات';
+      modeTitle = 'ط¥ط¹ط§ط¯ط© ط¶ط¨ط· ط§ظ„ظ…طµظ†ط¹ ظˆظ…ط³ط­ ط´ط§ظ…ظ„ ظ„ظ„ط¨ظٹط§ظ†ط§طھ';
       const wipeProducts = document.getElementById('set-factory-wipe-products')?.checked ? 1 : 0;
-      confirmMsg = `⚠️ تحذير خطير جداً وغير قابل للتراجع:\nأنت على وشك مسح شامل لجميع بيانات المتجر السحابية والمحلية وإعادة ضبط المصنع!${wipeProducts ? '\n\n🚨 تم تحديد خيار: حذف كتالوج وقائمة المنتجات تماماً!' : '\n(سيتم الإبقاء على قائمة المنتجات فقط ومسح كل ما عداها)'}\n\nاكتب كلمة "تأكيد" في المربع أدناه للمتابعة:`;
+      confirmMsg = `âڑ ï¸ڈ طھط­ط°ظٹط± ط®ط·ظٹط± ط¬ط¯ط§ظ‹ ظˆط؛ظٹط± ظ‚ط§ط¨ظ„ ظ„ظ„طھط±ط§ط¬ط¹:\nط£ظ†طھ ط¹ظ„ظ‰ ظˆط´ظƒ ظ…ط³ط­ ط´ط§ظ…ظ„ ظ„ط¬ظ…ظٹط¹ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…طھط¬ط± ط§ظ„ط³ط­ط§ط¨ظٹط© ظˆط§ظ„ظ…ط­ظ„ظٹط© ظˆط¥ط¹ط§ط¯ط© ط¶ط¨ط· ط§ظ„ظ…طµظ†ط¹!${wipeProducts ? '\n\nًںڑ¨ طھظ… طھط­ط¯ظٹط¯ ط®ظٹط§ط±: ط­ط°ظپ ظƒطھط§ظ„ظˆط¬ ظˆظ‚ط§ط¦ظ…ط© ط§ظ„ظ…ظ†طھط¬ط§طھ طھظ…ط§ظ…ط§ظ‹!' : '\n(ط³ظٹطھظ… ط§ظ„ط¥ط¨ظ‚ط§ط، ط¹ظ„ظ‰ ظ‚ط§ط¦ظ…ط© ط§ظ„ظ…ظ†طھط¬ط§طھ ظپظ‚ط· ظˆظ…ط³ط­ ظƒظ„ ظ…ط§ ط¹ط¯ط§ظ‡ط§)'}\n\nط§ظƒطھط¨ ظƒظ„ظ…ط© "طھط£ظƒظٹط¯" ظپظٹ ط§ظ„ظ…ط±ط¨ط¹ ط£ط¯ظ†ط§ظ‡ ظ„ظ„ظ…طھط§ط¨ط¹ط©:`;
     }
 
     if (mode === 'factory_reset_all') {
       const userInput = prompt(confirmMsg);
-      if (userInput !== 'تأكيد') {
-        window.app?.showToast('تم إلغاء عملية إعادة ضبط المصنع', 'info');
+      if (userInput !== 'طھط£ظƒظٹط¯') {
+        window.app?.showToast('طھظ… ط¥ظ„ط؛ط§ط، ط¹ظ…ظ„ظٹط© ط¥ط¹ط§ط¯ط© ط¶ط¨ط· ط§ظ„ظ…طµظ†ط¹', 'info');
         return;
       }
     } else {
@@ -168,7 +168,7 @@ class SettingsController {
     }
 
     try {
-      window.app?.showLoading(true, `جاري تنفيذ ${modeTitle}...`);
+      window.app?.showLoading(true, `ط¬ط§ط±ظٹ طھظ†ظپظٹط° ${modeTitle}...`);
       const wipeProducts = document.getElementById('set-factory-wipe-products')?.checked ? 1 : 0;
       
       const res = await window.api.systemReset(mode, wipeProducts);
@@ -210,19 +210,20 @@ class SettingsController {
         }
 
         window.posScanner?.playSuccessBeep?.();
-        alert(res.message || 'تمت العملية بنجاح! ✅');
-        window.app?.showToast(res.message || 'تمت العملية بنجاح! ✅', 'success');
+        alert(res.message || 'طھظ…طھ ط§ظ„ط¹ظ…ظ„ظٹط© ط¨ظ†ط¬ط§ط­! âœ…');
+        window.app?.showToast(res.message || 'طھظ…طھ ط§ظ„ط¹ظ…ظ„ظٹط© ط¨ظ†ط¬ط§ط­! âœ…', 'success');
       } else {
-        alert(res?.error || 'فشلت العملية. يرجى التأكد من الاتصال بالسيرفر.');
-        window.app?.showToast(res?.error || 'فشلت العملية', 'error');
+        alert(res?.error || 'ظپط´ظ„طھ ط§ظ„ط¹ظ…ظ„ظٹط©. ظٹط±ط¬ظ‰ ط§ظ„طھط£ظƒط¯ ظ…ظ† ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ط³ظٹط±ظپط±.');
+        window.app?.showToast(res?.error || 'ظپط´ظ„طھ ط§ظ„ط¹ظ…ظ„ظٹط©', 'error');
       }
     } catch (err) {
       window.app?.showLoading(false);
       console.error('System reset error:', err);
-      alert('خطأ أثناء تنفيذ العملية: ' + (err.message || err));
-      window.app?.showToast('خطأ: ' + (err.message || err), 'error');
+      alert('ط®ط·ط£ ط£ط«ظ†ط§ط، طھظ†ظپظٹط° ط§ظ„ط¹ظ…ظ„ظٹط©: ' + (err.message || err));
+      window.app?.showToast('ط®ط·ط£: ' + (err.message || err), 'error');
     }
   }
 }
 
 window.settingsController = new SettingsController();
+

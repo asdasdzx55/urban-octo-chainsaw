@@ -575,12 +575,31 @@ class CategoriesController {
   /* ==================== CATEGORY MANAGER UI & VIEW CONTROLS ==================== */
 
   openCategoryManagerModal(preselectedMain = '', forSub = false) {
-    window.app?.switchView('categories');
-    if (preselectedMain) {
-      setTimeout(() => {
-        this.openSubAdderOnPage(preselectedMain);
-      }, 60);
+    const modal = document.getElementById('category-manager-modal');
+    if (!modal) {
+      window.app?.switchView('categories');
+      return;
     }
+
+    this.updateDatalists();
+    const sel = document.getElementById('cat-modal-parent-select');
+    if (sel && preselectedMain) {
+      sel.value = preselectedMain;
+    }
+
+    this.renderManagerUI();
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+
+    if (forSub) {
+      const subInput = document.getElementById('cat-modal-sub-name');
+      if (subInput) setTimeout(() => subInput.focus(), 100);
+    } else {
+      const mainInput = document.getElementById('cat-modal-main-name');
+      if (mainInput) setTimeout(() => mainInput.focus(), 100);
+    }
+    if (window.lucide) window.lucide.createIcons();
   }
 
   closeCategoryManagerModal() {
@@ -714,6 +733,11 @@ class CategoriesController {
                 <i data-lucide="check" class="w-3 h-3"></i>
               </button>
 
+              <button type="button" onclick="window.categoryController.editCategory('${main}')" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs" title="تعديل وتغيير اسم هذا القسم الرئيسي">
+                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                <span>تعديل</span>
+              </button>
+
               <button type="button" onclick="window.categoryController.openSubAdderFor('${main}')" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="إضافة قسم فرعي يتبع هذا القسم">
                 <span>+ فرعي</span>
               </button>
@@ -729,7 +753,8 @@ class CategoriesController {
             ${subs.length > 0 ? subs.map(sub => `
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-[11px] text-gray-700 dark:text-gray-300 font-medium">
                 <button type="button" onclick="window.categoryController.useCategoryInProductForm('${main}', '${sub}')" class="hover:text-indigo-600 hover:underline cursor-pointer" title="اختيار هذا التصنيف الفرعي">${sub}</button>
-                <button type="button" onclick="window.categoryController.deleteCategory('${main}', '${sub}')" class="text-gray-400 hover:text-rose-600 font-bold px-0.5 cursor-pointer" title="حذف هذا القسم الفرعي">✕</button>
+                <button type="button" onclick="window.categoryController.editCategory('${main}', '${sub}')" class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-1 py-0.5 rounded cursor-pointer transition font-bold" title="تعديل اسم الفرعي (${sub})">✏️</button>
+                <button type="button" onclick="window.categoryController.deleteCategory('${main}', '${sub}')" class="text-gray-400 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-900/60 px-1 py-0.5 rounded font-bold cursor-pointer transition" title="حذف هذا القسم الفرعي">✕</button>
               </span>
             `).join('') : '<span class="text-[10px] text-gray-400 italic">لا توجد أقسام فرعية بعد (اضغط + فرعي لإضافة تصنيف فرعي)</span>'}
           </div>

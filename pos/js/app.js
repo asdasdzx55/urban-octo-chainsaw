@@ -223,11 +223,28 @@ class App {
       `;
     });
 
-    // Quick Add Category Button on Categories Bar
+    // Action buttons on categories bar (Always clearly visible on PC & Mobile)
     html += `
-      <button onclick="window.categoryController?.openCategoryManagerModal()" class="px-3 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border border-dashed border-indigo-300 dark:border-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center gap-1 cursor-pointer shrink-0" title="إدارة وإنشاء تصنيفات جديدة">
-        <span>➕ تصنيف جديد</span>
-      </button>
+      <div class="flex items-center gap-1.5 shrink-0 me-1">
+        <button onclick="window.categoryController?.openCategoryManagerModal()" class="px-3 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border border-dashed border-indigo-400 dark:border-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 flex items-center gap-1 cursor-pointer shadow-2xs" title="إضافة وتعديل الأقسام والتصنيفات">
+          <span>➕ إضافة تصنيف</span>
+        </button>
+    `;
+
+    if (this.activeCategory && this.activeCategory !== 'all') {
+      html += `
+        <button onclick="window.categoryController?.editCategory('${this.activeCategory}')" class="px-2.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border border-blue-300 dark:border-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center gap-1 cursor-pointer shadow-2xs" title="تعديل وتغيير اسم هذا القسم الرئيسي (${this.activeCategory})">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          <span>✏️ تعديل (${this.activeCategory})</span>
+        </button>
+      `;
+    }
+
+    html += `
+        <button onclick="window.app.switchView('categories')" class="px-2.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border border-gray-300 dark:border-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-1 cursor-pointer" title="فتح شاشة إدارة شجرة الأقسام والتصنيفات الكاملة">
+          <span>📁 كل الأقسام</span>
+        </button>
+      </div>
     `;
 
     container.innerHTML = html;
@@ -252,6 +269,21 @@ class App {
             </button>
           `;
         });
+
+        // Quick add subcategory or edit selected subcategory
+        subHtml += `
+          <button onclick="window.categoryController?.openCategoryManagerModal('${this.activeCategory}', true)" class="px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 cursor-pointer" title="إضافة قسم فرعي جديد تحت (${this.activeCategory})">
+            <span>➕ فرعي جديد</span>
+          </button>
+        `;
+
+        if (this.activeSubCategory && this.activeSubCategory !== 'all') {
+          subHtml += `
+            <button onclick="window.categoryController?.editCategory('${this.activeCategory}', '${this.activeSubCategory}')" class="px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border border-blue-300 dark:border-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center gap-1 cursor-pointer" title="تعديل اسم الفرعي (${this.activeSubCategory})">
+              <span>✏️ تعديل الفرعي</span>
+            </button>
+          `;
+        }
 
         subHtml += `</div>`;
         subContainer.innerHTML = subHtml;

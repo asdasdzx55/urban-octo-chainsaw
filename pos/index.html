@@ -50,12 +50,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.5.5">
-  <link rel="stylesheet" href="css/receipt.css?v=2.5.5">
+  <link rel="stylesheet" href="css/pos.css?v=2.5.6">
+  <link rel="stylesheet" href="css/receipt.css?v=2.5.6">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.5.5';
+    window.APP_VERSION = '2.5.6';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -211,13 +211,13 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.3</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.6</span>
         </div>
       </div>
     </div>
 
     <!-- Desktop Navigation View Switcher (Icon-Only Compact Toolbar) -->
-    <nav class="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-2xl shrink-0">
+    <nav class="hidden md:flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-2xl shrink-0">
       <button onclick="window.app.switchView('pos')" class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all bg-indigo-600 text-white shadow-2xs cursor-pointer relative group" data-view="pos" title="شاشة الكاشير والبيع">
         <i data-lucide="shopping-cart" class="w-4 h-4"></i>
         <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">البيع</span>
@@ -238,9 +238,10 @@
         <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">المخزون</span>
       </button>
 
-      <button onclick="window.app.switchView('categories')" class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="categories" title="إدارة الأقسام والتصنيفات">
+      <button onclick="window.app.switchView('categories')" class="app-view-btn px-2.5 h-9 rounded-xl flex items-center gap-1.5 transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="categories" title="إدارة وتعديل الأقسام والتصنيفات">
         <i data-lucide="folder-tree" class="w-4 h-4 text-indigo-500"></i>
-        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">الأقسام</span>
+        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 hidden xl:inline">الأقسام</span>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">إدارة وتعديل الأقسام</span>
       </button>
 
       <button onclick="window.app.switchView('expenses')" class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="expenses" title="المشتريات والمصروفات وسداد الموردين">
@@ -298,8 +299,8 @@
         <i data-lucide="lock" class="w-4 h-4"></i>
       </button>
 
-      <!-- Mobile Navigation Drawer Toggle Button (Mobile / Tablet) -->
-      <button type="button" id="btn-hamburger-menu" onclick="window.app.toggleDrawerMenu()" class="lg:hidden h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition transform active:scale-95 cursor-pointer" title="قائمة التنقل لجميع الصفحات">
+      <!-- Mobile / Tablet / Laptop Navigation Drawer Toggle Button -->
+      <button type="button" id="btn-hamburger-menu" onclick="window.app.toggleDrawerMenu()" class="xl:hidden h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition transform active:scale-95 cursor-pointer" title="قائمة التنقل لجميع الصفحات">
         <i data-lucide="menu" class="w-4 h-4"></i>
         <span>القائمة</span>
       </button>
@@ -480,7 +481,7 @@
           <span>قفل شاشة الكاشير (تسجيل خروج) 🔒</span>
         </button>
 
-        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.5.5</p>
+        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.5.6</p>
       </div>
 
     </div>
@@ -4150,6 +4151,10 @@
           <span id="cat-manager-total-count" class="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-mono text-[11px] font-bold border border-indigo-100 dark:border-indigo-900">
             0 رئيسي • 0 فرعي
           </span>
+          <button type="button" onclick="window.categoryController.closeCategoryManagerModal(); window.app.switchView('categories');" class="px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-indigo-200 dark:border-indigo-800" title="فتح شاشة الأقسام والتصنيفات الكاملة">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">شاشة الأقسام الكاملة</span>
+          </button>
           <button type="button" onclick="window.categoryController.closeCategoryManagerModal()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
@@ -4233,23 +4238,23 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.5.5"></script>
-  <script src="js/api.js?v=2.5.5"></script>
-  <script src="js/sync-manager.js?v=2.5.5"></script>
-  <script src="js/pos-scanner.js?v=2.5.5"></script>
-  <script src="js/settings.js?v=2.5.5"></script>
-  <script src="js/cart.js?v=2.5.5"></script>
-  <script src="js/categories.js?v=2.5.5"></script>
-  <script src="js/inventory.js?v=2.5.5"></script>
-  <script src="js/purchases.js?v=2.5.5"></script>
-  <script src="js/expenses.js?v=2.5.5"></script>
-  <script src="js/orders.js?v=2.5.5"></script>
-  <script src="js/delivery-settlement.js?v=2.5.5"></script>
-  <script src="js/returns.js?v=2.5.5"></script>
-  <script src="js/reports.js?v=2.5.5"></script>
-  <script src="js/employees.js?v=2.5.5"></script>
-  <script src="js/pwa.js?v=2.5.5"></script>
-  <script src="js/auth.js?v=2.5.5"></script>
-  <script src="js/app.js?v=2.5.5"></script>
+  <script src="js/barcode-parser.js?v=2.5.6"></script>
+  <script src="js/api.js?v=2.5.6"></script>
+  <script src="js/sync-manager.js?v=2.5.6"></script>
+  <script src="js/pos-scanner.js?v=2.5.6"></script>
+  <script src="js/settings.js?v=2.5.6"></script>
+  <script src="js/cart.js?v=2.5.6"></script>
+  <script src="js/categories.js?v=2.5.6"></script>
+  <script src="js/inventory.js?v=2.5.6"></script>
+  <script src="js/purchases.js?v=2.5.6"></script>
+  <script src="js/expenses.js?v=2.5.6"></script>
+  <script src="js/orders.js?v=2.5.6"></script>
+  <script src="js/delivery-settlement.js?v=2.5.6"></script>
+  <script src="js/returns.js?v=2.5.6"></script>
+  <script src="js/reports.js?v=2.5.6"></script>
+  <script src="js/employees.js?v=2.5.6"></script>
+  <script src="js/pwa.js?v=2.5.6"></script>
+  <script src="js/auth.js?v=2.5.6"></script>
+  <script src="js/app.js?v=2.5.6"></script>
 </body>
 </html>

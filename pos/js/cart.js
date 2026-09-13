@@ -523,20 +523,25 @@ class POSCart {
         // Close Checkout modal if open
         document.getElementById('checkout-modal')?.classList.add('hidden');
 
+        // Focus search input immediately for next sale
+        setTimeout(() => {
+          document.getElementById('product-search-input')?.focus();
+        }, 80);
+
+        const pSettings = window.printerController ? window.printerController.settings : {};
+        const showPreview = pSettings.show_preview_after_sale === true;
+
         if (shouldPrint) {
-          // Show Success Thermal Receipt Modal
-          this.showReceiptModal(invoiceData);
+          if (showPreview) {
+            this.showReceiptModal(invoiceData);
+          }
 
           if (window.printerController) {
-            const pSettings = window.printerController.settings || {};
-            if (pSettings.auto_print !== false && pSettings.print_mode !== 'preview') {
-              window.printerController.printReceipt(invoiceData);
-            } else {
-              window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح 💾✅`, 'success');
-            }
+            window.printerController.printReceipt(invoiceData);
           } else {
             this.printReceiptDirectly();
           }
+          window.app?.showToast(`تم حفظ وطباعة الفاتورة #${realOrderId} بنجاح ⚡🖨️`, 'success');
         } else {
           // Saved without printing (عدم الطباعة)
           window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح بدون طباعة 💾✅`, 'success');
@@ -596,18 +601,25 @@ class POSCart {
       document.getElementById('checkout-modal')?.classList.add('hidden');
       window.posScanner?.playSuccessBeep();
 
+      // Focus search input immediately for next sale
+      setTimeout(() => {
+        document.getElementById('product-search-input')?.focus();
+      }, 80);
+
+      const pSettings = window.printerController ? window.printerController.settings : {};
+      const showPreview = pSettings.show_preview_after_sale === true;
+
       if (shouldPrint) {
-        this.showReceiptModal(invoiceData);
+        if (showPreview) {
+          this.showReceiptModal(invoiceData);
+        }
 
         if (window.printerController) {
-          const pSettings = window.printerController.settings || {};
-          if (pSettings.auto_print !== false && pSettings.print_mode !== 'preview') {
-            window.printerController.printReceipt(invoiceData);
-          }
+          window.printerController.printReceipt(invoiceData);
         } else {
           this.printReceiptDirectly();
         }
-        window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً (وضع أوفلاين) 📦✅`, 'warning');
+        window.app?.showToast(`تم حفظ وطباعة الفاتورة #${offlineOrderId} محلياً (وضع أوفلاين) ⚡🖨️`, 'warning');
       } else {
         window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً بدون طباعة (وضع أوفلاين) 💾📦`, 'info');
       }

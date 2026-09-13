@@ -26,9 +26,10 @@ class POSPrinterController {
 
   loadPrinterSettings() {
     const defaults = {
-      print_mode: 'kiosk_pc', // 'kiosk_pc' (الافتراضي: طابعة الكمبيوتر المعرفة بدون كروم), 'usb', 'bluetooth', 'rawbt', 'browser', 'preview'
+      print_mode: 'kiosk_pc', // 'kiosk_pc' (الافتراضي: طابعة الكمبيوتر المعرفة بدون كروم), 'browser' (متصفح كروم)
       paper_width: '80mm',    // '80mm' أو '58mm'
       auto_print: true,       // طباعة تلقائية عند الدفع أو F5
+      show_preview_after_sale: false, // تعطيل ظهور شاشة المعاينة بعد البيع لتسريع الكاشير!
       copies: 1,              // عدد النسخ (1 أو 2)
       auto_cut: true,         // قص الورق تلقائياً
       open_drawer: false,     // فتح درج الكاشير

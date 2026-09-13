@@ -61,6 +61,9 @@ class SettingsController {
       if (document.getElementById('set-auto-print')) {
         document.getElementById('set-auto-print').checked = ps.auto_print !== false;
       }
+      if (document.getElementById('set-show-preview')) {
+        document.getElementById('set-show-preview').checked = ps.show_preview_after_sale === true;
+      }
       if (document.getElementById('set-no-chrome-print')) {
         document.getElementById('set-no-chrome-print').checked = (ps.print_mode === 'kiosk_pc' || ps.print_mode === 'preview' || ps.print_mode === 'bluetooth' || ps.print_mode === 'usb');
       }
@@ -91,6 +94,7 @@ class SettingsController {
     const paperWidth = document.getElementById('set-paper-width')?.value || '80mm';
     const printMode = document.getElementById('set-print-mode')?.value || 'kiosk_pc';
     const autoPrint = document.getElementById('set-auto-print') ? document.getElementById('set-auto-print').checked : true;
+    const showPreview = document.getElementById('set-show-preview') ? document.getElementById('set-show-preview').checked : false;
     const copies = parseInt(document.getElementById('set-print-copies')?.value || 1, 10);
     const autoCut = document.getElementById('set-auto-cut') ? document.getElementById('set-auto-cut').checked : true;
     const openDrawer = document.getElementById('set-open-drawer') ? document.getElementById('set-open-drawer').checked : false;
@@ -124,6 +128,7 @@ class SettingsController {
         print_mode: printMode,
         paper_width: paperWidth,
         auto_print: autoPrint,
+        show_preview_after_sale: showPreview,
         copies: copies,
         auto_cut: autoCut,
         open_drawer: openDrawer

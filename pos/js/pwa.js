@@ -17,9 +17,9 @@ class PWAManager {
   }
 
   async checkVersionUpdate() {
-    const currentVersion = '2.5.3';
+    const currentVersion = '2.5.4';
     const lastVersion = localStorage.getItem('pos_installed_version');
-    if (lastVersion !== currentVersion) {
+    if (lastVersion && lastVersion !== currentVersion) {
       console.log(`Upgrading POS shell from ${lastVersion} to ${currentVersion}...`);
       if ('caches' in window) {
         try {
@@ -31,13 +31,18 @@ class PWAManager {
         }
       }
       localStorage.setItem('pos_installed_version', currentVersion);
+      setTimeout(() => {
+        window.app?.showToast(`🎉 تم تثبيت التحديث الجديد للنظام بنجاح (الإصدار ${currentVersion})`, 'success');
+      }, 1200);
+    } else {
+      localStorage.setItem('pos_installed_version', currentVersion);
     }
   }
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       const doRegister = () => {
-        navigator.serviceWorker.register('./sw.js?v=2.5.3')
+        navigator.serviceWorker.register('./sw.js?v=2.5.4')
           .then((reg) => {
             console.log('POS Service Worker registered successfully:', reg.scope);
             // Check for updates immediately
@@ -46,7 +51,10 @@ class PWAManager {
             // Auto reload when a new service worker takes over
             navigator.serviceWorker.addEventListener('controllerchange', () => {
               console.log('POS Service Worker updated and claimed clients. Reloading...');
-              window.location.reload();
+              window.app?.showToast('🔄 يتوفر تحديث جديد للنظام، جاري التحديث والتنشيط...', 'info');
+              setTimeout(() => {
+                window.location.reload();
+              }, 900);
             });
           })
           .catch((err) => {

@@ -1,9 +1,9 @@
 /**
- * Syrian Home POS - Service Worker v2.5.3
+ * Syrian Home POS - Service Worker v2.5.4
  * Enables PWA installation, offline shell caching, and instant code updates.
  */
 
-const CACHE_NAME = 'syrian-home-pos-v2.5.3';
+const CACHE_NAME = 'syrian-home-pos-v2.5.4';
 const SHELL_ASSETS = [
   './',
   './index.html',

@@ -1410,6 +1410,39 @@ class App {
     });
   }
 
+  cleanText(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+      .replace(/âœ…/g, '✅')
+      .replace(/âڑ،/g, '⚡')
+      .replace(/âš ï¸ڈ/g, '⚠️')
+      .replace(/âš /g, '⚠️')
+      .replace(/âœ–/g, '✖')
+      .replace(/âœ”/g, '✔')
+      .replace(/âœ“/g, '✓')
+      .replace(/â€¢/g, '•')
+      .replace(/ï¸ڈ/g, '')
+      .replace(/طھظ…طھ/g, 'تمت')
+      .replace(/طھظ…/g, 'تم')
+      .replace(/ط§ظ„ظ…ط²ط§ظ…ظ†ط©/g, 'المزامنة')
+      .replace(/ط¨ظ†ط¬ط§ط­/g, 'بنجاح')
+      .replace(/ط§ظ„ظ…ط®ط²ظˆظ†/g, 'المخزون')
+      .replace(/ط§ظ„ط·ظٹط§ط±/g, 'الطيار')
+      .replace(/ط§ظ„ط¹ط§ظ…ظ„/g, 'العامل')
+      .replace(/ط§ظ„ظ…ظˆط¸ظپ/g, 'الموظف')
+      .replace(/ط§ظ„ظ…ظ†طھط¬/g, 'المنتج')
+      .replace(/طھط­ط¯ظٹط«/g, 'تحديث')
+      .replace(/ط³ط¹ط±/g, 'سعر')
+      .replace(/ط±طµظٹط¯/g, 'رصيد')
+      .replace(/ظ…ط·ظ„ظˆط¨/g, 'مطلوب')
+      .replace(/ظ…ظƒطھظ…ظ„/g, 'مكتمل')
+      .replace(/ظ…ط±طھط¬ط¹/g, 'مرتجع')
+      .replace(/ظپط§طھظˆط±ط©/g, 'فاتورة')
+      .replace(/ط§ظ„ظ…ط´طھط±ظٹط§طھ/g, 'المشتريات')
+      .replace(/ط§ظ„ط³ط­ط§ط¨ط©/g, 'السحابة')
+      .replace(/ط§ظ„ط³ط­ط§ط¨ظٹ/g, 'السحابي');
+  }
+
   showToast(message, type = 'info') {
     const toast = document.createElement('div');
     const colors = {
@@ -1419,8 +1452,9 @@ class App {
       info: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
     };
 
+    const cleanMsg = this.cleanText(message);
     toast.className = `fixed bottom-20 sm:bottom-6 start-6 z-[9999] px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs sm:text-sm font-bold animate-drawer-slide-up ${colors[type] || colors.info}`;
-    toast.innerHTML = `<span>${message}</span>`;
+    toast.innerHTML = `<span>${cleanMsg}</span>`;
     document.body.appendChild(toast);
 
     setTimeout(() => {

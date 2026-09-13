@@ -211,6 +211,9 @@ class EmployeesController {
       const remaining = parseFloat(emp.net_remaining_salary !== undefined ? emp.net_remaining_salary : (baseSalary - advances));
       const isActive = emp.is_active != 0;
       const roleColor = this.getRoleBadgeColor(emp.role);
+      const isDriver = (emp.role || '').includes('دليفري') || (emp.role || '').includes('طيار');
+      const salaryText = (baseSalary <= 0 && isDriver) ? 'بدون راتب (طيار)' : `${baseSalary.toFixed(0)}`;
+      const remainingText = (baseSalary <= 0 && isDriver) ? (advances > 0 ? `سلف: -${advances.toFixed(0)}` : '0 ج.م') : `${remaining.toFixed(0)} ج.م`;
 
       return `
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-200/80 dark:border-gray-700 shadow-xs hover:shadow-md transition flex flex-col justify-between gap-4 relative overflow-hidden group">
@@ -260,7 +263,7 @@ class EmployeesController {
           <div class="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-3 border border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-2 text-center">
             <div>
               <p class="text-[10px] text-gray-400 font-medium">الراتب الأساسي</p>
-              <p class="text-xs font-bold text-gray-800 dark:text-gray-200 mt-0.5 font-mono">${baseSalary.toFixed(0)}</p>
+              <p class="text-xs font-bold text-gray-800 dark:text-gray-200 mt-0.5 font-mono">${salaryText}</p>
             </div>
             <div class="border-x border-gray-200 dark:border-gray-700/60">
               <p class="text-[10px] text-rose-500 font-medium">سلف الشهر 💸</p>
@@ -268,7 +271,7 @@ class EmployeesController {
             </div>
             <div>
               <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">الصافي المتبقي</p>
-              <p class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">${remaining.toFixed(0)} ج.م</p>
+              <p class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">${remainingText}</p>
             </div>
           </div>
 

@@ -920,6 +920,21 @@ try {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
             } catch (Exception $e) {}
 
+            // مزامنة أي موظف يحمل مسمى طيار أو دليفري مع جدول delivery_drivers تلقائياً
+            try {
+                $emp_drivers = $pdo->query("SELECT name, phone, is_active FROM employees WHERE role LIKE '%دليفري%' OR role LIKE '%طيار%' OR role LIKE '%سائق%'")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($emp_drivers)) {
+                    $chk_d = $pdo->prepare("SELECT id FROM delivery_drivers WHERE name = ? LIMIT 1");
+                    $ins_d = $pdo->prepare("INSERT INTO delivery_drivers (name, phone, pin_code, cash_balance, is_active) VALUES (?, ?, '1234', 0.00, ?)");
+                    foreach ($emp_drivers as $ed) {
+                        $chk_d->execute([$ed['name']]);
+                        if (!$chk_d->fetchColumn()) {
+                            $ins_d->execute([$ed['name'], $ed['phone'], $ed['is_active']]);
+                        }
+                    }
+                }
+            } catch (Exception $e) {}
+
             $drivers = $pdo->query("SELECT id, name, phone, pin_code, cash_balance, is_active FROM delivery_drivers ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode([
                 'success' => true,
@@ -970,15 +985,15 @@ try {
                 $driver_id = (int)$pdo->lastInsertId();
             }
 
-            // ظ…ط²ط§ظ…ظ†ط© ط§ظ„ظ…ظˆط¸ظپ ظپظٹ ط¬ط¯ظˆظ„ employees ظ„ظٹظƒظˆظ† ط¯ظˆط±ظ‡ 'ط¯ظ„ظٹظپط±ظٹ'
+            // مزامنة الموظف في جدول employees ليكون دوره 'طيار دليفري' بدون راتب
             try {
                 $chk_emp = $pdo->prepare("SELECT id FROM employees WHERE name = ? LIMIT 1");
                 $chk_emp->execute([$name]);
                 $emp_id_found = $chk_emp->fetchColumn();
                 if ($emp_id_found) {
-                    $pdo->prepare("UPDATE employees SET role = 'ط¯ظ„ظٹظپط±ظٹ', phone = ? WHERE id = ?")->execute([$phone, $emp_id_found]);
+                    $pdo->prepare("UPDATE employees SET role = 'طيار دليفري', phone = ?, is_active = ? WHERE id = ?")->execute([$phone, $active, $emp_id_found]);
                 } else {
-                    $pdo->prepare("INSERT INTO employees (name, phone, role, salary_type, base_salary, is_active) VALUES (?, ?, 'ط¯ظ„ظٹظپط±ظٹ', 'monthly', 0, ?)")->execute([$name, $phone, $active]);
+                    $pdo->prepare("INSERT INTO employees (name, phone, role, salary_type, base_salary, daily_wage, hire_date, is_active, notes) VALUES (?, ?, 'طيار دليفري', 'بدون راتب', 0.00, 0.00, ?, ?, 'طيار دليفري (بدون راتب ثابت)')")->execute([$name, $phone, date('Y-m-d'), $active]);
                 }
             } catch (Exception $e) {}
 
@@ -1057,6 +1072,15 @@ try {
             $name = trim($data['name'] ?? $data['driver_name'] ?? '');
             $force = !empty($data['force']);
 
+            $driver_name_to_del = $name;
+            if ($driver_id > 0 && empty($driver_name_to_del)) {
+                try {
+                    $st = $pdo->prepare("SELECT name FROM delivery_drivers WHERE id = ?");
+                    $st->execute([$driver_id]);
+                    $driver_name_to_del = $st->fetchColumn() ?: '';
+                } catch (Exception $e) {}
+            }
+
             if ($driver_id > 0) {
                 if ($force) {
                     $pdo->prepare("DELETE FROM delivery_drivers WHERE id = ?")->execute([$driver_id]);
@@ -1070,13 +1094,24 @@ try {
                     $pdo->prepare("UPDATE delivery_drivers SET is_active = 0 WHERE name = ?")->execute([$name]);
                 }
             } else {
-                echo json_encode(['success' => false, 'error' => 'ظ…ط¹ط±ظپ ط§ظ„ط·ظٹط§ط± ط£ظˆ ط§ط³ظ…ظ‡ ظ…ط·ظ„ظˆط¨!']);
+                echo json_encode(['success' => false, 'error' => 'معرف الطيار أو اسمه مطلوب!']);
                 exit;
+            }
+
+            // مزامنة الحذف أو الإيقاف مع جدول العمال employees
+            if (!empty($driver_name_to_del)) {
+                try {
+                    if ($force) {
+                        $pdo->prepare("DELETE FROM employees WHERE name = ? AND (role LIKE '%دليفري%' OR role LIKE '%طيار%')")->execute([$driver_name_to_del]);
+                    } else {
+                        $pdo->prepare("UPDATE employees SET is_active = 0 WHERE name = ? AND (role LIKE '%دليفري%' OR role LIKE '%طيار%')")->execute([$driver_name_to_del]);
+                    }
+                } catch (Exception $e) {}
             }
 
             echo json_encode([
                 'success' => true,
-                'message' => 'âœ… طھظ… طھط­ط¯ظٹط« ط­ط§ظ„ط© / ط­ط°ظپ ط§ظ„ط·ظٹط§ط± ط¨ظ†ط¬ط§ط­.'
+                'message' => '✅ تم تحديث حالة / حذف الطيار والموظف بنجاح.'
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -1167,6 +1202,21 @@ try {
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
                 } catch (Exception $e2) {}
             }
+            // مزامنة طياري الدليفري تلقائياً مع جدول العمال (فالدليفري عامل بدون راتب ثابت)
+            try {
+                $all_drivers = $pdo->query("SELECT name, phone, is_active FROM delivery_drivers")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($all_drivers)) {
+                    $chk_e = $pdo->prepare("SELECT id FROM employees WHERE name = ? LIMIT 1");
+                    $ins_e = $pdo->prepare("INSERT INTO employees (name, phone, role, salary_type, base_salary, daily_wage, hire_date, is_active, notes) VALUES (?, ?, 'طيار دليفري', 'بدون راتب', 0.00, 0.00, ?, ?, 'طيار دليفري (بدون راتب ثابت)')");
+                    $today_str = date('Y-m-d');
+                    foreach ($all_drivers as $d) {
+                        $chk_e->execute([$d['name']]);
+                        if (!$chk_e->fetchColumn()) {
+                            $ins_e->execute([$d['name'], $d['phone'], $today_str, $d['is_active']]);
+                        }
+                    }
+                }
+            } catch (Exception $e) {}
 
             $active_only = isset($_GET['active_only']) ? (int)$_GET['active_only'] : 0;
             $sql = "SELECT * FROM employees" . ($active_only ? " WHERE is_active = 1" : "") . " ORDER BY name ASC";
@@ -1322,6 +1372,15 @@ try {
             $name = trim($data['name'] ?? '');
             $force = !empty($data['force']);
 
+            $emp_name_to_del = $name;
+            if ($emp_id > 0 && empty($emp_name_to_del)) {
+                try {
+                    $st = $pdo->prepare("SELECT name FROM employees WHERE id = ?");
+                    $st->execute([$emp_id]);
+                    $emp_name_to_del = $st->fetchColumn() ?: '';
+                } catch (Exception $e) {}
+            }
+
             if ($emp_id > 0) {
                 if ($force) {
                     $pdo->prepare("DELETE FROM employees WHERE id = ?")->execute([$emp_id]);
@@ -1335,13 +1394,24 @@ try {
                     $pdo->prepare("UPDATE employees SET is_active = 0 WHERE name = ?")->execute([$name]);
                 }
             } else {
-                echo json_encode(['success' => false, 'error' => 'ظ…ط¹ط±ظپ ط§ظ„ظ…ظˆط¸ظپ ط£ظˆ ط§ط³ظ…ظ‡ ظ…ط·ظ„ظˆط¨!']);
+                echo json_encode(['success' => false, 'error' => 'معرف الموظف أو اسمه مطلوب!']);
                 exit;
+            }
+
+            // مزامنة الحذف أو الإيقاف مع جدول delivery_drivers إذا كان طياراً
+            if (!empty($emp_name_to_del)) {
+                try {
+                    if ($force) {
+                        $pdo->prepare("DELETE FROM delivery_drivers WHERE name = ?")->execute([$emp_name_to_del]);
+                    } else {
+                        $pdo->prepare("UPDATE delivery_drivers SET is_active = 0 WHERE name = ?")->execute([$emp_name_to_del]);
+                    }
+                } catch (Exception $e) {}
             }
 
             echo json_encode([
                 'success' => true,
-                'message' => 'âœ… طھظ… طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ظ…ظˆط¸ظپ / ط­ط°ظپظ‡ ط¨ظ†ط¬ط§ط­.'
+                'message' => '✅ تم تحديث حالة الموظف / حذفه بنجاح.'
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -2099,6 +2169,17 @@ try {
             $drivers = [];
             try {
                 $drivers = $pdo->query("SELECT id, name, phone, cash_balance, is_active FROM delivery_drivers WHERE is_active = 1 ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+                
+                // مزامنة أي طيار غير مسجل في العمال
+                $chk_e = $pdo->prepare("SELECT id FROM employees WHERE name = ? LIMIT 1");
+                $ins_e = $pdo->prepare("INSERT INTO employees (name, phone, role, salary_type, base_salary, daily_wage, hire_date, is_active, notes) VALUES (?, ?, 'طيار دليفري', 'بدون راتب', 0.00, 0.00, ?, ?, 'طيار دليفري (بدون راتب ثابت)')");
+                $today_str = date('Y-m-d');
+                foreach ($drivers as $da) {
+                    $chk_e->execute([$da['name']]);
+                    if (!$chk_e->fetchColumn()) {
+                        $ins_e->execute([$da['name'], $da['phone'], $today_str, $da['is_active']]);
+                    }
+                }
             } catch (Exception $e) {}
 
             $employees = [];
@@ -2472,14 +2553,39 @@ try {
             break;
 
         // ============================================================
-        // 15. ط¬ظ„ط¨ ظ‚ط§ط¦ظ…ط© ط§ظ„ط·ظٹط§ط±ظٹظ† ط§ظ„ظ…طھط§ط­ظٹظ† (ظ„ظ„ظƒط§ط´ظٹط± ظˆط´ط§ط´ط© ط§ظ„ط¯ط®ظˆظ„)
+        // 15. جلب طلبات الدليفري المعلقة بدون طيار (Unassigned Delivery Orders)
         // ============================================================
-        case 'get_delivery_drivers':
-            $drivers = $pdo->query("SELECT id, name, phone, cash_balance FROM delivery_drivers WHERE is_active = 1 ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode([
-                'success' => true,
-                'drivers' => $drivers
-            ], JSON_UNESCAPED_UNICODE);
+        case 'get_unassigned_delivery_orders':
+            try {
+                $stmt = $pdo->prepare("SELECT id, invoice_number, customer_name, customer_phone, address, total_price, payment_method, payment_status, status, delivery_person, is_adhoc, created_at FROM orders WHERE order_type = 'delivery' AND (delivery_person IS NULL OR delivery_person = '' OR delivery_person = 'ديلفري غير معروف' OR delivery_person LIKE 'مؤقت%') AND status != 'تم التسليم' AND status != 'ملغي' ORDER BY id DESC LIMIT 50");
+                $stmt->execute();
+                $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $orders = [];
+            }
+            echo json_encode(['success' => true, 'orders' => $orders], JSON_UNESCAPED_UNICODE);
+            break;
+
+        case 'settle_adhoc_delivery':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $order_id = (int)($data['order_id'] ?? 0);
+            $driver_note = trim($data['driver_note'] ?? 'توصيل مؤقت');
+            $amount = (float)($data['amount'] ?? 0);
+            $payment_method = trim($data['payment_method'] ?? 'كاش');
+
+            if ($order_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم الطلب غير صحيح']);
+                break;
+            }
+
+            try {
+                $upd = $pdo->prepare("UPDATE orders SET status = 'تم التسليم', payment_status = 'مدفوع', delivery_person = ? WHERE id = ?");
+                $upd->execute(["مؤقت: " . $driver_note, $order_id]);
+
+                echo json_encode(['success' => true, 'message' => 'تم تقفيل الأوردر المؤقت بنجاح']);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
             break;
 
         // ============================================================

@@ -930,6 +930,14 @@ class App {
       deliveryPayment?.classList.remove('hidden');
       inStorePayment?.classList.add('hidden');
 
+      if (!window.cart.deliveryPerson || window.cart.deliveryPerson.trim() === '') {
+        window.cart.deliveryPerson = 'ديلفري غير معروف';
+      }
+      const driverSelect = document.getElementById('checkout-delivery-driver-select');
+      if (driverSelect && (!driverSelect.value || driverSelect.value === '')) {
+        driverSelect.value = window.cart.deliveryPerson;
+      }
+
       if (!window.cart.deliveryFee) {
         window.cart.deliveryFee = 15;
         const feeInp = document.getElementById('checkout-delivery-fee');
@@ -1156,7 +1164,7 @@ class App {
     const select = document.getElementById('checkout-delivery-driver-select');
     if (!select) return;
 
-    let html = '<option value="">-- اختر طيار الدليفري --</option>';
+    let html = '<option value="ديلفري غير معروف">🛵 ديلفري غير معروف (إسناد لاحقاً)</option>';
     this.deliveryDrivers.forEach(d => {
       const bal = parseFloat(d.cash_balance || 0);
       const isSelected = window.cart.deliveryPerson === d.name ? 'selected' : '';
@@ -1165,6 +1173,12 @@ class App {
       </option>`;
     });
     select.innerHTML = html;
+    if (window.cart.deliveryPerson && window.cart.deliveryPerson !== '') {
+      select.value = window.cart.deliveryPerson;
+    } else {
+      select.value = 'ديلفري غير معروف';
+      window.cart.deliveryPerson = 'ديلفري غير معروف';
+    }
   }
 
   openNewDriverModal() {
@@ -1213,6 +1227,9 @@ class App {
         this.showToast(`تمت إضافة الطيار (${name}) بنجاح!`, 'success');
         window.cart.deliveryPerson = name;
         await this.loadDeliveryDrivers();
+        if (window.employeesController) {
+          window.employeesController.loadEmployees();
+        }
         this.closeNewDriverModal();
       } else {
         throw new Error(res.message || 'فشل حفظ الطيار');

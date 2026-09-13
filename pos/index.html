@@ -2114,6 +2114,7 @@
               <option value="monthly">راتب شهري ثابت</option>
               <option value="daily">يومية</option>
               <option value="commission">بالعمولة / الإنتاج</option>
+              <option value="none">بدون راتب ثابت (طيار حر / بالعمولة)</option>
             </select>
           </div>
 
@@ -3200,7 +3201,7 @@
               <button type="button" onclick="window.app.openNewDriverModal()" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline" title="إضافة طيار جديد">+ طيار جديد</button>
             </div>
             <select id="checkout-delivery-driver-select" onchange="window.cart.deliveryPerson = this.value" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
-              <option value="">-- اختر طيار الدليفري --</option>
+              <option value="ديلفري غير معروف" selected>🛵 ديلفري غير معروف (إسناد لاحقاً)</option>
             </select>
           </div>
 

@@ -18,7 +18,7 @@ class POSCart {
     this.customerName = 'عميل نقدي';
     this.customerPhone = '';
     this.customerAddress = '';
-    this.deliveryPerson = '';
+    this.deliveryPerson = 'ديلفري غير معروف';
     this.deliveryFee = 0;
     this.cashierNotes = 'كاشير 1';
     this.paidAmount = 0;
@@ -226,7 +226,7 @@ class POSCart {
     this.deliveryPrepaidMethod = 'instapay';
     this.deliveryPrepaidRef = '';
     this.deliveryFee = 0;
-    this.deliveryPerson = '';
+    this.deliveryPerson = 'ديلفري غير معروف';
     this.customerAddress = '';
     this.customerPhone = '';
     this.customerName = 'عميل نقدي';
@@ -427,13 +427,17 @@ class POSCart {
     }
 
     // Prepare Sale Payload according to Syrian Home REST API & Delivery Spec
+    const finalDeliveryPerson = isDelivery 
+      ? ((this.deliveryPerson && this.deliveryPerson.trim()) ? this.deliveryPerson.trim() : 'ديلفري غير معروف')
+      : '';
+
     const payload = {
       local_sale_id: Date.now(),
       customer_name: (this.customerName || (isDelivery ? 'عميل دليفري' : 'عميل نقدي')).trim(),
       customer_phone: (this.customerPhone || '').trim(),
       phone: (this.customerPhone || '').trim(),
       address: (this.customerAddress || '').trim(),
-      delivery_person: (this.deliveryPerson || '').trim(),
+      delivery_person: finalDeliveryPerson,
       delivery_fee: deliveryFee,
       order_type: isDelivery ? 'delivery' : 'hall',
       delivery_pay_mode: isDelivery ? (this.deliveryPayMode || 'cod') : 'standard',
@@ -488,7 +492,7 @@ class POSCart {
           customer_phone: this.customerPhone || '',
           phone: this.customerPhone || '',
           address: this.customerAddress || '',
-          delivery_person: this.deliveryPerson || '',
+          delivery_person: finalDeliveryPerson,
           delivery_fee: deliveryFee,
           order_type: isDelivery ? 'delivery' : 'hall',
           delivery_pay_mode: isDelivery ? (this.deliveryPayMode || 'cod') : 'standard',
@@ -554,7 +558,7 @@ class POSCart {
         customer_phone: this.customerPhone || '',
         phone: this.customerPhone || '',
         address: this.customerAddress || '',
-        delivery_person: this.deliveryPerson || '',
+        delivery_person: finalDeliveryPerson,
         delivery_fee: deliveryFee,
         order_type: isDelivery ? 'delivery' : 'hall',
         delivery_pay_mode: isDelivery ? (this.deliveryPayMode || 'cod') : 'standard',

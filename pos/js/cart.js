@@ -1295,8 +1295,11 @@ class POSCart {
       return;
     }
 
-    window.app?.showToast(`جاري طباعة فاتورة #${inv.order_id}... 🖨️`, 'info');
-    this.printInvoice(inv);
+    if (window.printerController) {
+      window.printerController.printReceipt(inv);
+    } else {
+      this.printInvoice(inv);
+    }
   }
 
   newSale() {

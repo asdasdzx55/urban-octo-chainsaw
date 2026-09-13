@@ -1,21 +1,11 @@
 /**
- * Syrian Home POS - Advanced Thermal Receipt Printer Controller (v3.0.0)
- * يدعم جميع أنواع الطباعة الحرارية المتطورة:
- * 1. Kiosk PC Silent Print: طباعة صامتة فورية لطابعة الكمبيوتر المعرفة في الويندوز بدون نافذة كروم.
- * 2. WebUSB / WebSerial ESC/POS: اتصال مباشر بطابعات USB الموصولة بالكمبيوتر.
- * 3. Web Bluetooth API: طباعة لاسلكية مباشرة لطابعات البلوتوث (ESC/POS).
- * 4. RawBT Android Driver: طباعة فورية للأجهزة اللوحية والهواتف الذكية.
- * 5. Chrome Print Dialog: طباعة متصفح كروم التقليدية.
- * 6. Internal Preview: معاينة بالتطبيق فقط.
+ * Syrian Home POS - Chrome Thermal Receipt Printer Controller (v3.1.0)
+ * نظام طباعة الفواتير الحرارية عبر متصفح كروم (Kiosk Printing Mode):
+ * طباعة فورية ومباشرة بدون شاشات وسيطة لطابعة الفواتير الافتراضية في كروم.
  */
 
 class POSPrinterController {
   constructor() {
-    this.btDevice = null;
-    this.btCharacteristic = null;
-    this.usbDevice = null;
-    this.usbInterface = null;
-    this.usbEndpointOut = null;
     this.isPrinting = false;
     this.init();
   }
@@ -26,21 +16,21 @@ class POSPrinterController {
 
   loadPrinterSettings() {
     const defaults = {
-      print_mode: 'kiosk_pc', // 'kiosk_pc' (الافتراضي: طابعة الكمبيوتر المعرفة بدون كروم), 'browser' (متصفح كروم)
+      print_mode: 'chrome',   // طابعة متصفح كروم فقط (Kiosk Printing)
       paper_width: '80mm',    // '80mm' أو '58mm'
       auto_print: true,       // طباعة تلقائية عند الدفع أو F5
       show_preview_after_sale: false, // تعطيل ظهور شاشة المعاينة بعد البيع لتسريع الكاشير!
       copies: 1,              // عدد النسخ (1 أو 2)
       auto_cut: true,         // قص الورق تلقائياً
-      open_drawer: false,     // فتح درج الكاشير
-      paired_bt_name: localStorage.getItem('pos_bt_printer_name') || '',
-      usb_printer_name: localStorage.getItem('pos_usb_printer_name') || ''
+      open_drawer: false      // فتح درج الكاشير
     };
 
     try {
       const saved = localStorage.getItem('pos_printer_prefs');
       if (saved) {
-        return { ...defaults, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        parsed.print_mode = 'chrome'; // ضمان استخدام طابعة كروم دائماً
+        return { ...defaults, ...parsed };
       }
     } catch (e) {}
 
@@ -48,13 +38,13 @@ class POSPrinterController {
   }
 
   savePrinterSettings(newPrefs) {
-    this.settings = { ...this.settings, ...newPrefs };
+    this.settings = { ...this.settings, ...newPrefs, print_mode: 'chrome' };
     localStorage.setItem('pos_printer_prefs', JSON.stringify(this.settings));
   }
 
-  /* ==================== 1. طابعة الكمبيوتر المعرفة بدون كروم (KIOSK SILENT PRINT) ==================== */
+  /* ==================== 1. طابعة متصفح كروم (CHROME KIOSK PRINT) ==================== */
 
-  printViaKioskPC(invoice) {
+  printViaChrome(invoice) {
     if (!invoice) invoice = window.cart?.lastInvoice;
     if (!invoice) {
       window.app?.showToast('لا توجد فاتورة للطباعة', 'warning');
@@ -82,11 +72,11 @@ class POSPrinterController {
         `;
       }
 
-      let printFrame = document.getElementById('pos-kiosk-print-frame');
+      let printFrame = document.getElementById('pos-chrome-print-frame');
       if (printFrame) printFrame.remove();
 
       printFrame = document.createElement('iframe');
-      printFrame.id = 'pos-kiosk-print-frame';
+      printFrame.id = 'pos-chrome-print-frame';
       // Hidden off-screen, full opacity for crisp thermal rendering
       printFrame.setAttribute('style', 'position:fixed; top:0; left:-10000px; width:76mm; height:100vh; border:0; z-index:-9999; pointer-events:none;');
       document.body.appendChild(printFrame);
@@ -127,7 +117,7 @@ class POSPrinterController {
         }
       }
 
-      window.app?.showToast(`جاري الطباعة الصامتة لطابعة الكمبيوتر المعرفة #${invoice.order_id} 🖨️⚡`, 'info');
+      window.app?.showToast(`جاري الطباعة عبر طابعة كروم #${invoice.order_id} 🖨️⚡`, 'info');
 
       // Trigger print after rendering
       requestAnimationFrame(() => {
@@ -136,15 +126,24 @@ class POSPrinterController {
             printFrame.contentWindow.focus();
             printFrame.contentWindow.print();
           } catch (pErr) {
-            console.warn('Kiosk print error:', pErr);
+            console.warn('Chrome print error:', pErr);
           }
-        }, 200);
+        }, 150);
       });
 
     } catch (e) {
-      console.warn('printViaKioskPC error:', e);
-      window.app?.showToast(`خطأ في الطباعة الصامتة: ${e.message}`, 'error');
+      console.warn('printViaChrome error:', e);
+      window.app?.showToast(`خطأ في طباعة كروم: ${e.message}`, 'error');
     }
+  }
+
+  // Aliases for compatibility
+  printViaKioskPC(invoice) {
+    this.printViaChrome(invoice);
+  }
+
+  printViaBrowser(invoice) {
+    this.printViaChrome(invoice);
   }
 
   getThermalPrintStyles(paperWidth = '80mm') {
@@ -501,44 +500,14 @@ class POSPrinterController {
     }
   }
 
-  /* ==================== 5. نافذة كروم العادية (BROWSER PRINT) ==================== */
-
-  printViaBrowser(invoice) {
-    if (!invoice) invoice = window.cart?.lastInvoice;
-    if (!invoice) return;
-    window.cart?.printInvoice(invoice);
-  }
-
-  /* ==================== DISPATCH PRINT (بناءً على اختيار المستخدم في الإعدادات) ==================== */
+  /* ==================== طباعة الفاتورة عبر كروم (CHROME KIOSK PRINT) ==================== */
 
   printReceipt(invoice, forceMode = null) {
     if (!invoice) invoice = window.cart?.lastInvoice;
     if (!invoice) return;
 
-    const mode = forceMode || this.settings.print_mode || 'kiosk_pc';
-
-    switch (mode) {
-      case 'kiosk_pc':
-        this.printViaKioskPC(invoice);
-        break;
-      case 'usb':
-        this.printViaUSB(invoice);
-        break;
-      case 'bluetooth':
-        this.printViaBluetooth(invoice);
-        break;
-      case 'rawbt':
-        this.printViaRawBT(invoice);
-        break;
-      case 'browser':
-        this.printViaBrowser(invoice);
-        break;
-      case 'preview':
-      default:
-        window.cart?.showReceiptModal(invoice);
-        window.app?.showToast(`تم حفظ الفاتورة #${invoice.order_id} بنجاح 💾✅`, 'success');
-        break;
-    }
+    // طباعة مباشرة وفورية عبر طابعة كروم الافتراضية
+    this.printViaChrome(invoice);
   }
 
   /* ==================== طباعة فاتورة فحص وتجربة (TEST RECEIPT) ==================== */

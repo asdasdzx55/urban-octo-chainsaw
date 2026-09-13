@@ -2747,28 +2747,35 @@
           </div>
 
           <!-- Card 2: Thermal Printer & Direct PC Silent Printing -->
+          <!-- Card 2: Chrome Thermal Printer (Kiosk Printing) -->
           <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
             <div class="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
               <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i data-lucide="printer" class="w-4 h-4 text-indigo-600"></i>
-                <span>إعدادات طابعة الفواتير والطباعة السريعة</span>
+                <span>إعدادات طابعة كروم (Chrome Thermal Printer)</span>
               </h3>
               <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
-                ⚡ كاشير سريع
+                ⚡ Kiosk Printing نشط
               </span>
             </div>
 
-            <!-- Printer Method Selection -->
-            <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-500"></i>
-                <span>طريقة الطباعة المعتمدة:</span>
-              </label>
-              <select id="set-print-mode" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-100 shadow-xs focus:ring-2 focus:ring-indigo-500">
-                <option value="kiosk_pc">⚡ طابعة الكمبيوتر المعرفة (طباعة صامتة وسريعة بدون شاشات - الوضع الموصى به)</option>
-                <option value="browser">🖨️ طباعة عادية عبر نافذة المتصفح</option>
-                <option value="preview">📱 معاينة داخل التطبيق فقط (بدون طباعة ورقية)</option>
-              </select>
+            <!-- Active Printer Status (Chrome Only) -->
+            <div class="p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-xs">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+                  🖨️
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-gray-900 dark:text-white">طابعة متصفح كروم الافتراضية للكمبيوتر</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                      مباشرة وفورية ⚡
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">تتم الطباعة فورياً ومباشرة عبر متصفح كروم إلى طابعة الفواتير الافتراضية بدون شاشات وسيطة أو تأخير</p>
+                </div>
+              </div>
+              <input type="hidden" id="set-print-mode" value="chrome">
             </div>
 
             <!-- Paper Width & Copies -->
@@ -2816,33 +2823,16 @@
               </div>
             </div>
 
-            <!-- Prominent Kiosk Shortcut Download Banner -->
-            <div class="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
-                  <i data-lucide="zap" class="w-4 h-4 text-emerald-600"></i>
-                  <span>إلغاء شاشة كروم نهائياً (طباعة صامتة فورية بضغطة زر):</span>
-                </span>
-                <p class="text-[11px] text-emerald-700/80 dark:text-emerald-300/80">
-                  حمّل ملف الاختصار وضعه على سطح المكتب، وبمجرد فتحه ستختفي شاشة كروم تماماً وتخرج الفاتورة في أقل من ثانية!
-                </p>
-              </div>
-              <button type="button" onclick="window.settingsController?.downloadKioskShortcut()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer shrink-0">
-                <i data-lucide="download" class="w-4 h-4"></i>
-                <span>تنزيل اختصار سطح المكتب (.bat)</span>
-              </button>
-            </div>
-
-            <!-- Action Buttons: Test Print & Guide -->
+            <!-- Action Buttons: Test Print -->
             <div class="flex flex-wrap items-center gap-2 pt-1">
-              <button type="button" onclick="window.settingsController?.testPrint()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer">
-                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                <span>🖨️ فحص وتجربة الطباعة الآن</span>
+              <button type="button" onclick="window.settingsController?.testPrint()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>🖨️ فحص وتجربة طابعة كروم الآن</span>
               </button>
 
-              <button type="button" onclick="window.printerController?.showKioskGuideModal()" class="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
-                <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-                <span>شرح كيفية عمل الطباعة الصامتة</span>
+              <button type="button" onclick="window.settingsController?.downloadKioskShortcut()" class="px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer" title="تنزيل اختصار تشغيل كروم بالطباعة الصامتة">
+                <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>اختصار سطح المكتب (.bat)</span>
               </button>
             </div>
           </div>
@@ -3813,17 +3803,10 @@
       <!-- Quick Preferences & New Sale -->
       <div class="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
         
-        <!-- Toggle: No Chrome Dialog in Future -->
-        <div class="flex items-center justify-between gap-2 px-1">
-          <label class="flex items-center gap-2 cursor-pointer text-[11px] font-semibold text-gray-700 dark:text-gray-300 select-none">
-            <input type="checkbox" id="modal-chk-no-chrome" onchange="window.printerController?.savePrinterSettings({ auto_open_browser_print: !this.checked })" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
-            <span>عدم فتح صفحة كروم تلقائياً عند الدفع 🚫📄</span>
-          </label>
-
-          <button type="button" onclick="window.printerController?.showKioskGuideModal()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer flex items-center gap-0.5">
-            <i data-lucide="info" class="w-3 h-3"></i>
-            <span>إرشادات الطباعة</span>
-          </button>
+        <!-- Active Chrome Kiosk Indicator -->
+        <div class="flex items-center justify-center gap-1.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+          <span>طابعة كروم الافتراضية (Kiosk Printing نشط للطباعة الفورية)</span>
         </div>
 
         <!-- Primary New Sale Action -->

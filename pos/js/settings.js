@@ -49,11 +49,11 @@ class SettingsController {
     if (document.getElementById('set-api-url')) document.getElementById('set-api-url').value = s.api_url || '';
     if (document.getElementById('set-api-token')) document.getElementById('set-api-token').value = s.api_token || '';
 
-    // إعدادات الطابعة والطباعة الصامتة
+    // إعدادات طابعة كروم والطباعة الفورية
     if (window.printerController) {
       const ps = window.printerController.settings;
       if (document.getElementById('set-print-mode')) {
-        document.getElementById('set-print-mode').value = ps.print_mode || 'kiosk_pc';
+        document.getElementById('set-print-mode').value = 'chrome';
       }
       if (document.getElementById('set-paper-width')) {
         document.getElementById('set-paper-width').value = ps.paper_width || s.paper_width || '80mm';
@@ -92,7 +92,7 @@ class SettingsController {
 
   saveSettings() {
     const paperWidth = document.getElementById('set-paper-width')?.value || '80mm';
-    const printMode = document.getElementById('set-print-mode')?.value || 'kiosk_pc';
+    const printMode = 'chrome';
     const autoPrint = document.getElementById('set-auto-print') ? document.getElementById('set-auto-print').checked : true;
     const showPreview = document.getElementById('set-show-preview') ? document.getElementById('set-show-preview').checked : false;
     const copies = parseInt(document.getElementById('set-print-copies')?.value || 1, 10);

@@ -2747,35 +2747,55 @@
           </div>
 
           <!-- Card 2: Thermal Printer & Direct PC Silent Printing -->
-          <!-- Card 2: Chrome Thermal Printer (Kiosk Printing) -->
+          <!-- Card 2: Thermal Printer & Local Print Bridge (QZ Tray / Chrome Kiosk) -->
           <div class="p-5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
             <div class="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
               <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i data-lucide="printer" class="w-4 h-4 text-indigo-600"></i>
-                <span>إعدادات طابعة كروم (Chrome Thermal Printer)</span>
+                <span>طابعة الفواتير والربط المحلي (QZ Tray & Chrome Kiosk)</span>
               </h3>
-              <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
-                ⚡ Kiosk Printing نشط
-              </span>
+              <div id="qz-bridge-status-badge">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  ⚡ طباعة فورية بدون شاشات
+                </span>
+              </div>
             </div>
 
-            <!-- Active Printer Status (Chrome Only) -->
-            <div class="p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-xs">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-                  🖨️
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-gray-900 dark:text-white">طابعة متصفح كروم الافتراضية للكمبيوتر</span>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                      مباشرة وفورية ⚡
-                    </span>
+            <!-- QZ Tray Local Print Bridge Integration Banner -->
+            <div class="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 flex flex-col gap-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                    <i data-lucide="network" class="w-4 h-4"></i>
                   </div>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">تتم الطباعة فورياً ومباشرة عبر متصفح كروم إلى طابعة الفواتير الافتراضية بدون شاشات وسيطة أو تأخير</p>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold text-gray-900 dark:text-white">مكتبة الربط المحلي QZ Tray (Local Print Bridge)</span>
+                      <span class="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-100 dark:bg-indigo-900/60 px-2 py-0.5 rounded-full">الأكثر استقراراً</span>
+                    </div>
+                    <p class="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">اتصال مباشر بطابعة الويندوز المعرفة عبر WebSocket مع بديل تلقائي عبر كروم</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <button type="button" onclick="window.printerController?.connectQZ(false)" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition active:scale-95 cursor-pointer" title="إعادة فحص والاتصال ببرنامج QZ Tray">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span>فحص الاتصال</span>
+                  </button>
+                  <a href="https://qz.io/download/" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1 transition" title="تحميل برنامج QZ Tray لويندوز">
+                    <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>تحميل QZ Tray</span>
+                  </a>
                 </div>
               </div>
-              <input type="hidden" id="set-print-mode" value="chrome">
+
+              <!-- Printer Selector for QZ Tray -->
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t border-indigo-100 dark:border-indigo-900/40">
+                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 shrink-0">طابعة الويندوز المحددة:</label>
+                <select id="qz-printer-select" onchange="window.printerController.qzPrinterName = this.value; localStorage.setItem('pos_qz_printer_name', this.value);" class="flex-1 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                  <option value="">طابعة الويندوز الافتراضية (Default Printer)</option>
+                </select>
+              </div>
             </div>
 
             <!-- Paper Width & Copies -->
@@ -2823,11 +2843,11 @@
               </div>
             </div>
 
-            <!-- Action Buttons: Test Print -->
+            <!-- Action Buttons: Test Print & Kiosk Shortcut -->
             <div class="flex flex-wrap items-center gap-2 pt-1">
-              <button type="button" onclick="window.settingsController?.testPrint()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer">
+              <button type="button" onclick="window.printerController?.printTestReceipt()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer">
                 <i data-lucide="printer" class="w-4 h-4"></i>
-                <span>🖨️ فحص وتجربة طابعة كروم الآن</span>
+                <span>🖨️ فحص وتجربة وضوح الطباعة الآن</span>
               </button>
 
               <button type="button" onclick="window.settingsController?.downloadKioskShortcut()" class="px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer" title="تنزيل اختصار تشغيل كروم بالطباعة الصامتة">
@@ -4392,7 +4412,8 @@
   <script src="js/api.js?v=2.5.6"></script>
   <script src="js/sync-manager.js?v=2.5.6"></script>
   <script src="js/pos-scanner.js?v=2.5.6"></script>
-  <script src="js/printer.js?v=3.0.0"></script>
+  <script src="js/qz-tray.min.js"></script>
+  <script src="js/printer.js?v=3.2.0"></script>
   <script src="js/settings.js?v=3.0.0"></script>
   <script src="js/cart.js?v=3.0.0"></script>
   <script src="js/categories.js?v=2.5.6"></script>

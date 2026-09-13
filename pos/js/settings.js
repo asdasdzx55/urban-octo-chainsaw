@@ -76,6 +76,7 @@ class SettingsController {
       if (document.getElementById('set-open-drawer')) {
         document.getElementById('set-open-drawer').checked = ps.open_drawer === true;
       }
+      window.printerController.updateQZUI();
     }
 
     // Payment Fee Inputs

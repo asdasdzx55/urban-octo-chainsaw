@@ -894,71 +894,13 @@ class POSCart {
   }
 
   getReceiptPrintStyles() {
-    const is58 = window.printerController?.settings?.paper_width === '58mm';
-    const pageW = is58 ? '58mm' : '80mm';
-    const maxW = is58 ? '52mm' : '74mm';
-    const baseMargin = is58 ? '1mm' : '2mm';
-
+    if (window.printerController) {
+      return window.printerController.getThermalPrintStyles(window.printerController?.settings?.paper_width || '80mm');
+    }
     return `
-      @page { size: ${pageW} auto; margin: ${baseMargin}; }
-      * { box-sizing: border-box; }
-      html, body {
-        width: 100%;
-        margin: 0;
-        padding: 1mm ${baseMargin};
-        background: #ffffff !important;
-        color: #000000 !important;
-        font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
-        direction: rtl;
-        text-align: right;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .bw-receipt {
-        width: 100%;
-        max-width: ${maxW};
-        margin: 0 auto;
-        padding: 0;
-        background: #fff !important;
-        color: #000 !important;
-        border: none !important;
-        box-shadow: none !important;
-      }
-      .bw-header { text-align: center; margin-bottom: 6px; }
-      .bw-title { font-size: 18px; font-weight: 900; margin: 0 0 3px 0; color: #000 !important; }
-      .bw-sub { font-size: 11px; font-weight: 700; margin-bottom: 3px; color: #000 !important; }
-      .bw-info { font-size: 10px; margin: 1.5px 0; font-weight: 600; color: #000 !important; }
-      .bw-divider-double { border-top: 2px solid #000; margin: 6px 0; }
-      .bw-divider-solid { border-top: 1px solid #000; margin: 6px 0; }
-      .bw-divider-dashed { border-top: 1px dashed #000; margin: 6px 0; }
-      .bw-meta-table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin: 3px 0; }
-      .bw-meta-table td { padding: 2px 1px; vertical-align: middle; color: #000 !important; }
-      .bw-mono { font-family: 'Courier New', monospace; font-weight: bold; }
-      .bw-delivery-box { border: 1.5px solid #000; border-radius: 6px; padding: 5px 6px; margin: 5px 0; }
-      .bw-delivery-title { font-weight: 900; font-size: 11.5px; text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 4px; }
-      .bw-items-table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 10.5px; border: 1.5px solid #000; table-layout: fixed; word-wrap: break-word; }
-      .bw-items-table thead th { border: 1px solid #000; border-bottom: 2px solid #000; background: #e8e8e8 !important; color: #000 !important; font-weight: 900; padding: 4px 2px; text-align: center; font-size: 10px; }
-      .bw-items-table tbody td { border: 1px solid #000; padding: 3.5px 2px; vertical-align: middle; color: #000 !important; }
-      .bw-items-table .th-num, .bw-items-table .td-num { width: 7%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; }
-      .bw-items-table .th-name, .bw-items-table .td-name { width: 45%; text-align: right; }
-      .bw-items-table .item-title { font-weight: 800; line-height: 1.25; color: #000 !important; font-size: 10.5px; }
-      .bw-items-table .item-code { font-size: 8.5px; color: #333 !important; font-family: 'Courier New', monospace; display: block; }
-      .bw-items-table .th-qty, .bw-items-table .td-qty { width: 20%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; font-size: 10px; }
-      .bw-items-table .th-price, .bw-items-table .td-price { width: 14%; text-align: center; font-family: 'Courier New', monospace; font-size: 10px; }
-      .bw-items-table .th-total, .bw-items-table .td-total { width: 14%; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; font-size: 10.5px; }
-      .bw-summary-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 5px 0; table-layout: fixed; }
-      .bw-summary-table td { padding: 2.5px 1px; color: #000 !important; }
-      .bw-summary-table .bw-val { text-align: left; font-family: 'Courier New', monospace; font-weight: 800; }
-      .bw-summary-table .bw-grand-row td { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 1px; font-size: 13.5px; font-weight: 900; }
-      .bw-summary-table .bw-grand-val { text-align: left; font-family: 'Courier New', monospace; font-size: 15px; font-weight: 900; }
-      .bw-barcode { text-align: center; margin: 6px 0 3px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      .bw-barcode svg { max-width: 100%; height: 35px; }
-      .bw-barcode-text { font-family: 'Courier New', monospace; font-size: 10.5px; font-weight: 900; letter-spacing: 1px; color: #000 !important; }
-      .bw-footer { text-align: center; font-size: 9.5px; color: #000 !important; line-height: 1.35; margin-top: 5px; }
-      .bw-footer p { margin: 2px 0; }
-      @media print {
-        .no-print { display: none !important; }
-      }
+      @page { size: 80mm auto; margin: 0mm !important; }
+      html, body { width: 100%; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; direction: rtl; }
+      .bw-receipt { width: 74mm; margin: 0 auto; padding: 2mm 1mm; }
     `;
   }
 

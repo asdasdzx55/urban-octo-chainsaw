@@ -1,22 +1,32 @@
 /**
- * Syrian Home POS - Chrome Thermal Receipt Printer Controller (v3.1.0)
- * نظام طباعة الفواتير الحرارية عبر متصفح كروم (Kiosk Printing Mode):
- * طباعة فورية ومباشرة بدون شاشات وسيطة لطابعة الفواتير الافتراضية في كروم.
+ * Syrian Home POS - Ultimate Thermal Receipt & Local Print Bridge Controller (v3.2.0)
+ * يدعم كلاً من:
+ * 1. مكتبة الربط المحلي QZ Tray (Local Print Bridge عبر WebSocket المباشر لطابعة الويندوز المعرفة).
+ * 2. طابعة متصفح كروم (Kiosk Printing Mode بتنسيق حراري فائق الجودة والجمال).
  */
 
 class POSPrinterController {
   constructor() {
     this.isPrinting = false;
+    this.qzConnected = false;
+    this.qzPrinterName = localStorage.getItem('pos_qz_printer_name') || '';
+    this.qzPrinters = [];
     this.init();
   }
 
   init() {
     this.settings = this.loadPrinterSettings();
+    // محاولة الاتصال التلقائي الصامت بمكتبة QZ Tray إذا كانت مشغلة على جهاز الكاشير
+    setTimeout(() => {
+      this.autoConnectQZ();
+    }, 600);
   }
 
   loadPrinterSettings() {
     const defaults = {
-      print_mode: 'chrome',   // طابعة متصفح كروم فقط (Kiosk Printing)
+      print_engine: 'auto',   // 'auto' (يفضل QZ Tray إن وجد، وإلا كروم), 'qz', 'chrome'
+      use_qz_bridge: true,    // تفعيل مكتبة الربط المحلي
+      qz_printer_name: localStorage.getItem('pos_qz_printer_name') || '',
       paper_width: '80mm',    // '80mm' أو '58mm'
       auto_print: true,       // طباعة تلقائية عند الدفع أو F5
       show_preview_after_sale: false, // تعطيل ظهور شاشة المعاينة بعد البيع لتسريع الكاشير!
@@ -28,9 +38,7 @@ class POSPrinterController {
     try {
       const saved = localStorage.getItem('pos_printer_prefs');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        parsed.print_mode = 'chrome'; // ضمان استخدام طابعة كروم دائماً
-        return { ...defaults, ...parsed };
+        return { ...defaults, ...JSON.parse(saved) };
       }
     } catch (e) {}
 
@@ -38,11 +46,204 @@ class POSPrinterController {
   }
 
   savePrinterSettings(newPrefs) {
-    this.settings = { ...this.settings, ...newPrefs, print_mode: 'chrome' };
+    this.settings = { ...this.settings, ...newPrefs };
     localStorage.setItem('pos_printer_prefs', JSON.stringify(this.settings));
   }
 
-  /* ==================== 1. طابعة متصفح كروم (CHROME KIOSK PRINT) ==================== */
+  /* ==================== 1. مكتبة الربط المحلي QZ TRAY (LOCAL PRINT BRIDGE) ==================== */
+
+  async autoConnectQZ() {
+    if (typeof qz === 'undefined') return;
+    try {
+      await this.connectQZ(true);
+    } catch (e) {}
+  }
+
+  async connectQZ(silent = false) {
+    if (typeof qz === 'undefined') {
+      if (!silent) window.app?.showToast('مكتبة QZ Tray غير متوفرة في الصفحة', 'warning');
+      return false;
+    }
+
+    try {
+      // إعداد الشهادة الرقمية لـ QZ Tray لمنع النوافذ المزعجة
+      if (!qz.security.getCertificatePromise) {
+        qz.security.setCertificatePromise(function(resolve, reject) {
+          resolve();
+        });
+      }
+      if (!qz.security.getSignaturePromise) {
+        qz.security.setSignaturePromise(function(toSign) {
+          return function(resolve, reject) {
+            resolve();
+          };
+        });
+      }
+
+      if (!qz.websocket.isActive()) {
+        await qz.websocket.connect({ retries: 1, delay: 0.3 });
+      }
+
+      this.qzConnected = true;
+      console.log('✅ Connected to QZ Tray Local Print Bridge');
+
+      // جلب قائمة الطابعات المعرفة في نظام ويندوز
+      try {
+        const printers = await qz.printers.find();
+        this.qzPrinters = printers || [];
+        
+        if (!this.qzPrinterName || !this.qzPrinters.includes(this.qzPrinterName)) {
+          try {
+            this.qzPrinterName = await qz.printers.getDefault();
+          } catch (e) {
+            this.qzPrinterName = this.qzPrinters[0] || '';
+          }
+          if (this.qzPrinterName) {
+            localStorage.setItem('pos_qz_printer_name', this.qzPrinterName);
+          }
+        }
+      } catch (pErr) {
+        console.warn('QZ Printers list error:', pErr);
+      }
+
+      this.updateQZUI();
+
+      if (!silent) {
+        window.app?.showToast(`تم الاتصال بنجاح بمكتبة QZ Tray! الطابعة: ${this.qzPrinterName || 'الافتراضية'} ⚡🖨️`, 'success');
+      }
+      return true;
+
+    } catch (err) {
+      this.qzConnected = false;
+      this.updateQZUI();
+      if (!silent) {
+        console.warn('QZ Connection failed:', err);
+        window.app?.showToast('برنامج QZ Tray غير مشغل حالياً على جهازك. جاري الاعتماد على طابعة كروم المباشرة 👍', 'info');
+      }
+      return false;
+    }
+  }
+
+  updateQZUI() {
+    const statusBadge = document.getElementById('qz-bridge-status-badge');
+    const printerSelect = document.getElementById('qz-printer-select');
+    const qzBox = document.getElementById('qz-bridge-box');
+
+    if (statusBadge) {
+      if (this.qzConnected) {
+        statusBadge.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>QZ Tray متصل ومفعل ⚡</span>
+          </span>
+        `;
+      } else {
+        statusBadge.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            <span>كروم Kiosk (جاهز) 🖨️</span>
+          </span>
+        `;
+      }
+    }
+
+    if (printerSelect && this.qzPrinters && this.qzPrinters.length > 0) {
+      printerSelect.innerHTML = this.qzPrinters.map(p => `
+        <option value="${p}" ${p === this.qzPrinterName ? 'selected' : ''}>${p}</option>
+      `).join('');
+      printerSelect.disabled = false;
+    }
+  }
+
+  async printViaQZ(invoice) {
+    if (!invoice) invoice = window.cart?.lastInvoice;
+    if (!invoice) return false;
+
+    if (this.isPrinting) return false;
+    this.isPrinting = true;
+    setTimeout(() => { this.isPrinting = false; }, 1500);
+
+    try {
+      if (!this.qzConnected || !qz.websocket.isActive()) {
+        const ok = await this.connectQZ(true);
+        if (!ok) return false;
+      }
+
+      const printer = this.qzPrinterName || await qz.printers.getDefault();
+      const paperWidth = this.settings.paper_width || '80mm';
+      const is58 = paperWidth === '58mm';
+      const wMM = is58 ? 58 : 80;
+      const numCopies = parseInt(this.settings.copies, 10) || 1;
+
+      const config = qz.configs.create(printer, {
+        size: { width: wMM, height: null },
+        units: 'mm',
+        margins: 0,
+        colorType: 'grayscale',
+        copies: numCopies,
+        scaleContent: true
+      });
+
+      const receiptHTML = window.cart ? window.cart.buildReceiptHTML(invoice) : '';
+      const styles = this.getThermalPrintStyles(paperWidth);
+
+      // Render barcode to base64 or inline SVG
+      let processedHTML = receiptHTML;
+      if (window.JsBarcode) {
+        try {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = receiptHTML;
+          const svgEls = tempDiv.querySelectorAll('.receipt-svg-barcode');
+          svgEls.forEach(el => {
+            const code = el.getAttribute('data-barcode') || (invoice.invoice_barcode || `INV-${invoice.order_id}`);
+            window.JsBarcode(el, code, {
+              format: 'CODE128',
+              width: is58 ? 1.2 : 1.4,
+              height: is58 ? 28 : 34,
+              displayValue: false,
+              margin: 1
+            });
+          });
+          processedHTML = tempDiv.innerHTML;
+        } catch (e) {
+          console.warn('Barcode render error for QZ:', e);
+        }
+      }
+
+      const fullHTML = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>فاتورة #${invoice.order_id}</title>
+          <style>${styles}</style>
+        </head>
+        <body>
+          <div class="receipt-print-wrapper">
+            ${processedHTML}
+          </div>
+        </body>
+        </html>
+      `;
+
+      const data = [{
+        type: 'pixel',
+        format: 'html',
+        flavor: 'plain',
+        data: fullHTML
+      }];
+
+      window.app?.showToast(`جاري الطباعة الفورية عبر QZ Tray (${printer}) ⚡🖨️`, 'info');
+      await qz.print(config, data);
+      window.app?.showToast(`تمت طباعة فاتورة #${invoice.order_id} بنجاح عبر QZ Tray ⚡✅`, 'success');
+      return true;
+
+    } catch (e) {
+      console.warn('QZ Tray print failed:', e);
+      return false;
+    }
+  }
+
+  /* ==================== 2. طابعة متصفح كروم فائق الدقة (CHROME KIOSK PRINT) ==================== */
 
   printViaChrome(invoice) {
     if (!invoice) invoice = window.cart?.lastInvoice;
@@ -53,7 +254,7 @@ class POSPrinterController {
 
     if (this.isPrinting) return;
     this.isPrinting = true;
-    setTimeout(() => { this.isPrinting = false; }, 2000);
+    setTimeout(() => { this.isPrinting = false; }, 1500);
 
     try {
       const paperWidth = this.settings.paper_width || '80mm';
@@ -61,7 +262,7 @@ class POSPrinterController {
       const receiptHTML = window.cart ? window.cart.buildReceiptHTML(invoice) : '';
       const styles = this.getThermalPrintStyles(paperWidth);
 
-      // Build printable copies HTML
+      // إنشاء نسخ الفاتورة
       let copiesHTML = '';
       for (let i = 0; i < numCopies; i++) {
         copiesHTML += `
@@ -77,7 +278,7 @@ class POSPrinterController {
 
       printFrame = document.createElement('iframe');
       printFrame.id = 'pos-chrome-print-frame';
-      // Hidden off-screen, full opacity for crisp thermal rendering
+      // إخفاء الـ iframe بدقة كاملة بدون حجب التنسيق أو الباركود
       printFrame.setAttribute('style', 'position:fixed; top:0; left:-10000px; width:76mm; height:100vh; border:0; z-index:-9999; pointer-events:none;');
       document.body.appendChild(printFrame);
 
@@ -98,7 +299,7 @@ class POSPrinterController {
       `);
       frameDoc.close();
 
-      // Render barcode in the iframe if JsBarcode is loaded
+      // رسم الباركود عالي الدقة
       if (window.JsBarcode) {
         try {
           const barcodeEls = printFrame.contentWindow.document.querySelectorAll('.receipt-svg-barcode');
@@ -106,8 +307,8 @@ class POSPrinterController {
             const code = el.getAttribute('data-barcode') || (invoice.invoice_barcode || `INV-${invoice.order_id}`);
             window.JsBarcode(el, code, {
               format: 'CODE128',
-              width: paperWidth === '58mm' ? 1.2 : 1.5,
-              height: 36,
+              width: paperWidth === '58mm' ? 1.2 : 1.4,
+              height: paperWidth === '58mm' ? 28 : 34,
               displayValue: false,
               margin: 1
             });
@@ -117,9 +318,9 @@ class POSPrinterController {
         }
       }
 
-      window.app?.showToast(`جاري الطباعة عبر طابعة كروم #${invoice.order_id} 🖨️⚡`, 'info');
+      window.app?.showToast(`جاري إرسال الفاتورة #${invoice.order_id} للطابعة 🖨️⚡`, 'info');
 
-      // Trigger print after rendering
+      // إطلاق أمر الطباعة بعد اكتمال تحميل التنسيق والخطوط
       requestAnimationFrame(() => {
         setTimeout(() => {
           try {
@@ -128,40 +329,92 @@ class POSPrinterController {
           } catch (pErr) {
             console.warn('Chrome print error:', pErr);
           }
-        }, 150);
+        }, 180);
       });
 
     } catch (e) {
       console.warn('printViaChrome error:', e);
-      window.app?.showToast(`خطأ في طباعة كروم: ${e.message}`, 'error');
+      window.app?.showToast(`خطأ في الطباعة: ${e.message}`, 'error');
     }
   }
 
-  // Aliases for compatibility
+  // توافق مع الاستدعاءات القديمة
   printViaKioskPC(invoice) {
-    this.printViaChrome(invoice);
+    this.printReceipt(invoice);
   }
 
   printViaBrowser(invoice) {
     this.printViaChrome(invoice);
   }
 
+  /* ==================== طباعة الفاتورة الشاملة (DISPATCH PRINT) ==================== */
+
+  async printReceipt(invoice) {
+    if (!invoice) invoice = window.cart?.lastInvoice;
+    if (!invoice) return;
+
+    // 1. تجربة مكتبة الربط المحلي QZ Tray أولاً إذا كانت مفعلة ومتصلة
+    if (this.settings.use_qz_bridge && this.qzConnected) {
+      const qzOk = await this.printViaQZ(invoice);
+      if (qzOk) return;
+    }
+
+    // 2. البديل المباشر فائق السرعة: طابعة كروم بوضع Kiosk Printing
+    this.printViaChrome(invoice);
+  }
+
+  /* ==================== طباعة إيصال فحص وتجربة ==================== */
+
+  printTestReceipt() {
+    const store = window.settingsController ? window.settingsController.getStoreInfo() : { store_name: 'سوبر ماركت المنزل السوري' };
+    const testInv = {
+      order_id: 'TEST-' + Math.floor(1000 + Math.random() * 9000),
+      created_at: new Date().toLocaleString('ar-EG'),
+      customer_name: 'فحص وتجربة وضوح الطابعة',
+      phone: store.store_phone || '01000000000',
+      address: store.store_address || 'الفرع الرئيسي',
+      cashier: 'مسؤول النظام',
+      order_type: 'hall',
+      payment_method: 'نقدي',
+      items: [
+        { name: 'تجربة صنف بالقطعة 1', qty: 2, price: 25.00, total: 50.00, unit: 'قطعة' },
+        { name: 'تجربة وزن جبنة وزيتون 2', qty: 1.25, price: 40.00, total: 50.00, unit: 'كجم' }
+      ],
+      subtotal: 100.00,
+      discount: 0,
+      total: 100.00,
+      paid_amount: 100.00,
+      change: 0,
+      invoice_barcode: 'TEST-123456',
+      is_test: true
+    };
+
+    window.app?.showToast('جاري طباعة إيصال فحص للتأكد من جمال ووضوح الفاتورة... 🖨️', 'info');
+    this.printReceipt(testInv);
+  }
+
+  /* ==================== تنسيق الفاتورة الحراري فائق الجودة والجمال (CSS) ==================== */
+
   getThermalPrintStyles(paperWidth = '80mm') {
     const is58 = paperWidth === '58mm';
     const pageW = is58 ? '58mm' : '80mm';
-    const contentW = is58 ? '52mm' : '76mm';
-    const baseFontSize = is58 ? '10px' : '11px';
+    const contentW = is58 ? '50mm' : '74mm';
+    const baseFontSize = is58 ? '9px' : '10.5px';
 
     return `
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Courier+Prime:wght@400;700&display=swap');
+
       @page {
         size: ${pageW} auto;
-        margin: 0;
+        margin: 0mm !important;
       }
+
       * {
         box-sizing: border-box;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+
       html, body {
         width: 100%;
         margin: 0;
@@ -172,553 +425,256 @@ class POSPrinterController {
         font-size: ${baseFontSize};
         direction: rtl;
         text-align: right;
-        line-height: 1.35;
+        line-height: 1.3;
       }
-      .receipt-print-wrapper {
+
+      .receipt-print-wrapper, .bw-receipt {
         width: ${contentW};
+        max-width: ${contentW};
         margin: 0 auto;
         padding: 2mm 1mm;
+        background: #ffffff !important;
+        color: #000000 !important;
       }
+
+      .bw-header {
+        text-align: center;
+        margin-bottom: 4px;
+      }
+
+      .bw-title {
+        font-size: ${is58 ? '14px' : '17px'};
+        font-weight: 900;
+        margin: 0 0 2px 0;
+        color: #000000 !important;
+        line-height: 1.2;
+      }
+
+      .bw-sub {
+        font-size: ${is58 ? '9px' : '10.5px'};
+        font-weight: 700;
+        margin-bottom: 2px;
+        color: #000000 !important;
+      }
+
+      .bw-info {
+        font-size: ${is58 ? '8.5px' : '10px'};
+        margin: 1px 0;
+        font-weight: 600;
+        color: #000000 !important;
+      }
+
+      .bw-divider-double {
+        border: none;
+        border-top: 2px dashed #000000;
+        margin: 4px 0;
+      }
+
+      .bw-divider-solid {
+        border: none;
+        border-top: 1px solid #000000;
+        margin: 4px 0;
+      }
+
+      .bw-divider-dashed {
+        border: none;
+        border-top: 1px dashed #000000;
+        margin: 4px 0;
+      }
+
+      .bw-meta-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: ${is58 ? '8.5px' : '10px'};
+        margin: 2px 0;
+      }
+
+      .bw-meta-table td {
+        padding: 1.5px 1px;
+        vertical-align: middle;
+        color: #000000 !important;
+      }
+
+      .bw-mono {
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-weight: bold;
+      }
+
+      .bw-delivery-box {
+        border: 1.5px solid #000000;
+        border-radius: 4px;
+        padding: 3px 4px;
+        margin: 4px 0;
+        background: #fafafa !important;
+      }
+
+      .bw-delivery-title {
+        font-weight: 900;
+        font-size: ${is58 ? '9.5px' : '11px'};
+        text-align: center;
+        border-bottom: 1px dashed #000000;
+        padding-bottom: 2px;
+        margin-bottom: 3px;
+      }
+
+      /* جدول الأصناف فائق الدقة والوضوح */
+      .bw-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 4px 0;
+        font-size: ${is58 ? '8.5px' : '10px'};
+        border: 1.5px solid #000000;
+        table-layout: fixed;
+        word-wrap: break-word;
+      }
+
+      .bw-items-table thead th {
+        border: 1px solid #000000;
+        border-bottom: 2px solid #000000;
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        font-weight: 900;
+        padding: 3px 1px;
+        text-align: center;
+        font-size: ${is58 ? '8px' : '9.5px'};
+      }
+
+      .bw-items-table tbody td {
+        border: 1px solid #000000;
+        padding: 3px 2px;
+        vertical-align: middle;
+        color: #000000 !important;
+      }
+
+      .bw-items-table .th-num, .bw-items-table .td-num {
+        width: 8%;
+        text-align: center;
+        font-family: 'Courier Prime', monospace;
+        font-weight: bold;
+      }
+
+      .bw-items-table .th-name, .bw-items-table .td-name {
+        width: 44%;
+        text-align: right;
+      }
+
+      .bw-items-table .item-title {
+        font-weight: 800;
+        line-height: 1.2;
+        color: #000000 !important;
+        font-size: ${is58 ? '8.5px' : '10px'};
+      }
+
+      .bw-items-table .item-code {
+        font-size: 7.5px;
+        color: #333333 !important;
+        font-family: 'Courier Prime', monospace;
+        display: block;
+      }
+
+      .bw-items-table .th-qty, .bw-items-table .td-qty {
+        width: 16%;
+        text-align: center;
+        font-family: 'Courier Prime', monospace;
+        font-weight: bold;
+        font-size: ${is58 ? '8.5px' : '10px'};
+      }
+
+      .bw-items-table .th-price, .bw-items-table .td-price {
+        width: 16%;
+        text-align: center;
+        font-family: 'Courier Prime', monospace;
+        font-size: ${is58 ? '8.5px' : '10px'};
+      }
+
+      .bw-items-table .th-total, .bw-items-table .td-total {
+        width: 16%;
+        text-align: left;
+        font-family: 'Courier Prime', monospace;
+        font-weight: 900;
+        font-size: ${is58 ? '8.5px' : '10px'};
+      }
+
+      /* جدول الإجماليات */
+      .bw-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: ${is58 ? '9px' : '10.5px'};
+        margin: 3px 0;
+        table-layout: fixed;
+      }
+
+      .bw-summary-table td {
+        padding: 2px 1px;
+        color: #000000 !important;
+      }
+
+      .bw-summary-table .bw-val {
+        text-align: left;
+        font-family: 'Courier Prime', monospace;
+        font-weight: 800;
+      }
+
+      /* سطر الإجمالي المطلوب البارز */
+      .bw-summary-table .bw-grand-row td {
+        border-top: 2px solid #000000;
+        border-bottom: 2px solid #000000;
+        padding: 4px 1px;
+        font-size: ${is58 ? '11px' : '13px'};
+        font-weight: 900;
+        background-color: #f2f2f2 !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+
+      .bw-summary-table .bw-grand-val {
+        text-align: left;
+        font-family: 'Courier Prime', monospace;
+        font-size: ${is58 ? '12px' : '14.5px'};
+        font-weight: 900;
+      }
+
+      /* الباركود وتذييل الفاتورة */
+      .bw-barcode {
+        text-align: center;
+        margin: 4px 0 2px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .bw-barcode svg {
+        max-width: 100%;
+        height: ${is58 ? '28px' : '34px'};
+      }
+
+      .bw-barcode-text {
+        font-family: 'Courier Prime', monospace;
+        font-size: ${is58 ? '8.5px' : '10px'};
+        font-weight: 900;
+        letter-spacing: 1px;
+        color: #000000 !important;
+      }
+
+      .bw-footer {
+        text-align: center;
+        font-size: ${is58 ? '8px' : '9.5px'};
+        color: #000000 !important;
+        line-height: 1.3;
+        margin-top: 4px;
+      }
+
       .page-break-before {
         page-break-before: always;
         break-before: page;
-        margin-top: 5mm;
+        margin-top: 4mm;
       }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: inherit;
-      }
-      th, td {
-        padding: 2px 1px;
-      }
-      .text-center { text-align: center; }
-      .text-left { text-align: left; }
-      .text-right { text-align: right; }
-      .font-bold { font-weight: bold; }
-      .font-mono { font-family: monospace; }
-      .no-print { display: none !important; }
-      hr, .divider {
-        border: none;
-        border-top: 1px dashed #000;
-        margin: 4px 0;
+
+      .no-print {
+        display: none !important;
       }
     `;
-  }
-
-  /* ==================== 2. طابعة USB المباشرة للكمبيوتر (WEB USB ESC/POS) ==================== */
-
-  isUsbSupported() {
-    return !!(navigator && navigator.usb);
-  }
-
-  async connectUSB() {
-    if (!this.isUsbSupported()) {
-      window.app?.showToast('متصفحك لا يدعم WebUSB، يرجى استخدام متصفح Chrome أو خيار طابعة الكمبيوتر الصامتة (Kiosk)', 'warning');
-      return false;
-    }
-
-    try {
-      window.app?.showLoading(true, 'يرجى اختيار طابعة الـ USB المعرفة من القائمة المنبثقة...');
-
-      // Common Thermal Printer USB Class 0x07 (Printers)
-      const device = await navigator.usb.requestDevice({
-        filters: [{ classCode: 0x07 }]
-      }).catch(async () => {
-        // Fallback: request any USB device if classCode filter is strict
-        return await navigator.usb.requestDevice({ filters: [] });
-      });
-
-      if (!device) throw new Error('لم يتم اختيار أي جهاز');
-
-      await device.open();
-      await device.selectConfiguration(1);
-
-      // Find printer interface & OUT endpoint
-      let outEndpoint = null;
-      let targetInterface = null;
-
-      for (const iface of device.configuration.interfaces) {
-        for (const alt of iface.alternates) {
-          for (const ep of alt.endpoints) {
-            if (ep.direction === 'out') {
-              outEndpoint = ep.endpointNumber;
-              targetInterface = iface.interfaceNumber;
-              break;
-            }
-          }
-          if (outEndpoint) break;
-        }
-        if (outEndpoint) break;
-      }
-
-      if (!outEndpoint) {
-        throw new Error('لم يتم العثور على منفذ إرسال بيانات الطباعة في هذا الجهاز');
-      }
-
-      await device.claimInterface(targetInterface);
-
-      this.usbDevice = device;
-      this.usbInterface = targetInterface;
-      this.usbEndpointOut = outEndpoint;
-
-      const devName = device.productName || 'طابعة USB حرارية';
-      this.settings.usb_printer_name = devName;
-      localStorage.setItem('pos_usb_printer_name', devName);
-
-      window.app?.showLoading(false);
-      window.app?.showToast(`تم اقتران طابعة الـ USB بنجاح: ${devName} 🔌✅`, 'success');
-      return true;
-
-    } catch (err) {
-      window.app?.showLoading(false);
-      if (err.name !== 'NotFoundError') {
-        console.warn('USB Connection failed:', err);
-        window.app?.showToast(`تعذر الاتصال بطابعة USB: ${err.message}`, 'error');
-      }
-      return false;
-    }
-  }
-
-  async sendUsbData(uint8Array) {
-    if (!this.usbDevice || !this.usbDevice.opened) {
-      const ok = await this.connectUSB();
-      if (!ok) return false;
-    }
-
-    try {
-      await this.usbDevice.transferOut(this.usbEndpointOut, uint8Array);
-      return true;
-    } catch (err) {
-      console.warn('USB Transfer error:', err);
-      // Try to re-claim interface
-      try {
-        await this.usbDevice.claimInterface(this.usbInterface);
-        await this.usbDevice.transferOut(this.usbEndpointOut, uint8Array);
-        return true;
-      } catch (e2) {
-        throw new Error('فشل إرسال البيانات لطابعة الـ USB: ' + err.message);
-      }
-    }
-  }
-
-  async printViaUSB(invoice) {
-    if (!invoice) invoice = window.cart?.lastInvoice;
-    if (!invoice) {
-      window.app?.showToast('لا توجد فاتورة للطباعة', 'warning');
-      return;
-    }
-
-    try {
-      window.app?.showLoading(true, 'جاري الإرسال المباشر لطابعة USB... 🔌');
-      const escPosData = this.buildEscPosCommands(invoice);
-      const success = await this.sendUsbData(escPosData);
-      window.app?.showLoading(false);
-      if (success) {
-        window.app?.showToast(`تمت طباعة فاتورة #${invoice.order_id} عبر USB مباشرة 🔌✅`, 'success');
-      }
-    } catch (e) {
-      window.app?.showLoading(false);
-      window.app?.showToast(`خطأ في طباعة USB: ${e.message} - جاري التحويل للطباعة الصامتة`, 'warning');
-      this.printViaKioskPC(invoice);
-    }
-  }
-
-  /* ==================== 3. طابعة البلوتوث المباشرة (WEB BLUETOOTH ESC/POS) ==================== */
-
-  isBluetoothSupported() {
-    return !!(navigator && navigator.bluetooth);
-  }
-
-  async connectBluetooth() {
-    if (!this.isBluetoothSupported()) {
-      window.app?.showToast('متصفحك لا يدعم Web Bluetooth، يرجى استخدام متصفح Chrome على هاتف/كمبيوتر يدعم البلوتوث', 'warning');
-      return false;
-    }
-
-    try {
-      window.app?.showLoading(true, 'جاري البحث عن طابعات البلوتوث القريبة...');
-
-      const serviceUUIDs = [
-        '000018f0-0000-1000-8000-00805f9b34fb', // Standard POS
-        'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Mini POS
-        '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC
-        '0000ffe0-0000-1000-8000-00805f9b34fb'  // Serial BLE
-      ];
-
-      const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: serviceUUIDs
-      });
-
-      if (!device) throw new Error('لم يتم اختيار أي جهاز');
-
-      this.btDevice = device;
-      const devName = device.name || 'طابعة حرارية بلوتوث';
-      this.settings.paired_bt_name = devName;
-      localStorage.setItem('pos_bt_printer_name', devName);
-
-      window.app?.showLoading(true, `جاري الاتصال بالطابعة (${devName})...`);
-
-      const server = await device.gatt.connect();
-
-      let targetCharacteristic = null;
-      for (const sId of serviceUUIDs) {
-        try {
-          const service = await server.getPrimaryService(sId);
-          if (service) {
-            const characteristics = await service.getCharacteristics();
-            for (const ch of characteristics) {
-              if (ch.properties.write || ch.properties.writeWithoutResponse) {
-                targetCharacteristic = ch;
-                break;
-              }
-            }
-          }
-        } catch (errService) {}
-        if (targetCharacteristic) break;
-      }
-
-      if (!targetCharacteristic) {
-        const services = await server.getPrimaryServices();
-        for (const service of services) {
-          try {
-            const characteristics = await service.getCharacteristics();
-            for (const ch of characteristics) {
-              if (ch.properties.write || ch.properties.writeWithoutResponse) {
-                targetCharacteristic = ch;
-                break;
-              }
-            }
-          } catch(e) {}
-          if (targetCharacteristic) break;
-        }
-      }
-
-      if (!targetCharacteristic) {
-        throw new Error('تم الاتصال ولكن لم يتم العثور على منفذ الطباعة في الطابعة');
-      }
-
-      this.btCharacteristic = targetCharacteristic;
-      window.app?.showLoading(false);
-      window.app?.showToast(`تم الاتصال بنجاح بالطابعة: ${devName} 📶✅`, 'success');
-      return true;
-
-    } catch (err) {
-      window.app?.showLoading(false);
-      if (err.name !== 'NotFoundError') {
-        console.warn('Bluetooth connection failed:', err);
-        window.app?.showToast(`تعذر الاتصال بالبلوتوث: ${err.message}`, 'error');
-      }
-      return false;
-    }
-  }
-
-  async sendBluetoothData(uint8Array) {
-    if (!this.btCharacteristic || !this.btDevice?.gatt?.connected) {
-      const ok = await this.connectBluetooth();
-      if (!ok) return false;
-    }
-
-    const CHUNK_SIZE = 128;
-    for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
-      const chunk = uint8Array.slice(i, i + CHUNK_SIZE);
-      if (this.btCharacteristic.writeValueWithoutResponse) {
-        await this.btCharacteristic.writeValueWithoutResponse(chunk);
-      } else {
-        await this.btCharacteristic.writeValue(chunk);
-      }
-      await new Promise(r => setTimeout(r, 20));
-    }
-    return true;
-  }
-
-  async printViaBluetooth(invoice) {
-    if (!invoice) invoice = window.cart?.lastInvoice;
-    if (!invoice) {
-      window.app?.showToast('لا توجد فاتورة للطباعة', 'warning');
-      return;
-    }
-
-    if (this.isPrinting) return;
-    this.isPrinting = true;
-    setTimeout(() => { this.isPrinting = false; }, 3000);
-
-    try {
-      window.app?.showLoading(true, 'جاري إرسال الفاتورة للطابعة عبر البلوتوث... 📶');
-      const escPosData = this.buildEscPosCommands(invoice);
-      const success = await this.sendBluetoothData(escPosData);
-      window.app?.showLoading(false);
-      if (success) {
-        window.app?.showToast(`تمت طباعة فاتورة #${invoice.order_id} عبر البلوتوث مباشرة 📶✅`, 'success');
-      }
-    } catch (e) {
-      window.app?.showLoading(false);
-      window.app?.showToast(`خطأ في إرسال الطباعة: ${e.message}`, 'error');
-    }
-  }
-
-  /* ==================== 4. تطبيق RAWBT للأندرويد (RAWBT DRIVER) ==================== */
-
-  printViaRawBT(invoice) {
-    if (!invoice) invoice = window.cart?.lastInvoice;
-    if (!invoice) {
-      window.app?.showToast('لا توجد فاتورة للطباعة', 'warning');
-      return;
-    }
-
-    try {
-      const receiptHTML = window.cart ? window.cart.buildReceiptHTML(invoice) : '';
-      const styles = this.getThermalPrintStyles(this.settings.paper_width || '80mm');
-
-      const fullDoc = `
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <style>${styles}</style>
-        </head>
-        <body>
-          ${receiptHTML}
-        </body>
-        </html>
-      `;
-
-      const base64Data = btoa(unescape(encodeURIComponent(fullDoc)));
-      window.app?.showToast('جاري إرسال الفاتورة لتطبيق RawBT للطباعة الفورية 📲🖨️', 'info');
-
-      const rawbtUri = `rawbt:data:text/html;base64,${base64Data}`;
-      const frame = document.createElement('iframe');
-      frame.style.display = 'none';
-      frame.src = rawbtUri;
-      document.body.appendChild(frame);
-      setTimeout(() => frame.remove(), 2000);
-
-    } catch (e) {
-      console.warn('RawBT print failed:', e);
-      window.app?.showToast('تعذر التحويل لتطبيق RawBT، يرجى التأكد من تثبيته على هاتفك', 'warning');
-    }
-  }
-
-  /* ==================== طباعة الفاتورة عبر كروم (CHROME KIOSK PRINT) ==================== */
-
-  printReceipt(invoice, forceMode = null) {
-    if (!invoice) invoice = window.cart?.lastInvoice;
-    if (!invoice) return;
-
-    // طباعة مباشرة وفورية عبر طابعة كروم الافتراضية
-    this.printViaChrome(invoice);
-  }
-
-  /* ==================== طباعة فاتورة فحص وتجربة (TEST RECEIPT) ==================== */
-
-  printTestReceipt() {
-    const store = window.settingsController ? window.settingsController.getStoreInfo() : { store_name: 'سوبر ماركت المنزل السوري' };
-    const testInv = {
-      order_id: 'TEST-' + Math.floor(1000 + Math.random() * 9000),
-      created_at: new Date().toLocaleString('ar-EG'),
-      customer_name: 'فحص وتجربة الطابعة',
-      phone: store.store_phone || '01000000000',
-      address: store.store_address || 'الفرع الرئيسي',
-      cashier: 'مسؤول النظام',
-      order_type: 'hall',
-      payment_method: 'نقدي',
-      items: [
-        { name: 'تجربة خط عربي ومحاذاة 1', qty: 1, price: 50.00, total: 50.00, unit: 'قطعة' },
-        { name: 'تجربة وزن ومقاسات 2', qty: 1.5, price: 40.00, total: 60.00, unit: 'كجم' }
-      ],
-      subtotal: 110.00,
-      discount: 10.00,
-      total: 100.00,
-      paid_amount: 100.00,
-      change: 0,
-      invoice_barcode: 'TEST-123456',
-      is_test: true
-    };
-
-    window.app?.showToast('جاري طباعة فاتورة تجريبية للتأكد من إعدادات الطابعة... 🖨️', 'info');
-    this.printReceipt(testInv);
-  }
-
-  /* ==================== ESC/POS COMMAND BUILDER ==================== */
-
-  buildEscPosCommands(inv) {
-    const encoder = new TextEncoder();
-    const bytes = [];
-
-    const push = (...b) => bytes.push(...b);
-    const pushText = (str) => {
-      const encoded = encoder.encode(str);
-      for (let i = 0; i < encoded.length; i++) bytes.push(encoded[i]);
-    };
-
-    const ESC = 0x1B;
-    const GS = 0x1D;
-
-    // 1. Initialize printer
-    push(ESC, 0x40);
-
-    // Open cash drawer if enabled (Pin 2: ESC p 0 25 250)
-    if (this.settings.open_drawer) {
-      push(ESC, 0x70, 0x00, 0x19, 0xFA);
-    }
-
-    // Arabic / UTF-8 mode
-    push(ESC, 0x74, 0x00);
-
-    // Center alignment
-    push(ESC, 0x61, 0x01);
-
-    // Store Title (Double height & width)
-    const store = window.settingsController ? window.settingsController.getStoreInfo() : { store_name: 'سوبر ماركت المنزل السوري' };
-    push(ESC, 0x21, 0x30);
-    pushText(`${store.store_name || 'سوبر ماركت المنزل السوري'}\n`);
-
-    // Subtitle
-    push(ESC, 0x21, 0x00);
-    push(ESC, 0x61, 0x01);
-    pushText(`${store.receipt_sub || 'فاتورة مبيعات نقدية'}\n`);
-    if (store.store_phone) pushText(`هاتف: ${store.store_phone}\n`);
-    if (store.store_address) pushText(`${store.store_address}\n`);
-
-    pushText('--------------------------------\n');
-
-    // Invoice Meta
-    push(ESC, 0x61, 0x02);
-    pushText(`رقم الفاتورة: #${inv.order_id}\n`);
-    pushText(`التاريخ: ${inv.created_at || new Date().toLocaleString('ar-EG')}\n`);
-    pushText(`العميل: ${inv.customer_name || 'عميل نقدي'}\n`);
-    if (inv.phone) pushText(`الهاتف: ${inv.phone}\n`);
-    if (inv.cashier) pushText(`الكاشير: ${inv.cashier}\n`);
-
-    pushText('--------------------------------\n');
-    pushText('الصنف             الكمية  السعر  الإجمالي\n');
-    pushText('--------------------------------\n');
-
-    if (Array.isArray(inv.items)) {
-      inv.items.forEach((item, idx) => {
-        const name = (item.name || 'صنف').substring(0, 16);
-        const qty = item.qty || 1;
-        const price = (item.price || 0).toFixed(2);
-        const total = (item.total || (qty * item.price)).toFixed(2);
-        pushText(`${idx + 1}. ${name}\n`);
-        pushText(`   ${qty} x ${price} = ${total} ج.م\n`);
-      });
-    }
-
-    pushText('--------------------------------\n');
-
-    // Totals
-    push(ESC, 0x61, 0x02);
-    pushText(`المجموع: ${(inv.subtotal || inv.total || 0).toFixed(2)} ج.م\n`);
-    if (inv.discount && parseFloat(inv.discount) > 0) {
-      pushText(`الخصم: -${parseFloat(inv.discount).toFixed(2)} ج.م\n`);
-    }
-    if (inv.payment_fee && parseFloat(inv.payment_fee) > 0) {
-      pushText(`رسوم الدفع: +${parseFloat(inv.payment_fee).toFixed(2)} ج.م\n`);
-    }
-    if (inv.delivery_fee && parseFloat(inv.delivery_fee) > 0) {
-      pushText(`خدمة التوصيل: +${parseFloat(inv.delivery_fee).toFixed(2)} ج.م\n`);
-    }
-
-    // Grand Total
-    push(ESC, 0x21, 0x20);
-    push(ESC, 0x61, 0x01);
-    pushText(`المطلوب: ${parseFloat(inv.total || 0).toFixed(2)} ج.م\n`);
-
-    push(ESC, 0x21, 0x00);
-    if (inv.paid_amount && (inv.payment_method === 'cash' || inv.payment_method === 'نقدي' || !inv.payment_method)) {
-      pushText(`المدفوع: ${parseFloat(inv.paid_amount).toFixed(2)} ج.م | الباقي: ${parseFloat(inv.change || 0).toFixed(2)} ج.م\n`);
-    }
-
-    // Barcode (Code128)
-    const barcode = inv.invoice_barcode || `INV-${inv.order_id}`;
-    push(ESC, 0x61, 0x01);
-    push(GS, 0x68, 60);
-    push(GS, 0x77, 2);
-    push(GS, 0x6B, 73);
-    push(barcode.length);
-    pushText(barcode);
-    pushText(`\n${barcode}\n`);
-
-    pushText('--------------------------------\n');
-    pushText(`${store.receipt_footer || 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة'}\n`);
-    pushText('الأسعار شاملة الضريبة\n');
-
-    // Feed lines & Auto Cut
-    pushText('\n\n\n\n');
-    if (this.settings.auto_cut) {
-      push(GS, 0x56, 0x01); // Full cut
-    }
-
-    return new Uint8Array(bytes);
-  }
-
-  /* ==================== 6. أداة تنزيل اختصار الطباعة الصامتة للويندوز ==================== */
-
-  downloadWindowsSilentKioskBat() {
-    const currentUrl = window.location.origin + window.location.pathname;
-    const batContent = `@echo off
-chcp 65001 >nul
-title تشغيل كاشير سوبر ماركت المنزل السوري - طباعة صامتة فورية
-echo ======================================================================
-echo    سوبر ماركت المنزل السوري - تشغيل الكاشير بالطباعة الصامتة الفورية
-echo ======================================================================
-echo  جاري تشغيل المتصفح بوضع Kiosk Printing (الطباعة المباشرة لطابعة الكمبيوتر)...
-echo.
-
-set "URL=${currentUrl}"
-
-if exist "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" (
-    start "" "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk-printing --app="%URL%"
-    goto done
-)
-if exist "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" (
-    start "" "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" --kiosk-printing --app="%URL%"
-    goto done
-)
-if exist "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" (
-    start "" "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" --kiosk-printing --app="%URL%"
-    goto done
-)
-if exist "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" (
-    start "" "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" --kiosk-printing --app="%URL%"
-    goto done
-)
-
-start msedge --kiosk-printing --app="%URL%"
-
-:done
-echo تم تشغيل الكاشير بالطباعة الصامتة بنجاح!
-exit
-`;
-
-    const blob = new Blob([batContent], { type: 'application/x-bat;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'تشغيل_كاشير_المنزل_السوري_طباعة_صامتة.bat';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    window.app?.showToast('تم تنزيل ملف الاختصار بنجاح! ضعه على سطح المكتب وشغله لطباعة الفواتير فوراً بدون نافذة كروم 🚀✅', 'success');
-  }
-
-  showKioskGuideModal() {
-    const modal = document.getElementById('kiosk-guide-modal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-      if (window.lucide) window.lucide.createIcons();
-    }
-  }
-
-  closeKioskGuideModal() {
-    const modal = document.getElementById('kiosk-guide-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-    }
   }
 }
 

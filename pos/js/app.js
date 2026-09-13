@@ -1268,14 +1268,20 @@ class App {
 
   /* ==================== EVENT BINDINGS ==================== */
   bindEvents() {
-    // Search input (Instant filter + Enter to add/scan)
+    // Search input (Debounced filter for typing + Instant Enter to add/scan)
     const searchInput = document.getElementById('product-search-input');
+    let searchDebounceTimer = null;
+
     searchInput?.addEventListener('input', (e) => {
-      this.renderProducts(e.target.value);
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        this.renderProducts(e.target.value);
+      }, 120);
     });
 
     searchInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
+        clearTimeout(searchDebounceTimer);
         const val = (e.target.value || '').trim();
         if (val) {
           e.preventDefault();

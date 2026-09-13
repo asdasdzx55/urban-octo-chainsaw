@@ -344,24 +344,27 @@ class POSScanner {
     const cleanCode = String(decodedText || '').trim();
     if (!cleanCode) return;
 
-    const now = Date.now();
-    const elapsedSinceLastScan = now - this.lastScannedTime;
+    // Cooldown & debounce applies ONLY to mobile video camera scanning (source === 'camera')!
+    // For PC hardware laser scanners, search input, and keyboard scanners: ZERO delay (0ms) and instant repeat scans!
+    if (source === 'camera') {
+      const now = Date.now();
+      const elapsedSinceLastScan = now - this.lastScannedTime;
 
-    // 1. Global cooldown: ignore any scan within 800ms
-    if (elapsedSinceLastScan < this.globalScanCooldownMs) {
-      return;
+      // 1. Global camera cooldown: ignore duplicate video frames within 700ms
+      if (elapsedSinceLastScan < this.globalScanCooldownMs) {
+        return;
+      }
+
+      // 2. Same-code camera cooldown: ignore identical barcode within 2 seconds
+      if (cleanCode === this.lastScannedCode && elapsedSinceLastScan < this.sameCodeCooldownMs) {
+        return;
+      }
+
+      this.lastScannedCode = cleanCode;
+      this.lastScannedTime = now;
     }
 
-    // 2. Same-code cooldown: ignore identical barcode within 2.2 seconds
-    if (cleanCode === this.lastScannedCode && elapsedSinceLastScan < this.sameCodeCooldownMs) {
-      return;
-    }
-
-    // Mark current code and timestamp
-    this.lastScannedCode = cleanCode;
-    this.lastScannedTime = now;
-
-    // Dispatch valid scan
+    // Dispatch valid scan immediately without any delay!
     this.handleScannedBarcode(cleanCode, source);
   }
 

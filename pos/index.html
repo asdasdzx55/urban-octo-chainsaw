@@ -148,11 +148,13 @@
       </div>
 
       <!-- Password Input Form -->
-      <form id="pos-auth-form" onsubmit="event.preventDefault(); window.posAuth?.handleLogin();" class="space-y-4 text-right">
+      <form id="pos-auth-form" onsubmit="event.preventDefault(); window.posAuth?.handleLogin();" class="space-y-4 text-right" autocomplete="off">
+        <!-- Explicit hidden username to prevent Chrome from treating search inputs outside as username/password -->
+        <input type="text" name="username" value="admin" autocomplete="username" class="sr-only hidden" style="display:none;" tabindex="-1" aria-hidden="true">
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة مرور الأدمن:</label>
           <div class="relative flex items-center">
-            <input type="password" id="pos-auth-password" inputmode="numeric" autocomplete="current-password" required placeholder="أدخل كلمة المرور..."
+            <input type="password" id="pos-auth-password" name="admin_pos_password" inputmode="numeric" autocomplete="current-password" required placeholder="أدخل كلمة المرور..."
                    class="w-full bg-slate-950 border border-slate-700 text-white text-center text-lg tracking-widest font-mono rounded-xl px-10 py-3 focus:outline-none focus:border-indigo-500 transition shadow-inner">
             <button type="button" onclick="window.posAuth?.togglePasswordVisibility()" class="absolute left-3 text-slate-400 hover:text-white p-1 transition" title="إظهار / إخفاء">
               <i data-lucide="eye" id="pos-auth-eye-icon" class="w-5 h-5"></i>
@@ -594,7 +596,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 sm:p-3 border border-gray-200/80 dark:border-gray-700 shadow-xs flex items-center gap-2 sm:gap-3 shrink-0">
           <div class="relative flex-1">
             <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="product-search-input" placeholder="ابحث باسم المنتج، كود الصنف، أو امسح الباركود بالسكنر..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+            <input type="search" id="product-search-input" name="pos_barcode_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="ابحث باسم المنتج، كود الصنف، أو امسح الباركود بالسكنر..." class="w-full bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500">
           </div>
           
           <!-- Detailed Search Toggle Button (F7) -->
@@ -1066,7 +1068,7 @@
                   </button>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <input type="text" id="inv-prod-barcode" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
+                  <input type="text" id="inv-prod-barcode" name="inv_prod_barcode" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
                   <button type="button" id="btn-scan-inv-barcode" onclick="window.inventoryController.scanBarcodeWithCamera()" class="lg:hidden w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shrink-0 flex items-center justify-center shadow-xs" title="فتح الكاميرا ومسح الباركود فوراً">
                     <i data-lucide="camera" class="w-4 h-4"></i>
                   </button>
@@ -1109,7 +1111,7 @@
                   </button>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <input type="text" id="inv-prod-packbarcode" placeholder="امسح باركود الكرتونة..." class="flex-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
+                  <input type="text" id="inv-prod-packbarcode" name="inv_prod_packbarcode" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="امسح باركود الكرتونة..." class="flex-1 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono font-bold">
                   <button type="button" onclick="window.inventoryController.scanPackBarcodeWithCamera()" class="lg:hidden w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition shrink-0 flex items-center justify-center shadow-xs" title="فتح الكاميرا لمسح باركود الدستة">
                     <i data-lucide="camera" class="w-4 h-4"></i>
                   </button>
@@ -2771,7 +2773,7 @@
             <!-- Secret Token -->
             <div class="flex flex-col gap-1">
               <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">مفتاح التشفير والتوكن السري (API Token):</label>
-              <input type="password" id="set-api-token" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+              <input type="password" id="set-api-token" name="set_api_token" autocomplete="new-password" data-lpignore="true" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
             </div>
 
             <!-- Status Banner -->
@@ -3796,7 +3798,7 @@
         <div class="flex flex-col gap-1">
           <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الباركود الدولي:</label>
           <div class="flex items-center gap-1.5">
-            <input type="text" id="new-purch-item-barcode" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+            <input type="text" id="new-purch-item-barcode" name="purch_item_barcode" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="امسح أو اكتب الباركود..." class="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
             <button type="button" onclick="window.purchasesController.scanBarcodeForNewProduct()" class="lg:hidden p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition" title="مسح الباركود بكاميرا الهاتف">
               <i data-lucide="camera" class="w-4 h-4"></i>
             </button>

@@ -152,6 +152,38 @@ class PurchasesController {
     this.updateSupplierBalanceBadge();
   }
 
+  filterSupplierDropdown(term) {
+    const select = document.getElementById('purch-supplier-select');
+    if (!select || !this.suppliers) return;
+
+    term = (term || '').trim();
+    let list = [...this.suppliers];
+    if (term && window.expensesController?.matchSupplierScore) {
+      const scored = [];
+      list.forEach(s => {
+        const score = window.expensesController.matchSupplierScore(term, s.name, s.code || s.id, s.phone);
+        if (score > 0) scored.push({ s, score });
+      });
+      scored.sort((a, b) => b.score - a.score);
+      list = scored.map(item => item.s);
+    }
+
+    let html = '<option value="">-- اختر المورد (' + list.length + ' نتائج مطابقة) --</option>';
+    list.forEach(s => {
+      const bal = parseFloat(s.balance || 0);
+      const isSelected = this.selectedSupplierId == s.id ? 'selected' : '';
+      html += '<option value="' + s.id + '" ' + isSelected + ' data-name="' + s.name + '" data-phone="' + (s.phone || '') + '" data-balance="' + bal + '">' + 
+        s.name + (bal !== 0 ? ' (رصيد: ' + bal.toFixed(2) + ' ج.م)' : '') + 
+      '</option>';
+    });
+    select.innerHTML = html;
+
+    if (list.length === 1) {
+      select.value = list[0].id;
+      this.onSupplierSelected(list[0].id);
+    }
+  }
+
   onSupplierSelected(val) {
     this.selectedSupplierId = val ? parseInt(val, 10) : null;
     this.updateSupplierBalanceBadge();

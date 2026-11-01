@@ -286,11 +286,92 @@ class ExpensesController {
     if (window.lucide) window.lucide.createIcons();
   }
 
+  normalizeArabic(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/[\u064B-\u065F\u0670]/g, '')
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/ى/g, 'ي')
+      .replace(/ـ/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  levenshteinDistance(s1, s2) {
+    if (s1.length < s2.length) return this.levenshteinDistance(s2, s1);
+    if (s2.length === 0) return s1.length;
+    let prev = Array.from({ length: s2.length + 1 }, (_, i) => i);
+    for (let i = 0; i < s1.length; i++) {
+      const curr = [i + 1];
+      for (let j = 0; j < s2.length; j++) {
+        const ins = prev[j + 1] + 1;
+        const del = curr[j] + 1;
+        const sub = prev[j] + (s1[i] === s2[j] ? 0 : 1);
+        curr.push(Math.min(ins, del, sub));
+      }
+      prev = curr;
+    }
+    return prev[prev.length - 1];
+  }
+
+  matchSupplierScore(query, targetName, code = '', phone = '') {
+    if (!query) return 1;
+    const qNorm = this.normalizeArabic(query);
+    const tNorm = this.normalizeArabic(targetName);
+    const qCompact = qNorm.replace(/\s+/g, '');
+    const tCompact = tNorm.replace(/\s+/g, '');
+    const qRaw = String(query).trim();
+
+    // 1. مطابقة مباشرة بالكود
+    if (code && (String(code) === qRaw || String(code) === qNorm)) return 100;
+    if (code && String(code).startsWith(qRaw) && qRaw.length >= 2) return 85;
+
+    // 2. مطابقة بالهاتف
+    if (phone && String(phone).includes(qRaw)) return 80;
+
+    // 3. تطابق تام بعد توحيد الحروف
+    if (qNorm === tNorm) return 100;
+
+    // 4. تطابق تجاهل المسافات (مثل: عبدالله vs عبد الله)
+    if (tCompact.includes(qCompact)) return 95;
+
+    // 5. تطابق جزئي بالاسم
+    if (tNorm.includes(qNorm)) return 90;
+
+    // 6. تطابق كلمات متعددة بأي ترتيب
+    const tokens = qNorm.split(' ').filter(Boolean);
+    if (tokens.length > 1) {
+      if (tokens.every(tok => tNorm.includes(tok) || tCompact.includes(tok))) return 85;
+      if (tokens.some(tok => tNorm.includes(tok))) return 60;
+    }
+
+    // 7. تشابه الحروف المتسلسلة (Subsequence)
+    let qIdx = 0;
+    for (let i = 0; i < tCompact.length && qIdx < qCompact.length; i++) {
+      if (tCompact[i] === qCompact[qIdx]) qIdx++;
+    }
+    if (qIdx === qCompact.length && qCompact.length >= 3) return 70;
+
+    // 8. تقارب إملائي (Levenshtein distance)
+    const words = tNorm.split(' ');
+    for (const w of words) {
+      if (Math.abs(w.length - qNorm.length) <= 2) {
+        const d = this.levenshteinDistance(qNorm, w);
+        if (d <= 1 && qNorm.length >= 3) return 65;
+        if (d <= 2 && qNorm.length >= 5) return 55;
+      }
+    }
+
+    return 0;
+  }
+
   searchSuppliersReport(term) {
-    term = (term || '').trim().toLowerCase();
+    term = (term || '').trim();
     if (!this.allSuppliersData) return;
 
-    let filtered = this.allSuppliersData;
+    let filtered = [...this.allSuppliersData];
     if (this.currentSuppliersFilter === 'debt') {
       filtered = filtered.filter(s => parseFloat(s.balance || 0) > 0);
     } else if (this.currentSuppliersFilter === 'settled') {
@@ -298,13 +379,51 @@ class ExpensesController {
     }
 
     if (term) {
-      filtered = filtered.filter(s => 
-        (s.name && s.name.toLowerCase().includes(term)) ||
-        (s.phone && s.phone.includes(term))
-      );
+      const scored = [];
+      filtered.forEach(s => {
+        const score = this.matchSupplierScore(term, s.name, s.code || s.id, s.phone);
+        if (score > 0) {
+          scored.push({ supplier: s, score });
+        }
+      });
+      // ترتيب تنازلي: الأكثر تطابقاً وتشابهاً أولاً
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return parseFloat(b.supplier.balance || 0) - parseFloat(a.supplier.balance || 0);
+      });
+      filtered = scored.map(item => item.supplier);
     }
 
     this.renderSuppliersReportTable(filtered);
+  }
+
+  filterSupplierDropdown(term) {
+    const select = document.getElementById('exp-supplier-select');
+    if (!select || !this.suppliers) return;
+
+    term = (term || '').trim();
+    let list = [...this.suppliers];
+    if (term) {
+      const scored = [];
+      list.forEach(s => {
+        const score = this.matchSupplierScore(term, s.name, s.code || s.id, s.phone);
+        if (score > 0) scored.push({ s, score });
+      });
+      scored.sort((a, b) => b.score - a.score);
+      list = scored.map(item => item.s);
+    }
+
+    select.innerHTML = `
+      <option value="">-- اختر المورد (${list.length} نتائج مطابقة) --</option>
+      ${list.map(s => `
+        <option value="${s.id}" data-balance="${s.balance || 0}">${s.name} (كود #${s.code || s.id} - رصيد: ${parseFloat(s.balance || 0).toFixed(2)} ج.م)</option>
+      `).join('')}
+    `;
+
+    if (list.length === 1) {
+      select.value = list[0].id;
+      this.onSupplierSelected(list[0].id);
+    }
   }
 
   filterSuppliersReport(filterType) {

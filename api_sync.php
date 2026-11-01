@@ -707,6 +707,65 @@ try {
             break;
 
         // ============================================================
+        // 2.41 تقرير الموردين الشامل والمديونيات (Suppliers Report)
+        // ============================================================
+        case 'get_suppliers_report':
+            $stmt = $pdo->query("SELECT * FROM suppliers ORDER BY CASE WHEN balance > 0 THEN 0 WHEN balance < 0 THEN 1 ELSE 2 END, balance DESC, name ASC");
+            $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // إحصائيات المشتريات لكل مورد إن وجدت
+            $purch_stats = [];
+            try {
+                $p_rows = $pdo->query("SELECT supplier_name, 
+                                              COUNT(*) as invoices_count, 
+                                              SUM(total_amount) as total_supplied, 
+                                              SUM(paid_amount) as total_paid, 
+                                              SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END) as unpaid_count, 
+                                              MAX(created_at) as last_date 
+                                       FROM purchases 
+                                       GROUP BY supplier_name")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($p_rows as $pr) {
+                    $purch_stats[$pr['supplier_name']] = $pr;
+                }
+            } catch (Exception $e) {}
+
+            $total_debt = 0.0;
+            $total_supplied = 0.0;
+            $total_paid = 0.0;
+
+            foreach ($suppliers as &$s) {
+                $name = $s['name'];
+                $bal = (float)($s['balance'] ?? 0);
+                
+                $p_info = $purch_stats[$name] ?? null;
+                $s['total_purchases'] = (float)($p_info['total_supplied'] ?? 0);
+                $s['total_paid'] = (float)($p_info['total_paid'] ?? 0);
+                $s['invoices_count'] = (int)($p_info['invoices_count'] ?? 0);
+                $s['unpaid_invoices_count'] = (int)($p_info['unpaid_count'] ?? 0);
+                $s['last_purchase_date'] = $p_info['last_date'] ?? null;
+
+                // مديونية الموردين (المبالغ المستحقة لهم)
+                if ($bal > 0) {
+                    $total_debt += $bal;
+                }
+                $total_supplied += $s['total_purchases'];
+                $total_paid += $s['total_paid'];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($suppliers),
+                'summary' => [
+                    'total_debt' => $total_debt,
+                    'total_supplied' => $total_supplied,
+                    'total_paid' => $total_paid,
+                    'suppliers_count' => count($suppliers)
+                ],
+                'suppliers' => $suppliers
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 2.5 مزامنة مورد (إضافة أو تعديل أو تحديث رصيد)
         // ============================================================
         case 'sync_supplier':

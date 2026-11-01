@@ -1416,6 +1416,7 @@
                   </div>
                 </div>
 
+                <input type="text" id="purch-supplier-search-input" oninput="window.purchasesController.filterSupplierDropdown(this.value)" placeholder="🔍 بحث تقريبي بالاسم أو الكود (مثال: محايرى، طليمات، 101)..." class="w-full mb-1.5 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs">
                 <select id="purch-supplier-select" onchange="window.purchasesController.onSupplierSelected(this.value)" class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
                   <!-- Rendered dynamically -->
                 </select>
@@ -1635,6 +1636,7 @@
                   <span>عرض كشف الحساب 📑</span>
                 </button>
               </div>
+              <input type="text" id="exp-supplier-search-input" oninput="window.expensesController.filterSupplierDropdown(this.value)" placeholder="🔍 بحث تقريبي بالاسم أو الكود (مثال: محايرى، طليمات، 101)..." class="w-full mb-1.5 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs">
               <select id="exp-supplier-select" onchange="window.expensesController.onSupplierSelected(this.value)" class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold">
                 <!-- Rendered dynamically -->
               </select>
@@ -1751,7 +1753,7 @@
               <div class="flex items-center gap-2 flex-1 max-w-md">
                 <div class="relative w-full">
                   <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute right-3 top-2.5"></i>
-                  <input type="text" id="sup-report-search" oninput="window.expensesController.searchSuppliersReport(this.value)" placeholder="ابحث باسم المورد أو رقم الهاتف..." class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pr-9 pl-3 py-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500">
+                  <input type="text" id="sup-report-search" oninput="window.expensesController.searchSuppliersReport(this.value)" placeholder="🔍 بحث تقريبي بالاسم أو الكود أو الهاتف (مثال: محايرى، طليمات، أجبان، 101)..." class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pr-9 pl-3 py-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500">
                 </div>
               </div>
 
@@ -4474,8 +4476,8 @@
   <script src="js/cart.js?v=2.5.6"></script>
   <script src="js/categories.js?v=2.5.6"></script>
   <script src="js/inventory.js?v=2.5.6"></script>
-  <script src="js/purchases.js?v=2.5.6"></script>
-  <script src="js/expenses.js?v=2.5.6"></script>
+  <script src="js/purchases.js?v=2.7.0?v=2.5.6"></script>
+  <script src="js/expenses.js?v=2.7.0?v=2.5.6"></script>
   <script src="js/orders.js?v=2.5.6"></script>
   <script src="js/delivery-settlement.js?v=2.5.6"></script>
   <script src="js/returns.js?v=2.5.6"></script>

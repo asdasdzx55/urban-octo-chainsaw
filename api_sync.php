@@ -160,6 +160,10 @@ if (!function_exists('ensure_customers_schema')) {
         try { $pdo->exec("ALTER TABLE customers ADD COLUMN total_orders INT DEFAULT 0"); } catch (Exception $e) {}
         try { $pdo->exec("ALTER TABLE customers ADD COLUMN total_spent DECIMAL(10,2) DEFAULT 0.00"); } catch (Exception $e) {}
         try { $pdo->exec("ALTER TABLE customers ADD COLUMN last_order_date DATETIME DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN code INT DEFAULT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN remind DECIMAL(12,2) DEFAULT 0.00"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN receipts DECIMAL(12,2) DEFAULT 0.00"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE customers ADD COLUMN balance DECIMAL(12,2) DEFAULT 0.00"); } catch (Exception $e) {}
 
         // ترقية أعمدة جدول الطلبات لضمان عدم وجود أخطاء عند القراءة
         try { $pdo->exec("ALTER TABLE orders ADD COLUMN governorate VARCHAR(100) DEFAULT 'القاهرة'"); } catch (Exception $e) {}
@@ -2051,6 +2055,73 @@ try {
         // ============================================================
         // 2.651 تسجيل سند قبض / مقبوض من عميل (Customer Receipt)
         // ============================================================
+        
+        // ============================================================
+        // 2.653 مزامنة عملاء دريم سوفت بكامل الأكواد والأرصدة الفعلية
+        // ============================================================
+        case 'sync_dreamsoft_customers':
+            ensure_customers_schema($pdo);
+            $custs = $json_payload['customers'] ?? [];
+            if (empty($custs) && !empty($_POST['customers'])) {
+                $custs = json_decode($_POST['customers'], true);
+            }
+
+            if (empty($custs) || !is_array($custs)) {
+                echo json_encode(['success' => false, 'error' => 'قائمة العملاء فارغة']);
+                exit;
+            }
+
+            $synced_count = 0;
+            $updated_debts = 0;
+
+            // استعلام التحقق والتحديث
+            $chk = $pdo->prepare("SELECT id FROM customers WHERE code = ? LIMIT 1");
+            $upd = $pdo->prepare("UPDATE customers SET name = ?, phone = ?, address = ?, remind = ?, receipts = ?, balance = ? WHERE code = ?");
+            $ins = $pdo->prepare("INSERT INTO customers (code, name, phone, address, remind, receipts, balance) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+            foreach ($custs as $c) {
+                $code = (int)($c['code'] ?? 0);
+                if ($code <= 0) continue;
+
+                $name = trim($c['name'] ?? '');
+                $phone = trim($c['phone'] ?? $c['mobile'] ?? $c['tel'] ?? '');
+                $address = trim($c['address'] ?? '');
+                $remind = (float)($c['remind'] ?? 0);
+                $receipts = (float)($c['receipts'] ?? 0);
+                
+                // في الكاشير: الرصيد السالب يمثل مديونية على العميل بمقدار المتبقي
+                $balance = $remind > 0 ? -$remind : 0.00;
+
+                $chk->execute([$code]);
+                $existing_id = $chk->fetchColumn();
+
+                if ($existing_id) {
+                    $upd->execute([$name, $phone, $address, $remind, $receipts, $balance, $code]);
+                } else {
+                    // فحص إذا كان موجوداً بالاسم
+                    $chk_name = $pdo->prepare("SELECT id FROM customers WHERE name = ? LIMIT 1");
+                    $chk_name->execute([$name]);
+                    $by_name = $chk_name->fetchColumn();
+                    if ($by_name) {
+                        $pdo->prepare("UPDATE customers SET code = ?, phone = COALESCE(NULLIF(phone, ''), ?), address = COALESCE(NULLIF(address, ''), ?), remind = ?, receipts = ?, balance = ? WHERE id = ?")
+                            ->execute([$code, $phone, $address, $remind, $receipts, $balance, $by_name]);
+                    } else {
+                        $ins->execute([$code, $name, $phone, $address, $remind, $receipts, $balance]);
+                    }
+                }
+
+                $synced_count++;
+                if ($remind > 0) $updated_debts++;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => "تمت مزامنة {$synced_count} عميل من دريم سوفت بنجاح، منهم {$updated_debts} عميل عليهم حسابات آجلة.",
+                'synced_count' => $synced_count,
+                'debts_count' => $updated_debts
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
         case 'customer_receipt':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $cust_id = (int)($data['customer_id'] ?? $data['id'] ?? 0);
@@ -2925,29 +2996,30 @@ try {
         case 'get_customers':
             ensure_customers_schema($pdo);
             $q = trim($json_payload['q'] ?? $json_payload['query'] ?? $_GET['q'] ?? $_GET['query'] ?? $_POST['q'] ?? $_POST['query'] ?? $_REQUEST['q'] ?? $_REQUEST['query'] ?? '');
-            $limit = min(200, max(1, (int)($json_payload['limit'] ?? $_GET['limit'] ?? $_POST['limit'] ?? $_REQUEST['limit'] ?? 50)));
+            $limit = min(1000, max(1, (int)($json_payload['limit'] ?? $_GET['limit'] ?? $_POST['limit'] ?? $_REQUEST['limit'] ?? 500)));
             $page = max(1, (int)($json_payload['page'] ?? $_GET['page'] ?? $_POST['page'] ?? $_REQUEST['page'] ?? 1));
             $offset = ($page - 1) * $limit;
 
             if ($q !== '') {
                 $search_term = "%$q%";
-                $cnt = $pdo->prepare("SELECT COUNT(*) FROM customers WHERE name LIKE ? OR phone LIKE ? OR phone2 LIKE ? OR address LIKE ? OR governorate LIKE ?");
-                $cnt->execute([$search_term, $search_term, $search_term, $search_term, $search_term]);
+                $cnt = $pdo->prepare("SELECT COUNT(*) FROM customers WHERE code LIKE ? OR name LIKE ? OR phone LIKE ? OR phone2 LIKE ? OR address LIKE ? OR notes LIKE ?");
+                $cnt->execute([$search_term, $search_term, $search_term, $search_term, $search_term, $search_term]);
                 $total_count = (int)$cnt->fetchColumn();
 
-                $stmt = $pdo->prepare("SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ? OR phone2 LIKE ? OR address LIKE ? OR governorate LIKE ? ORDER BY total_orders DESC, id DESC LIMIT ? OFFSET ?");
+                $stmt = $pdo->prepare("SELECT * FROM customers WHERE code LIKE ? OR name LIKE ? OR phone LIKE ? OR phone2 LIKE ? OR address LIKE ? OR notes LIKE ? ORDER BY CASE WHEN remind > 0 THEN 0 WHEN balance < 0 THEN 1 ELSE 2 END, remind DESC, code ASC LIMIT ? OFFSET ?");
                 $stmt->bindValue(1, $search_term, PDO::PARAM_STR);
                 $stmt->bindValue(2, $search_term, PDO::PARAM_STR);
                 $stmt->bindValue(3, $search_term, PDO::PARAM_STR);
                 $stmt->bindValue(4, $search_term, PDO::PARAM_STR);
                 $stmt->bindValue(5, $search_term, PDO::PARAM_STR);
-                $stmt->bindValue(6, (int)$limit, PDO::PARAM_INT);
-                $stmt->bindValue(7, (int)$offset, PDO::PARAM_INT);
+                $stmt->bindValue(6, $search_term, PDO::PARAM_STR);
+                $stmt->bindValue(7, (int)$limit, PDO::PARAM_INT);
+                $stmt->bindValue(8, (int)$offset, PDO::PARAM_INT);
                 $stmt->execute();
                 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             } else {
                 $total_count = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
-                $stmt = $pdo->prepare("SELECT * FROM customers ORDER BY total_orders DESC, id DESC LIMIT ? OFFSET ?");
+                $stmt = $pdo->prepare("SELECT * FROM customers ORDER BY CASE WHEN remind > 0 THEN 0 WHEN balance < 0 THEN 1 ELSE 2 END, remind DESC, code ASC LIMIT ? OFFSET ?");
                 $stmt->bindValue(1, (int)$limit, PDO::PARAM_INT);
                 $stmt->bindValue(2, (int)$offset, PDO::PARAM_INT);
                 $stmt->execute();

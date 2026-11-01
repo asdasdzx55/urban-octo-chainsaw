@@ -1,95 +1,110 @@
 /**
- * Syrian Home POS - Customers & Credit Accounts Controller (v2.6.0)
- * منظومة إدارة حسابات العملاء، الآجل، المديونيات، سندات القبض والدفع، وكشوف الحسابات
+ * Syrian Home POS - Customers & Credit Management Controller (إدارة حسابات العملاء والآجل)
+ * مزامنة دقيقة ومتطابقة 100% مع أكواد وأرصدة برنامج دريم سوفت الأصلي
  */
 class CustomersController {
   constructor() {
     this.customers = [];
+    this.filter = 'debtors'; // 'debtors', 'all', 'creditors'
     this.searchQuery = '';
-    this.filter = 'debt'; // 'debt' (المدينين فقط افتراضياً), 'all', 'credit', 'zero'
-    this.currentSubView = 'list'; // 'list', 'form', 'voucher', 'ledger'
-    this.activeCustomer = null;
-    this.voucherType = 'receipt'; // 'receipt' (مقبوض), 'payment' (دفع)
-    this.recentVouchers = [];
+    this.selectedCustomer = null;
+    this.currentReceiptModalType = 'receipt'; // 'receipt' (مقبوض) | 'pay' (دفع)
   }
 
   init() {
-    this.setSubView('list');
+    this.bindEvents();
     this.loadCustomers();
-    this.loadRecentVouchers();
   }
 
-  setSubView(viewName, data = null) {
-    this.currentSubView = viewName;
-
-    // Toggle subtab buttons
-    document.querySelectorAll('.cust-subtab-btn').forEach(btn => {
-      const target = btn.getAttribute('data-subview');
-      if (target === viewName) {
-        btn.className = 'cust-subtab-btn px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1.5 transition';
-      } else {
-        btn.className = 'cust-subtab-btn px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5 transition cursor-pointer';
-      }
-    });
-
-    const views = {
-      list: document.getElementById('cust-subview-list'),
-      form: document.getElementById('cust-subview-form'),
-      voucher: document.getElementById('cust-subview-voucher'),
-      ledger: document.getElementById('cust-subview-ledger')
-    };
-
-    Object.keys(views).forEach(k => {
-      if (views[k]) {
-        if (k === viewName) views[k].classList.remove('hidden');
-        else views[k].classList.add('hidden');
-      }
-    });
-
-    if (viewName === 'form') {
-      if (data) this.populateEditForm(data);
-      else this.resetAddForm();
-    } else if (viewName === 'voucher') {
-      this.setupVoucherForm(data);
-    } else if (viewName === 'ledger') {
-      const custId = data?.id || data || (this.customers[0]?.id);
-      this.setupLedgerView(custId);
-    } else if (viewName === 'list') {
-      this.renderKPIs();
-      this.renderCustomersList();
+  bindEvents() {
+    // Search input
+    const searchInput = document.getElementById('cust-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.searchQuery = e.target.value.trim().toLowerCase();
+        this.renderCustomersList();
+      });
     }
 
-    const parent = document.getElementById('view-customers');
-    if (parent) parent.scrollTop = 0;
-    if (window.lucide) window.lucide.createIcons();
+    // Filter Buttons
+    document.querySelectorAll('.cust-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cust-filter-btn').forEach(b => {
+          b.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+          b.classList.add('bg-white', 'dark:bg-gray-800', 'text-gray-600', 'dark:text-gray-300');
+        });
+        btn.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+        btn.classList.remove('bg-white', 'dark:bg-gray-800', 'text-gray-600', 'dark:text-gray-300');
+        this.filter = btn.getAttribute('data-filter');
+        this.renderCustomersList();
+      });
+    });
+
+    // Refresh Button
+    const refreshBtn = document.getElementById('btn-refresh-customers');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.loadCustomers(true));
+    }
   }
 
-  async loadCustomers() {
+  async loadCustomers(forceRefresh = false) {
     const listContainer = document.getElementById('customers-grid');
+    
+    // 1. Instant Cache Load
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem('syrian_home_customers');
+        if (cached) {
+          this.customers = JSON.parse(cached);
+          this.renderKPIs();
+          this.renderCustomersList();
+        }
+      } catch (e) {}
+    }
+
     try {
-      if (!this.customers.length) {
-        window.app?.showLoading(true, 'جاري تحميل بيانات العملاء والآجل...');
+      if (forceRefresh || !this.customers || this.customers.length === 0) {
+        window.app?.showLoading(true, 'جاري تحميل بيانات العملاء وأرصدة دريم سوفت...');
       }
-      const res = await window.api.get('get_customers', { limit: 500 });
+      
+      const res = await window.api.get('get_customers', { limit: 1000 });
       window.app?.showLoading(false);
 
       if (res && res.success && Array.isArray(res.customers)) {
         this.customers = res.customers.map(c => {
-          const bal = parseFloat(c.balance || 0);
+          const code = parseInt(c.code || c.id || 0);
+          const remind = parseFloat(c.remind || 0);
+          const rawBal = parseFloat(c.balance || 0);
+          const rec = parseFloat(c.receipts || 0);
+
+          // الحساب المحاسبي لدريم سوفت:
+          // إذا كان remind > 0 فالمديونية المطلوبة من العميل هي remind
+          let finalBal = 0.00;
+          if (remind > 0) {
+            finalBal = -remind; // سالب = مديونية على العميل
+          } else if (rawBal < 0 && remind === 0 && (c.notes && c.notes.includes('حساب آجل'))) {
+            finalBal = rawBal;
+          } else if (rawBal > 0) {
+            finalBal = rawBal; // موجب = رصيد دائن لصالح العميل
+          }
+
           return {
-            id: parseInt(c.id || c.client_code || 0),
-            code: parseInt(c.client_code || c.id || 0),
+            id: parseInt(c.id || code),
+            code: code,
             name: c.name || 'عميل بدون اسم',
             phone: c.phone || '',
             phone2: c.phone2 || '',
             address: c.address || '',
             notes: c.notes || '',
-            balance: bal,
+            balance: finalBal,
+            remind: remind,
+            receipts: rec,
             total_orders: parseInt(c.total_orders || 0),
             total_spent: parseFloat(c.total_spent || 0)
           };
         });
 
+        // حفظ في الكاش
         try {
           localStorage.setItem('syrian_home_customers', JSON.stringify(this.customers));
         } catch (e) {}
@@ -101,28 +116,6 @@ class CustomersController {
     } catch (err) {
       window.app?.showLoading(false);
       console.error('Error loading customers:', err);
-      // Fallback from cache
-      try {
-        const saved = JSON.parse(localStorage.getItem('syrian_home_customers') || '[]');
-        if (saved && saved.length > 0) {
-          this.customers = saved;
-          this.renderKPIs();
-          this.renderCustomersList();
-          this.updateCustomerDropdowns();
-          return;
-        }
-      } catch (e) {}
-
-      if (listContainer) {
-        listContainer.innerHTML = `
-          <div class="col-span-full p-8 text-center bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 rounded-3xl">
-            <i data-lucide="alert-circle" class="w-8 h-8 text-rose-500 mx-auto mb-2"></i>
-            <p class="text-xs font-bold text-rose-600 dark:text-rose-400">تعذر جلب بيانات العملاء: ${err.message}</p>
-            <button onclick="window.customersController.loadCustomers()" class="mt-3 px-4 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold">إعادة المحاولة</button>
-          </div>
-        `;
-        if (window.lucide) window.lucide.createIcons();
-      }
     }
   }
 
@@ -158,17 +151,15 @@ class CustomersController {
     let filtered = [...this.customers];
 
     // Filter by Debt Status
-    if (this.filter === 'debt') {
+    if (this.filter === 'debtors') {
       filtered = filtered.filter(c => c.balance < 0);
-    } else if (this.filter === 'credit') {
+    } else if (this.filter === 'creditors') {
       filtered = filtered.filter(c => c.balance > 0);
-    } else if (this.filter === 'zero') {
-      filtered = filtered.filter(c => c.balance === 0);
     }
 
     // Filter by Search Query (ID/Code, Name, or Phone)
-    const q = (this.searchQuery || '').trim().toLowerCase();
-    if (q) {
+    if (this.searchQuery) {
+      const q = this.searchQuery;
       filtered = filtered.filter(c => 
         String(c.code).includes(q) ||
         String(c.id).includes(q) ||
@@ -178,8 +169,13 @@ class CustomersController {
       );
     }
 
-    // Sort: Largest debt first
-    filtered.sort((a, b) => a.balance - b.balance);
+    // Sort: Largest debt first, then by code
+    filtered.sort((a, b) => {
+      if (a.balance !== b.balance) {
+        return a.balance - b.balance; // الأكثر مديونية أولاً
+      }
+      return a.code - b.code;
+    });
 
     if (filtered.length === 0) {
       grid.innerHTML = `
@@ -187,7 +183,7 @@ class CustomersController {
           <i data-lucide="users" class="w-12 h-12 mx-auto mb-2 opacity-40 text-indigo-400"></i>
           <p class="text-xs font-bold text-gray-600 dark:text-gray-300">لم يتم العثور على أي عميل مطابق للبحث أو الفلتر</p>
           <button onclick="window.customersController.filter = 'all'; window.customersController.searchQuery = ''; document.getElementById('cust-search-input').value = ''; window.customersController.renderCustomersList();" class="mt-3 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-xs font-bold text-indigo-600 hover:bg-gray-200 transition">
-            عرض كافة العملاء
+            عرض كافة العملاء (${this.customers.length})
           </button>
         </div>
       `;
@@ -201,13 +197,13 @@ class CustomersController {
       const absBal = Math.abs(c.balance).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
       return `
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border ${isDebt ? 'border-rose-200 dark:border-rose-900/60 shadow-xs' : 'border-gray-200 dark:border-gray-700 shadow-2xs'} flex flex-col justify-between gap-3 transition hover:shadow-md">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border ${isDebt ? 'border-rose-300 dark:border-rose-900/80 shadow-xs' : 'border-gray-200 dark:border-gray-700 shadow-2xs'} flex flex-col justify-between gap-3 transition hover:shadow-md">
           
           <!-- Top Row: Code Badge & Debt Badge -->
           <div class="flex items-start justify-between gap-2">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono font-black text-xs border border-indigo-200/80 dark:border-indigo-800">
-                كود #${c.code || c.id}
+                كود دريم سوفت #${c.code || c.id}
               </span>
               ${c.phone ? `
                 <a href="tel:${c.phone}" class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-mono text-[11px] hover:text-indigo-600 flex items-center gap-1">
@@ -220,11 +216,11 @@ class CustomersController {
             <div class="text-left">
               ${isDebt ? `
                 <span class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-mono font-black text-xs border border-rose-200 dark:border-rose-800 flex items-center gap-1">
-                  <span>مديونية:</span> <span>${absBal} ج.م</span>
+                  <span>آجل مطلوب:</span> <span>${absBal} ج.م</span>
                 </span>
               ` : isCredit ? `
                 <span class="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-mono font-black text-xs border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                  <span>له رصيد:</span> <span>+${absBal} ج.م</span>
+                  <span>رصيد دائن:</span> <span>+${absBal} ج.م</span>
                 </span>
               ` : `
                 <span class="px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 font-mono font-bold text-xs">
@@ -238,23 +234,20 @@ class CustomersController {
           <div class="my-1">
             <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-tight">${c.name}</h3>
             ${c.address ? `<p class="text-[11px] text-gray-400 mt-1 flex items-center gap-1"><span>📍</span> <span>${c.address}</span></p>` : ''}
-            ${c.notes ? `<p class="text-[10px] text-gray-400 mt-0.5">${c.notes}</p>` : ''}
           </div>
 
-          <!-- Action Buttons Row -->
-          <div class="pt-3 border-t border-gray-100 dark:border-gray-700/80 grid grid-cols-3 gap-1.5">
-            <button type="button" onclick="window.customersController.openVoucher('receipt', ${c.id})" class="py-2 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 cursor-pointer" title="قبض دفعة نقدية من العميل">
+          <!-- Actions Toolbar -->
+          <div class="pt-2 border-t border-gray-100 dark:border-gray-700/60 grid grid-cols-3 gap-1.5">
+            <button onclick="window.customersController.openVoucherModal(${c.code || c.id}, 'receipt')" class="py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs">
               <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
-              <span>📥 مقبوض</span>
+              <span>قبض [مقبوض]</span>
             </button>
-
-            <button type="button" onclick="window.customersController.openVoucher('payment', ${c.id})" class="py-2 px-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 cursor-pointer" title="دفع أو رد نقدية للعميل">
+            <button onclick="window.customersController.openVoucherModal(${c.code || c.id}, 'pay')" class="py-2 px-1 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs">
               <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
-              <span>📤 دفع</span>
+              <span>صرف [دفع]</span>
             </button>
-
-            <button type="button" onclick="window.customersController.setSubView('ledger', { id: ${c.id} })" class="py-2 px-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-xs transition flex items-center justify-center gap-1 cursor-pointer" title="كشف الحساب التفصيلي">
-              <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+            <button onclick="window.customersController.openLedgerModal(${c.code || c.id})" class="py-2 px-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
               <span>كشف حساب</span>
             </button>
           </div>
@@ -266,232 +259,178 @@ class CustomersController {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  openVoucher(type, customerId) {
-    this.voucherType = type; // 'receipt' or 'payment'
-    const cust = this.customers.find(c => c.id === customerId);
-    this.setSubView('voucher', cust);
-  }
+  openVoucherModal(customerCode, type = 'receipt') {
+    const cust = this.customers.find(c => (c.code === customerCode || c.id === customerCode));
+    if (!cust) return;
 
-  setupVoucherForm(customer = null) {
-    const isReceipt = this.voucherType === 'receipt';
-    const titleEl = document.getElementById('cust-voucher-title');
-    const typeBadgeEl = document.getElementById('cust-voucher-type-badge');
-    const submitBtn = document.getElementById('cust-voucher-submit-btn');
+    this.selectedCustomer = cust;
+    this.currentReceiptModalType = type;
 
-    if (titleEl) {
-      titleEl.textContent = isReceipt ? '📥 تسجيل سند قبض / مقبوض من عميل' : '📤 تسجيل سند صرف / دفع نقدية لعميل';
-    }
-    if (typeBadgeEl) {
-      typeBadgeEl.textContent = isReceipt ? 'مقبوض (يدخل درج الكاشير)' : 'مدفوع (يخرج من درج الكاشير)';
-      typeBadgeEl.className = isReceipt 
-        ? 'px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
-        : 'px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
-    }
-    if (submitBtn) {
-      submitBtn.className = isReceipt 
-        ? 'flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer'
-        : 'flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer';
-      submitBtn.innerHTML = isReceipt 
-        ? '<i data-lucide="check" class="w-4 h-4"></i><span>تأكيد استلام المبلغ (قبض)</span>' 
-        : '<i data-lucide="check" class="w-4 h-4"></i><span>تأكيد صرف المبلغ (دفع)</span>';
-    }
+    const modal = document.getElementById('cust-voucher-modal');
+    if (!modal) return;
 
-    const select = document.getElementById('cust-voucher-customer-id');
-    if (select && customer) {
-      select.value = customer.id;
-      this.onVoucherCustomerChange();
+    const titleEl = document.getElementById('cust-voucher-modal-title');
+    const subtitleEl = document.getElementById('cust-voucher-modal-subtitle');
+    const custNameEl = document.getElementById('cust-voucher-name');
+    const custBalEl = document.getElementById('cust-voucher-balance');
+    const amountInp = document.getElementById('cust-voucher-amount');
+    const noteInp = document.getElementById('cust-voucher-note');
+
+    if (custNameEl) custNameEl.textContent = `${cust.name} (كود #${cust.code || cust.id})`;
+    
+    const absDebt = Math.abs(cust.balance).toFixed(2);
+    if (custBalEl) {
+      if (cust.balance < 0) {
+        custBalEl.textContent = `المديونية الحالية: ${absDebt} ج.م (آجل غير مسدد)`;
+        custBalEl.className = 'text-xs font-bold text-rose-600 dark:text-rose-400 mt-1';
+      } else if (cust.balance > 0) {
+        custBalEl.textContent = `رصيد دائن: ${cust.balance.toFixed(2)} ج.م`;
+        custBalEl.className = 'text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1';
+      } else {
+        custBalEl.textContent = 'الحساب خالص (0.00 ج.م)';
+        custBalEl.className = 'text-xs font-bold text-gray-500 mt-1';
+      }
     }
 
-    const amtInput = document.getElementById('cust-voucher-amount');
-    if (amtInput) amtInput.value = '';
-    const noteInput = document.getElementById('cust-voucher-note');
-    if (noteInput) noteInput.value = isReceipt ? 'سداد دفعة من المديونية' : 'رد نقدية للعميل';
+    if (type === 'receipt') {
+      titleEl.innerHTML = `<span class="text-emerald-600">📥 سند قبض من عميل [مقبوض]</span>`;
+      subtitleEl.textContent = 'استلام دفعة نقدية وتوريدها للخزينة وتخفيض مديونية العميل';
+      if (amountInp) amountInp.value = cust.balance < 0 ? Math.abs(cust.balance) : '';
+      if (noteInp) noteInp.value = `دفعة من الحساب الآجل - عميل #${cust.code || cust.id}`;
+    } else {
+      titleEl.innerHTML = `<span class="text-rose-600">📤 سند صرف / دفع لعميل [دفع]</span>`;
+      subtitleEl.textContent = 'صرف مبلغ نقدي من الدرج للعميل أو رد دفعة';
+      if (amountInp) amountInp.value = '';
+      if (noteInp) noteInp.value = `صرف نقدي من الدرج - عميل #${cust.code || cust.id}`;
+    }
 
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     if (window.lucide) window.lucide.createIcons();
+
+    setTimeout(() => amountInp?.focus(), 150);
   }
 
-  onVoucherCustomerChange() {
-    const select = document.getElementById('cust-voucher-customer-id');
-    const preview = document.getElementById('cust-voucher-preview');
-    if (!select || !preview) return;
+  closeVoucherModal() {
+    const modal = document.getElementById('cust-voucher-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    this.selectedCustomer = null;
+  }
 
-    const id = parseInt(select.value);
-    const c = this.customers.find(x => x.id === id);
-    if (!c) {
-      preview.innerHTML = '';
+  async submitVoucher() {
+    if (!this.selectedCustomer) return;
+
+    const amountInp = document.getElementById('cust-voucher-amount');
+    const noteInp = document.getElementById('cust-voucher-note');
+    const pmInp = document.getElementById('cust-voucher-method');
+
+    const amount = parseFloat(amountInp?.value || 0);
+    const note = noteInp?.value.trim() || '';
+    const paymentMethod = pmInp?.value || 'كاش من الدرج';
+
+    if (isNaN(amount) || amount <= 0) {
+      window.app?.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error');
+      amountInp?.focus();
       return;
     }
 
-    const isDebt = c.balance < 0;
-    const absBal = Math.abs(c.balance).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const action = this.currentReceiptModalType === 'receipt' ? 'customer_receipt' : 'pay_customer';
+    const payload = {
+      customer_id: this.selectedCustomer.id,
+      customer_code: this.selectedCustomer.code,
+      customer_name: this.selectedCustomer.name,
+      amount: amount,
+      payment_method: paymentMethod,
+      note: note,
+      date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
 
-    preview.innerHTML = `
-      <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/60 border border-gray-100 dark:border-gray-700 text-xs">
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">${c.name}</span>
-          <span class="text-gray-400 font-mono text-[10px] me-1">(كود #${c.code || c.id})</span>
-        </div>
-        <div class="font-mono font-black ${isDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}">
-          ${isDebt ? `المديونية الحالية: ${absBal} ج.م` : `الرصيد الدائن: ${absBal} ج.م`}
-        </div>
-      </div>
-    `;
-  }
-
-  setFullRemainingVoucherAmount() {
-    const select = document.getElementById('cust-voucher-customer-id');
-    const amtInput = document.getElementById('cust-voucher-amount');
-    if (!select || !amtInput) return;
-
-    const id = parseInt(select.value);
-    const c = this.customers.find(x => x.id === id);
-    if (c && c.balance < 0) {
-      amtInput.value = Math.abs(c.balance);
-    }
-  }
-
-  async saveVoucher() {
-    const select = document.getElementById('cust-voucher-customer-id');
-    const amtInput = document.getElementById('cust-voucher-amount');
-    const noteInput = document.getElementById('cust-voucher-note');
-    const methodSelect = document.getElementById('cust-voucher-method');
-
-    const customerId = parseInt(select?.value || 0);
-    const amount = parseFloat(amtInput?.value || 0);
-    const note = (noteInput?.value || '').trim();
-    const paymentMethod = methodSelect?.value || 'كاش من الدرج';
-
-    if (!customerId) {
-      window.app?.showToast('يرجى اختيار العميل أولاً!', 'error');
-      return;
-    }
-    if (amount <= 0) {
-      window.app?.showToast('يرجى كتابة مبلغ صحيح أكبر من الصفر!', 'error');
-      return;
-    }
-
-    const customer = this.customers.find(c => c.id === customerId);
-    const isReceipt = this.voucherType === 'receipt';
+    window.app?.showLoading(true, 'جاري تسجيل السند وتحديث الحساب...');
 
     try {
-      window.app?.showLoading(true, isReceipt ? 'جاري تسجيل سند القبض...' : 'جاري تسجيل سند الصرف...');
-      
-      const payload = {
-        action: isReceipt ? 'customer_receipt' : 'pay_customer',
-        customer_id: customerId,
-        customer_name: customer?.name || '',
-        amount: amount,
-        note: note,
-        payment_method: paymentMethod,
-        date: new Date().toISOString().slice(0, 19).replace('T', ' ')
-      };
-
-      const res = await window.api.post(payload.action, payload);
+      const res = await window.api.post(action, payload);
       window.app?.showLoading(false);
 
       if (res && res.success) {
-        // Adjust local balance immediately
-        if (customer) {
-          if (isReceipt) {
-            customer.balance += amount; // Reduces negative debt
-          } else {
-            customer.balance -= amount; // Increases debt / reduces credit
-          }
-        }
-        window.app?.showToast(`✅ تم حفظ السند بنجاح بمبلغ ${amount} ج.م`, 'success');
-        this.setSubView('list');
+        window.app?.showToast(res.message || 'تم حفظ السند بنجاح!', 'success');
+        this.closeVoucherModal();
+        this.loadCustomers(true);
       } else {
-        throw new Error(res?.error || 'فشل حفظ السند على السيرفر');
+        window.app?.showToast(res.error || 'تعذر تسجيل السند!', 'error');
       }
     } catch (err) {
       window.app?.showLoading(false);
-      window.app?.showToast(`⚠️ تم الحفظ محلياً: ${err.message}`, 'warning');
-      if (customer) {
-        if (isReceipt) customer.balance += amount;
-        else customer.balance -= amount;
+      window.app?.showToast('خطأ في الاتصال بالسيرفر: ' + err.message, 'error');
+    }
+  }
+
+  async openLedgerModal(customerCode) {
+    const cust = this.customers.find(c => (c.code === customerCode || c.id === customerCode));
+    if (!cust) return;
+
+    this.selectedCustomer = cust;
+    const modal = document.getElementById('cust-ledger-modal');
+    if (!modal) return;
+
+    document.getElementById('cust-ledger-title').textContent = `كشف حساب: ${cust.name} (كود #${cust.code || cust.id})`;
+    document.getElementById('cust-ledger-balance').textContent = `الرصيد الحالي: ${Math.abs(cust.balance).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م ${cust.balance < 0 ? '(مديونية مطلوبة)' : cust.balance > 0 ? '(رصيد دائن)' : '(خالص)'}`;
+
+    const tbody = document.getElementById('cust-ledger-table-body');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">جاري تحميل حركات الحساب...</td></tr>`;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (window.lucide) window.lucide.createIcons();
+
+    try {
+      const res = await window.api.get('get_customer_ledger', { customer_id: cust.id, customer_name: cust.name });
+      if (res && res.success && Array.isArray(res.transactions)) {
+        if (res.transactions.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">لا توجد حركات مسجلة حتى الآن</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = res.transactions.map(t => `
+          <tr class="border-b border-gray-100 dark:border-gray-800 text-xs hover:bg-gray-50 dark:hover:bg-gray-800/40">
+            <td class="py-2.5 px-3 font-mono text-gray-500">${t.date || t.created_at}</td>
+            <td class="py-2.5 px-3 font-bold text-gray-800 dark:text-gray-200">${t.type}</td>
+            <td class="py-2.5 px-3 text-gray-600 dark:text-gray-400">${t.note || '-'}</td>
+            <td class="py-2.5 px-3 font-mono font-bold ${t.type.includes('قبض') ? 'text-emerald-600' : 'text-rose-600'}">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
+            <td class="py-2.5 px-3 text-gray-500">${t.payment_method || 'كاش'}</td>
+          </tr>
+        `).join('');
       }
-      this.setSubView('list');
+    } catch (err) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-rose-500">تعذر جلب الحركات: ${err.message}</td></tr>`;
+    }
+  }
+
+  closeLedgerModal() {
+    const modal = document.getElementById('cust-ledger-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
   }
 
   updateCustomerDropdowns() {
-    const select = document.getElementById('cust-voucher-customer-id');
-    if (!select) return;
-
-    select.innerHTML = `
-      <option value="">-- اختر العميل بالاسم أو رقم الكود --</option>
-      ${this.customers.map(c => `
-        <option value="${c.id}">
-          كود #${c.code || c.id} - ${c.name} ${c.balance < 0 ? `(مديونية: ${Math.abs(c.balance).toFixed(2)})` : ''}
-        </option>
-      `).join('')}
-    `;
-  }
-
-  async setupLedgerView(customerId) {
-    const cust = this.customers.find(c => c.id === customerId);
-    const titleEl = document.getElementById('cust-ledger-title');
-    const balEl = document.getElementById('cust-ledger-balance');
-    const tableBody = document.getElementById('cust-ledger-table-body');
-
-    if (titleEl && cust) {
-      titleEl.innerHTML = `كشف حساب العميل: <b>${cust.name}</b> (كود #${cust.code || cust.id})`;
-    }
-    if (balEl && cust) {
-      const isDebt = cust.balance < 0;
-      balEl.textContent = `${Math.abs(cust.balance).toFixed(2)} ج.م (${isDebt ? 'مديونية آجل مطلوبة' : 'رصيد'})`;
-      balEl.className = isDebt ? 'text-rose-600 font-bold font-mono' : 'text-emerald-600 font-bold font-mono';
-    }
-
-    if (tableBody) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5" class="py-8 text-center text-gray-400">
-            <i data-lucide="loader" class="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500"></i>
-            <span>جاري استدعاء سجل فواتير وسندات العميل...</span>
-          </td>
-        </tr>
-      `;
-      if (window.lucide) window.lucide.createIcons();
-
-      try {
-        const res = await window.api.get('get_customer_ledger', { customer_id: customerId });
-        if (res && res.success && Array.isArray(res.transactions) && res.transactions.length > 0) {
-          tableBody.innerHTML = res.transactions.map(t => `
-            <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/50 dark:hover:bg-gray-700/30">
-              <td class="py-2.5 px-3 font-mono text-[11px] text-gray-500">${t.date || '-'}</td>
-              <td class="py-2.5 px-3 font-bold ${t.type.includes('قبض') ? 'text-emerald-600' : 'text-rose-600'}">${t.type}</td>
-              <td class="py-2.5 px-3 font-mono font-bold text-xs">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
-              <td class="py-2.5 px-3 text-gray-500">${t.payment_method || 'كاش'}</td>
-              <td class="py-2.5 px-3 text-gray-400 text-[11px]">${t.note || '-'}</td>
-            </tr>
-          `).join('');
-        } else {
-          tableBody.innerHTML = `
-            <tr>
-              <td colspan="5" class="py-8 text-center text-gray-400">
-                <p class="text-xs">لا توجد حركات مسجلة لهذا العميل حتى الآن. الرصيد الافتتاحي هو: <b>${cust ? Math.abs(cust.balance).toFixed(2) : 0} ج.م</b></p>
-              </td>
-            </tr>
-          `;
-        }
-        if (window.lucide) window.lucide.createIcons();
-      } catch (e) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="5" class="py-6 text-center text-gray-400">
-              <p class="text-xs">الرصيد الحالي المسجل في دريم سوفت: <b>${cust ? Math.abs(cust.balance).toFixed(2) : 0} ج.م</b></p>
-            </td>
-          </tr>
-        `;
-      }
-    }
-  }
-
-  loadRecentVouchers() {
-    // Optional recent vouchers list
+    const selects = document.querySelectorAll('.customer-selector-dropdown');
+    selects.forEach(sel => {
+      const currentVal = sel.value;
+      sel.innerHTML = '<option value="">-- اختر العميل (اختياري) --</option>' + 
+        this.customers.map(c => `
+          <option value="${c.id}" data-phone="${c.phone}" data-address="${c.address}">
+            #${c.code || c.id} - ${c.name} ${c.balance < 0 ? `(دين: ${Math.abs(c.balance).toFixed(0)} ج.م)` : ''}
+          </option>
+        `).join('');
+      if (currentVal) sel.value = currentVal;
+    });
   }
 }
 
-// Global instance
 window.customersController = new CustomersController();

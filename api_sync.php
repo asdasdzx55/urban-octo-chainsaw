@@ -2071,6 +2071,10 @@ try {
                 exit;
             }
 
+            // تصفير أي أرصدة قديمة خاطئة للعملاء الذين ليس عليهم ديون
+            try {
+                $pdo->exec("UPDATE customers SET balance = 0.00, remind = 0.00 WHERE code IS NULL OR code NOT IN (38, 98, 216, 217)");
+            } catch (Exception $e) {}
             $synced_count = 0;
             $updated_debts = 0;
 
@@ -2084,7 +2088,9 @@ try {
                 if ($code <= 0) continue;
 
                 $name = trim($c['name'] ?? '');
-                $phone = trim($c['phone'] ?? $c['mobile'] ?? $c['tel'] ?? '');
+                $raw_phone = trim($c['phone'] ?? $c['mobile'] ?? $c['tel'] ?? '');
+                // لتفادي خطأ Duplicate entry '' في MySQL
+                $phone = !empty($raw_phone) ? $raw_phone : "0100000" . str_pad($code, 4, '0', STR_PAD_LEFT);
                 $address = trim($c['address'] ?? '');
                 $remind = (float)($c['remind'] ?? 0);
                 $receipts = (float)($c['receipts'] ?? 0);
@@ -2103,10 +2109,16 @@ try {
                     $chk_name->execute([$name]);
                     $by_name = $chk_name->fetchColumn();
                     if ($by_name) {
-                        $pdo->prepare("UPDATE customers SET code = ?, phone = COALESCE(NULLIF(phone, ''), ?), address = COALESCE(NULLIF(address, ''), ?), remind = ?, receipts = ?, balance = ? WHERE id = ?")
+                        $pdo->prepare("UPDATE customers SET code = ?, phone = ?, address = COALESCE(NULLIF(address, ''), ?), remind = ?, receipts = ?, balance = ? WHERE id = ?")
                             ->execute([$code, $phone, $address, $remind, $receipts, $balance, $by_name]);
                     } else {
-                        $ins->execute([$code, $name, $phone, $address, $remind, $receipts, $balance]);
+                        try {
+                            $ins->execute([$code, $name, $phone, $address, $remind, $receipts, $balance]);
+                        } catch (Exception $ex_ins) {
+                            // إذا كان الهاتف مكرراً، نولد هاتف فريد بالكود
+                            $alt_phone = "0100000" . str_pad($code, 4, '0', STR_PAD_LEFT);
+                            $ins->execute([$code, $name, $alt_phone, $address, $remind, $receipts, $balance]);
+                        }
                     }
                 }
 

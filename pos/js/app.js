@@ -109,10 +109,15 @@ class App {
 
   /* ==================== PRODUCT CATALOG & CATEGORIES ==================== */
   async fetchProducts(isManual = false) {
+    const hasCached = this.products && this.products.length > 0;
     try {
-      this.showLoading(true, isManual ? 'جاري سحب وتحديث الأصناف من السيرفر...' : 'جاري تحميل الأصناف والأسعار...');
+      if (isManual || !hasCached) {
+        this.showLoading(true, isManual ? 'جاري سحب وتحديث الأصناف من السيرفر...' : 'جاري تحميل الأصناف والأسعار...');
+      }
       const res = await window.api.getProducts();
-      this.showLoading(false);
+      if (isManual || !hasCached) {
+        this.showLoading(false);
+      }
 
       if (res && res.success && Array.isArray(res.products)) {
         this.products = res.products.map(p => window.syncManager ? window.syncManager.normalizeProduct(p) : p);
@@ -379,7 +384,17 @@ class App {
       return;
     }
 
-    grid.innerHTML = filtered.map(p => {
+    const maxVisible = 48;
+    if (this._lastSearchQuery !== rawQ || this._lastCategory !== this.activeCategory || this._lastSubCategory !== this.activeSubCategory) {
+      this.productsPageLimit = maxVisible;
+      this._lastSearchQuery = rawQ;
+      this._lastCategory = this.activeCategory;
+      this._lastSubCategory = this.activeSubCategory;
+    }
+    const currentLimit = this.productsPageLimit || maxVisible;
+    const toRender = filtered.slice(0, currentLimit);
+
+    grid.innerHTML = toRender.map(p => {
       const price = parseFloat(p.price || 0);
       const stock = parseFloat(p.stock || 0);
       const isWeight = p.unit_type === 'weight' || p.unit === 'كجم' || p.is_weight;
@@ -443,9 +458,21 @@ class App {
 
         </div>
       `;
-    }).join('');
+    }).join('') + (filtered.length > currentLimit ? `
+      <div class="col-span-full py-4 text-center">
+        <button type="button" onclick="window.app.loadMoreProducts()" class="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 mx-auto cursor-pointer">
+          <i data-lucide="arrow-down" class="w-4 h-4"></i>
+          <span>عرض المزيد من الأصناف (متبقي ${filtered.length - currentLimit} صنف) ⚡</span>
+        </button>
+      </div>
+    ` : '');
 
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  loadMoreProducts() {
+    this.productsPageLimit = (this.productsPageLimit || 48) + 48;
+    this.renderProducts();
   }
 
   onProductCardClick(productId) {
@@ -684,7 +711,8 @@ class App {
       return;
     }
 
-    grid.innerHTML = list.map(p => {
+    const toDisplay = list.slice(0, 48);
+    grid.innerHTML = toDisplay.map(p => {
       const price = parseFloat(p.price || 0);
       const stock = parseFloat(p.stock || 0);
       const isWeight = p.unit_type === 'weight' || p.unit === 'كجم' || p.is_weight;
@@ -722,7 +750,11 @@ class App {
 
         </div>
       `;
-    }).join('');
+    }).join('') + (list.length > 48 ? `
+      <div class="col-span-full py-4 text-center">
+        <p class="text-xs text-gray-400 font-bold">تم عرض أول 48 نتيجة من إجمالي ${list.length} صنف مطابق</p>
+      </div>
+    ` : '');
 
     if (window.lucide) window.lucide.createIcons();
   }
@@ -773,7 +805,7 @@ class App {
     });
 
     // Update View Containers
-    ['pos', 'orders', 'returns', 'inventory', 'categories', 'expenses', 'employees', 'reports', 'settings'].forEach(v => {
+    ['pos', 'orders', 'returns', 'inventory', 'categories', 'expenses', 'customers', 'employees', 'reports', 'settings'].forEach(v => {
       const el = document.getElementById(`view-${v}`);
       if (el) {
         if (v === viewName) {
@@ -804,6 +836,8 @@ class App {
       window.reportsController?.loadReports('today');
     } else if (viewName === 'expenses') {
       window.expensesController?.init();
+    } else if (viewName === 'customers') {
+      window.customersController?.init();
     } else if (viewName === 'employees') {
       window.employeesController?.init();
     } else if (viewName === 'settings') {

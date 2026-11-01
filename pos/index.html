@@ -249,9 +249,9 @@
         <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">المصروفات</span>
       </button>
 
-      <button onclick="window.app.switchView('employees')" class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="employees" title="العمال والرواتب والسلف">
+      <button onclick="window.app.switchView('customers')" class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="customers" title="العملاء وحسابات الآجل والديون">
         <i data-lucide="users" class="w-4 h-4 text-sky-500"></i>
-        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">العمال والرواتب</span>
+        <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all duration-150 px-2 py-0.5 rounded-md bg-gray-900 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-50">العملاء والآجل</span>
       </button>
 
       <button onclick="window.app.switchView('reports')" class="app-view-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer relative group" data-view="reports" title="تقارير الوردية والمبيعات">
@@ -368,14 +368,14 @@
         <div class="flex flex-col gap-1 pt-2 border-t border-gray-100 dark:border-gray-700">
           <span class="text-[10px] font-black text-amber-600 dark:text-amber-400 px-2 py-0.5 uppercase tracking-wider">الماليات والعمال والموردين</span>
 
-          <button onclick="window.app.switchView('employees')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-gray-700/70" data-view="employees">
+          <button onclick="window.app.switchView('customers')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-gray-700/70" data-view="customers">
             <div class="flex items-center gap-2.5">
               <span class="w-7 h-7 rounded-xl bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                 <i data-lucide="users" class="w-4 h-4"></i>
               </span>
-              <span>شؤون العمال والرواتب والسلف</span>
+              <span>دليل العملاء وحسابات الآجل</span>
             </div>
-            <span class="text-[10px] px-2 py-0.5 rounded-md bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 font-bold">جديد</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-md bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 font-bold">الآجل والديون</span>
           </button>
 
           <button onclick="window.app.switchView('expenses')" class="app-view-btn w-full p-2.5 rounded-2xl text-xs font-bold transition flex items-center justify-between text-right text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-gray-700/70" data-view="expenses">
@@ -2308,6 +2308,234 @@
               <!-- Dynamically Populated -->
             </tbody>
           </table>
+        </div>
+      </div>
+
+    </section>
+
+    
+    <!-- ==================== VIEW: CUSTOMERS & CREDIT ACCOUNTS (v2.6.0) ==================== -->
+    <section id="view-customers" class="hidden flex-1 flex-col gap-4 max-w-7xl mx-auto w-full h-full overflow-y-auto min-h-0 pb-28 lg:pb-8">
+      
+      <!-- Top Navigation Sub-Tabs Bar -->
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3">
+          <span class="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 dark:text-white">دليل العملاء وحسابات الآجل والديون</h2>
+            <p class="text-[11px] text-gray-400">متابعة حسابات العملاء، سندات القبض والدفع، وكشوف الحسابات المالية اللحظية</p>
+          </div>
+        </div>
+
+        <!-- Sub-Tabs Switcher Buttons -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl self-start sm:self-auto flex-wrap">
+          <button type="button" onclick="window.customersController.setSubView('list')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1.5 transition cursor-pointer" data-subview="list">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+            <span>👥 دليل العملاء</span>
+          </button>
+          <button type="button" onclick="window.customersController.voucherType='receipt'; window.customersController.setSubView('voucher')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="voucher">
+            <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-500"></i>
+            <span>📥 سند قبض (مقبوض)</span>
+          </button>
+          <button type="button" onclick="window.customersController.voucherType='payment'; window.customersController.setSubView('voucher')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="voucher">
+            <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-rose-500"></i>
+            <span>📤 سند صرف (دفع)</span>
+          </button>
+          <button type="button" onclick="window.customersController.setSubView('ledger')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="ledger">
+            <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+            <span>📜 كشف حساب</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== SUBVIEW 1: CUSTOMERS DIRECTORY / LIST ==================== -->
+      <div id="cust-subview-list" class="flex flex-col gap-4">
+        
+        <!-- KPI Financial Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <!-- KPI 1: Customers Count -->
+          <div class="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">إجمالي العملاء</span>
+              <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-cust-count" class="text-xl sm:text-2xl font-black text-indigo-700 dark:text-indigo-300 font-mono">212</h3>
+              <p class="text-[10px] text-indigo-500/80 mt-0.5">عميل مسجل في المحل</p>
+            </div>
+          </div>
+
+          <!-- KPI 2: Total Debt (آجل مطلوب) -->
+          <div class="bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-rose-700 dark:text-rose-300">إجمالي ديون الآجل 🔴</span>
+              <i data-lucide="badge-alert" class="w-4 h-4 text-rose-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-cust-total-debt" class="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 font-mono">0.00 ج.م</h3>
+              <p class="text-[10px] text-rose-600/80 dark:text-rose-400/80 mt-0.5">مبالغ مستحقة على العملاء</p>
+            </div>
+          </div>
+
+          <!-- KPI 3: Debt Customers Count -->
+          <div class="bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-700 dark:text-amber-300">العملاء المدينين</span>
+              <i data-lucide="user-minus" class="w-4 h-4 text-amber-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-cust-debt-count" class="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 font-mono">0 عميل</h3>
+              <p class="text-[10px] text-amber-600/80 dark:text-amber-400/80 mt-0.5">عليهم حسابات آجلة</p>
+            </div>
+          </div>
+
+          <!-- KPI 4: Total Credit Balances -->
+          <div class="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">الأرصدة الدائنة 🟢</span>
+              <i data-lucide="wallet" class="w-4 h-4 text-emerald-500"></i>
+            </div>
+            <div class="mt-2">
+              <h3 id="kpi-cust-total-credit" class="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">0.00 ج.م</h3>
+              <p class="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">أرصدة مدفوعة مقدماً للعملاء</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search and Filter Bar Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <!-- Search Input -->
+          <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="cust-search-input" 
+              placeholder="ابحث برقم كود العميل (#234) أو الاسم أو الهاتف..." 
+              oninput="window.customersController.searchQuery = this.value; window.customersController.renderCustomersList();"
+              class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+            >
+          </div>
+
+          <!-- Status Filters and Fast Actions -->
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+            <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-xs font-bold">
+              <button type="button" onclick="window.customersController.filter = 'debt'; window.customersController.renderCustomersList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer">المدينين (الآجل) 🔴</button>
+              <button type="button" onclick="window.customersController.filter = 'all'; window.customersController.renderCustomersList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">الجميع</button>
+              <button type="button" onclick="window.customersController.filter = 'credit'; window.customersController.renderCustomersList(); this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs')); this.classList.add('bg-white', 'dark:bg-gray-600', 'text-indigo-600', 'shadow-2xs');" class="px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer">الدائنين 🟢</button>
+            </div>
+
+            <button type="button" onclick="window.customersController.loadCustomers()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="تحديث البيانات">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Customers Cards Grid -->
+        <div id="customers-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-1">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- ==================== SUBVIEW 2: VOUCHER (RECEIPT / PAYMENT) ==================== -->
+      <div id="cust-subview-voucher" class="hidden flex flex-col gap-4 max-w-2xl mx-auto w-full">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-4">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 id="cust-voucher-title" class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <span>📥 تسجيل سند قبض / مقبوض من عميل</span>
+            </h3>
+            <span id="cust-voucher-type-badge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              مقبوض (يدخل درج الكاشير)
+            </span>
+          </div>
+
+          <!-- Customer Select -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">اختر العميل (بالاسم أو برقم الكود): <span class="text-rose-500">*</span></label>
+            <select id="cust-voucher-customer-id" onchange="window.customersController.onVoucherCustomerChange()" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <!-- Customer Balance Preview -->
+          <div id="cust-voucher-preview"></div>
+
+          <!-- Amount -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ (ج.م): <span class="text-rose-500">*</span></label>
+              <button type="button" onclick="window.customersController.setFullRemainingVoucherAmount()" class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer">
+                كامل المديونية ⚡
+              </button>
+            </div>
+            <input type="number" id="cust-voucher-amount" step="any" min="0.01" placeholder="مثال: 500" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <!-- Payment Method -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">طريقة الدفع:</label>
+            <select id="cust-voucher-method" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+              <option value="كاش من الدرج">كاش من الدرج (حركة نقدية فورية)</option>
+              <option value="فودافون كاش">محفظة إلكترونية / فودافون كاش</option>
+              <option value="إنستاباي / تحويل بنكي">إنستاباي / تحويل بنكي</option>
+            </select>
+          </div>
+
+          <!-- Note -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">بيان وملاحظات السند:</label>
+            <input type="text" id="cust-voucher-note" placeholder="مثال: سداد جزء من حساب الآجل..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <button type="button" onclick="window.customersController.setSubView('list')" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إلغاء</button>
+            <button type="button" id="cust-voucher-submit-btn" onclick="window.customersController.saveVoucher()" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>تأكيد العملية</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SUBVIEW 3: LEDGER (STATEMENT) ==================== -->
+      <div id="cust-subview-ledger" class="hidden flex flex-col gap-4 max-w-4xl mx-auto w-full">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 id="cust-ledger-title" class="text-sm sm:text-base font-black text-gray-900 dark:text-white">كشف حساب العميل</h3>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-gray-400">الرصيد الصافي:</span>
+              <span id="cust-ledger-balance" class="font-mono font-black text-sm">0.00 ج.م</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                  <th class="py-2.5 px-3">التاريخ والوقت</th>
+                  <th class="py-2.5 px-3">نوع الحركة</th>
+                  <th class="py-2.5 px-3">المبلغ</th>
+                  <th class="py-2.5 px-3">طريقة الدفع</th>
+                  <th class="py-2.5 px-3">البيان والملاحظات</th>
+                </tr>
+              </thead>
+              <tbody id="cust-ledger-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+            <button type="button" onclick="window.customersController.setSubView('list')" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">
+              ← العودة لقائمة العملاء
+            </button>
+            <button type="button" onclick="window.print()" class="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+              <span>طباعة كشف الحساب</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -4255,6 +4483,7 @@
   <script src="js/employees.js?v=2.5.6"></script>
   <script src="js/pwa.js?v=2.5.6"></script>
   <script src="js/auth.js?v=2.5.6"></script>
+  <script src="js/customers.js?v=2.6.0"></script>
   <script src="js/app.js?v=2.5.6"></script>
 </body>
 </html>

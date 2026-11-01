@@ -1,4 +1,5 @@
 <?php
+if (!ob_start("ob_gzhandler")) ob_start();
 /**
  * Syrian Home Supermarket - Central Data Hub & POS Sync API
  * واجهة المزامنة المركزية الشاملة لسوبر ماركت المنزل السوري
@@ -2044,6 +2045,120 @@ try {
             echo json_encode([
                 'success' => true,
                 'message' => "✅ تم سداد مبلغ {$amount} ج.م للمورد ({$sup_name}) وتحديث الرصيد بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.651 تسجيل سند قبض / مقبوض من عميل (Customer Receipt)
+        // ============================================================
+        case 'customer_receipt':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $cust_id = (int)($data['customer_id'] ?? $data['id'] ?? 0);
+            $cust_name = trim($data['customer_name'] ?? '');
+            $amount = (float)($data['amount'] ?? 0);
+            $note = trim($data['note'] ?? '');
+            $pm = trim($data['payment_method'] ?? 'كاش من الدرج');
+            $date = $data['date'] ?? date('Y-m-d H:i:s');
+
+            if ($amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'مبلغ السند يجب أن يكون أكبر من الصفر!']);
+                exit;
+            }
+
+            // زيادة الرصيد (يخفض المديونية السالبة)
+            if ($cust_id > 0) {
+                $upd = $pdo->prepare("UPDATE customers SET balance = balance + ?, total_spent = total_spent + ? WHERE id = ?");
+                $upd->execute([$amount, $amount, $cust_id]);
+                if (empty($cust_name)) {
+                    $cust_name = $pdo->query("SELECT name FROM customers WHERE id = {$cust_id}")->fetchColumn() ?: "عميل #{$cust_id}";
+                }
+            } elseif (!empty($cust_name)) {
+                $upd = $pdo->prepare("UPDATE customers SET balance = balance + ?, total_spent = total_spent + ? WHERE name = ?");
+                $upd->execute([$amount, $amount, $cust_name]);
+            }
+
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS customer_vouchers (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    customer_id INT DEFAULT NULL,
+                    customer_name VARCHAR(150) NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    amount DECIMAL(12,2) NOT NULL,
+                    payment_method VARCHAR(100) DEFAULT 'كاش',
+                    note TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, 'سند قبض', ?, ?, ?, ?)");
+                $ins_v->execute([$cust_id ?: null, $cust_name, $amount, $pm, $note, $date]);
+            } catch (Exception $e) {}
+
+            echo json_encode([
+                'success' => true,
+                'message' => "✅ تم استلام مبلغ {$amount} ج.م من العميل ({$cust_name}) وتخفيض مديونيته بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.652 تسجيل سند صرف / دفع لعميل (Customer Payment / Refund)
+        // ============================================================
+        case 'pay_customer':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $cust_id = (int)($data['customer_id'] ?? $data['id'] ?? 0);
+            $cust_name = trim($data['customer_name'] ?? '');
+            $amount = (float)($data['amount'] ?? 0);
+            $note = trim($data['note'] ?? '');
+            $pm = trim($data['payment_method'] ?? 'كاش من الدرج');
+            $date = $data['date'] ?? date('Y-m-d H:i:s');
+
+            if ($amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'المبلغ يجب أن يكون أكبر من الصفر!']);
+                exit;
+            }
+
+            if ($cust_id > 0) {
+                $upd = $pdo->prepare("UPDATE customers SET balance = balance - ? WHERE id = ?");
+                $upd->execute([$amount, $cust_id]);
+                if (empty($cust_name)) {
+                    $cust_name = $pdo->query("SELECT name FROM customers WHERE id = {$cust_id}")->fetchColumn() ?: "عميل #{$cust_id}";
+                }
+            }
+
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS customer_vouchers (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    customer_id INT DEFAULT NULL,
+                    customer_name VARCHAR(150) NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    amount DECIMAL(12,2) NOT NULL,
+                    payment_method VARCHAR(100) DEFAULT 'كاش',
+                    note TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, 'سند صرف', ?, ?, ?, ?)");
+                $ins_v->execute([$cust_id ?: null, $cust_name, $amount, $pm, $note, $date]);
+            } catch (Exception $e) {}
+
+            echo json_encode([
+                'success' => true,
+                'message' => "✅ تم صرف مبلغ {$amount} ج.م للعميل ({$cust_name}) وتعديل حسابه بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.653 كشف حساب عميل تفصيلي (Customer Ledger)
+        // ============================================================
+        case 'get_customer_ledger':
+            $cust_id = (int)($_GET['customer_id'] ?? 0);
+            $transactions = [];
+            try {
+                $stmt = $pdo->prepare("SELECT type, amount, payment_method, note, created_at as date FROM customer_vouchers WHERE customer_id = ? ORDER BY id DESC LIMIT 50");
+                $stmt->execute([$cust_id]);
+                $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
+            echo json_encode([
+                'success' => true,
+                'transactions' => $transactions
             ], JSON_UNESCAPED_UNICODE);
             break;
 

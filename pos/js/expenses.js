@@ -238,13 +238,18 @@ class ExpensesController {
 
   renderSuppliersReportTable(suppliers) {
     const tbody = document.getElementById('suppliers-report-table-body');
+    const mobileContainer = document.getElementById('suppliers-report-mobile-cards');
     if (!tbody) return;
 
     if (!suppliers || suppliers.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">لا يوجد موردين مطابقين للبحث أو الفلتر</td></tr>`;
+      if (mobileContainer) {
+        mobileContainer.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">لا يوجد موردين مطابقين للبحث أو الفلتر</div>`;
+      }
       return;
     }
 
+    // 1. Desktop Table
     tbody.innerHTML = suppliers.map(s => {
       const bal = parseFloat(s.balance || 0);
       const balColor = bal > 0 ? 'text-rose-600 dark:text-rose-400 font-black' : (bal < 0 ? 'text-blue-600 font-black' : 'text-emerald-600 font-bold');
@@ -274,14 +279,87 @@ class ExpensesController {
             ${lastDate}
           </td>
           <td class="py-3 px-3 text-center">
-            <button type="button" onclick="window.openSupplierStatement(${s.id})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
-              <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
-              <span>كشف حساب</span>
-            </button>
+            <div class="flex items-center justify-center gap-1.5">
+              <button type="button" onclick="window.paySupplierDirect(${s.id})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 transition font-bold text-xs cursor-pointer border border-emerald-200 dark:border-emerald-800" title="سداد دفعة فورية للمورد">
+                <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
+                <span>سداد</span>
+              </button>
+              <button type="button" onclick="window.openSupplierStatement(${s.id}, '${s.name.replace(/'/g, "\'")}')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
+                <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+                <span>كشف حساب</span>
+              </button>
+            </div>
           </td>
         </tr>
       `;
     }).join('');
+
+    // 2. Mobile Responsive Cards
+    if (mobileContainer) {
+      mobileContainer.innerHTML = suppliers.map(s => {
+        const bal = parseFloat(s.balance || 0);
+        let balBadge = '';
+        if (bal > 0) {
+          balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-black bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 font-mono" dir="ltr">${bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م (مطلوب له ⚠️)</span>`;
+        } else if (bal < 0) {
+          balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-black bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 font-mono" dir="ltr">${Math.abs(bal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م (رصيد دائن 🟢)</span>`;
+        } else {
+          balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">خالص تماماً ✅</span>`;
+        }
+
+        const phoneLink = s.phone ? `<a href="tel:${s.phone}" class="text-indigo-600 dark:text-indigo-400 font-mono underline inline-flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i><span>${s.phone}</span></a>` : '<span class="text-gray-300">بدون هاتف</span>';
+        const unpaidCount = s.unpaid_invoices_count > 0 ? `<span class="text-rose-500 font-bold">(${s.unpaid_invoices_count} آجل)</span>` : '';
+
+        return `
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="font-black text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full ${bal > 0 ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
+                  <span>${s.name}</span>
+                </div>
+                <div class="text-[11px] text-gray-400 flex items-center gap-2 mt-1">
+                  <span>كود #${s.supplier_code || s.code || s.id}</span>
+                  <span>•</span>
+                  ${phoneLink}
+                </div>
+              </div>
+              <div class="text-left shrink-0">
+                ${balBadge}
+              </div>
+            </div>
+
+            <!-- Financial Metrics Grid -->
+            <div class="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-[11px]">
+              <div class="text-center">
+                <div class="text-gray-400 text-[10px]">فواتير التوريد</div>
+                <div class="font-bold text-gray-800 dark:text-gray-200 mt-0.5">${s.invoices_count || s.purchases_count || 0} ${unpaidCount}</div>
+              </div>
+              <div class="text-center">
+                <div class="text-gray-400 text-[10px]">إجمالي التوريد</div>
+                <div class="font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5" dir="ltr">${parseFloat(s.total_supplied || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}</div>
+              </div>
+              <div class="text-center">
+                <div class="text-gray-400 text-[10px]">إجمالي المسدد</div>
+                <div class="font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5" dir="ltr">${parseFloat(s.total_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}</div>
+              </div>
+            </div>
+
+            <!-- Mobile Action Buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+              <button type="button" onclick="window.paySupplierDirect(${s.id})" class="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800 transition shadow-2xs">
+                <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
+                <span>سداد دفعة</span>
+              </button>
+              <button type="button" onclick="window.openSupplierStatement(${s.id}, '${s.name.replace(/'/g, "\'")}')" class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition shadow-2xs">
+                <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
+                <span>كشف حساب</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
     if (window.lucide) {
       const container = document.getElementById('view-expenses') || document.body;
@@ -661,27 +739,32 @@ class ExpensesController {
 
   renderLedgerTable() {
     const tbody = document.getElementById('sup-ledger-table-body');
+    const mobileContainer = document.getElementById('sup-ledger-mobile-cards');
     if (!tbody || !this.currentSupplierLedger) return;
 
     let txs = this.currentSupplierLedger.transactions || [];
     if (this.ledgerFilter === 'purchases') {
       txs = txs.filter(t => t.type === 'فاتورة توريد');
     } else if (this.ledgerFilter === 'payments') {
-      txs = txs.filter(t => t.type === 'دفعة نقدية مسددة');
+      txs = txs.filter(t => t.type === 'سداد نقدي' || t.type === 'دفعة نقدية مسددة');
     } else if (this.ledgerFilter === 'unpaid') {
       txs = txs.filter(t => (t.remaining > 0));
     }
 
     if (txs.length === 0) {
       tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-gray-400 font-bold">لا توجد حركات مطابقة للفلتر المحدد</td></tr>`;
+      if (mobileContainer) {
+        mobileContainer.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">لا توجد حركات مطابقة للفلتر المحدد</div>`;
+      }
       return;
     }
 
+    // 1. Desktop Table
     tbody.innerHTML = txs.map(t => {
       const isPurch = t.type === 'فاتورة توريد';
       const typeBadge = isPurch 
-        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">توريد بضاعة</span>`
-        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">سداد نقدي</span>`;
+        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">توريد بضاعة 📥</span>`
+        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">سداد نقدي 💵</span>`;
 
       const creditStr = (t.credit > 0) ? `<span class="font-bold text-rose-600 dark:text-rose-400 font-mono">+${parseFloat(t.credit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
       const debitStr = (t.debit > 0) ? `<span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">-${parseFloat(t.debit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
@@ -739,12 +822,69 @@ class ExpensesController {
           <td class="py-2.5 px-3 text-left" dir="ltr">${creditStr}</td>
           <td class="py-2.5 px-3 text-left" dir="ltr">${debitStr}</td>
           <td class="py-2.5 px-3 text-left" dir="ltr">${remStr}</td>
-          <td class="py-2.5 px-3 text-[11px] text-gray-500">${t.notes || ''}</td>
+          <td class="py-2.5 px-3 text-[11px] text-gray-500">${t.notes || t.note || ''}</td>
           <td class="py-2.5 px-3 text-center">${itemsBtn}</td>
         </tr>
         ${itemsRow}
       `;
     }).join('');
+
+    // 2. Mobile Responsive Cards for Transactions
+    if (mobileContainer) {
+      mobileContainer.innerHTML = txs.map(t => {
+        const isPurch = t.type === 'فاتورة توريد';
+        const badgeColor = isPurch ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border-indigo-200' : 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border-emerald-200';
+        const typeTitle = isPurch ? 'توريد بضاعة 📥' : 'سداد نقدي 💵';
+        const amountDisplay = isPurch
+          ? `<span class="text-rose-600 dark:text-rose-400 font-mono font-black" dir="ltr">+${parseFloat(t.credit || 0).toFixed(2)} ج.م</span>`
+          : `<span class="text-emerald-600 dark:text-emerald-400 font-mono font-black" dir="ltr">-${parseFloat(t.debit || 0).toFixed(2)} ج.م</span>`;
+
+        const hasItems = isPurch && Array.isArray(t.items) && t.items.length > 0;
+        const itemsBtn = hasItems
+          ? `<button type="button" onclick="window.expensesController.toggleTxItems(${t.id})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-[10px] border border-indigo-200 dark:border-indigo-800">
+               <i data-lucide="package" class="w-3 h-3"></i>
+               <span>الأصناف (${t.items.length}) ▾</span>
+             </button>`
+          : '';
+
+        let itemsAccordion = '';
+        if (hasItems) {
+          itemsAccordion = `
+            <div id="sup-tx-mobile-items-${t.id}" class="hidden flex flex-col gap-1 p-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 text-[11px] mt-1 border border-gray-200 dark:border-gray-600">
+              ${t.items.map(it => `
+                <div class="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-700/50">
+                  <span class="font-bold text-gray-800 dark:text-gray-200">${it.name} (${it.qty} ${it.unit || 'قطعة'})</span>
+                  <span class="font-mono text-indigo-600 dark:text-indigo-400 font-bold" dir="ltr">${parseFloat(it.total_cost || (it.qty * it.cost_price)).toFixed(2)} ج.م</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-3 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${badgeColor}">${typeTitle}</span>
+              <span class="font-mono text-[10px] text-gray-400">${t.date || ''}</span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${t.reference || ('حركة #' + t.id)}</span>
+                ${(t.notes || t.note) ? `<div class="text-[11px] text-gray-400 mt-0.5">${t.notes || t.note}</div>` : ''}
+              </div>
+              <div class="text-left">
+                <div class="text-sm font-black">${amountDisplay}</div>
+                ${isPurch && t.remaining > 0 ? `<div class="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold">متبقي: ${parseFloat(t.remaining).toFixed(2)} ج.م</div>` : ''}
+              </div>
+            </div>
+
+            ${itemsBtn ? `<div class="pt-1 flex items-center justify-between border-t border-gray-100 dark:border-gray-700/60">${itemsBtn}</div>` : ''}
+            ${itemsAccordion}
+          </div>
+        `;
+      }).join('');
+    }
 
     if (window.lucide) window.lucide.createIcons();
   }
@@ -826,6 +966,25 @@ class ExpensesController {
     this.setMode('suppliers_report');
   }
 
+  paySupplierDirect(supplierId) {
+    if (window.app && window.app.currentView !== 'expenses') {
+      window.app.switchView('expenses');
+    }
+    this.setMode('supplier');
+    setTimeout(() => {
+      const select = document.getElementById('exp-supplier-select');
+      if (select && supplierId) {
+        select.value = supplierId;
+        select.dispatchEvent(new Event('change'));
+      }
+      const amtInput = document.getElementById('sup-amount-input');
+      if (amtInput) {
+        amtInput.focus();
+        amtInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+  }
+
   printSupplierLedger() {
     if (!this.currentSupplierLedger || !this.currentSupplierLedger.supplier) {
       window.app?.showToast('لا توجد بيانات كشف حساب متاحة للطباعة', 'warning');
@@ -904,3 +1063,16 @@ class ExpensesController {
 }
 
 window.expensesController = new ExpensesController();
+
+// Global handlers for supplier actions from cards and tables
+window.openSupplierStatement = function(id, name = '') {
+  if (window.expensesController) {
+    window.expensesController.openSupplierLedger(id, name);
+  }
+};
+
+window.paySupplierDirect = function(id) {
+  if (window.expensesController) {
+    window.expensesController.paySupplierDirect(id);
+  }
+};

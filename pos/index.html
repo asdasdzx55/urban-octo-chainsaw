@@ -99,12 +99,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.7.1">
-  <link rel="stylesheet" href="css/receipt.css?v=2.7.1">
+  <link rel="stylesheet" href="css/pos.css?v=2.7.2">
+  <link rel="stylesheet" href="css/receipt.css?v=2.7.2">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.7.1';
+    window.APP_VERSION = '2.7.2';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -1814,7 +1814,8 @@
               </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <!-- Desktop Table View -->
+            <div class="hidden sm:block overflow-x-auto">
               <table class="w-full text-right border-collapse text-xs">
                 <thead>
                   <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
@@ -1833,6 +1834,11 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Mobile Cards View for Phone -->
+            <div id="suppliers-report-mobile-cards" class="sm:hidden flex flex-col gap-2.5 p-3">
+              <div class="py-6 text-center text-gray-400 font-bold text-xs">جاري تحميل بطاقات الموردين...</div>
             </div>
           </div>
 
@@ -1921,7 +1927,8 @@
 
           <!-- Chronological Table of Transactions -->
           <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
+            <!-- Desktop Table View -->
+            <div class="hidden sm:block overflow-x-auto">
               <table class="w-full text-right border-collapse text-xs">
                 <thead>
                   <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
@@ -1939,6 +1946,11 @@
                   <!-- Populated dynamically -->
                 </tbody>
               </table>
+            </div>
+
+            <!-- Mobile Cards View for Phone -->
+            <div id="sup-ledger-mobile-cards" class="sm:hidden flex flex-col gap-2 p-3">
+              <!-- Populated dynamically by expensesController -->
             </div>
           </div>
 
@@ -2561,21 +2573,29 @@
             </div>
           </div>
 
-          <div class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700">
-            <table class="w-full text-right border-collapse text-xs">
-              <thead>
-                <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
-                  <th class="py-2.5 px-3">التاريخ والوقت</th>
-                  <th class="py-2.5 px-3">نوع الحركة</th>
-                  <th class="py-2.5 px-3">المبلغ</th>
-                  <th class="py-2.5 px-3">طريقة الدفع</th>
-                  <th class="py-2.5 px-3">البيان والملاحظات</th>
-                </tr>
-              </thead>
-              <tbody id="cust-ledger-table-body">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
+          <div class="rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <!-- Desktop Table View -->
+            <div class="hidden sm:block overflow-x-auto">
+              <table class="w-full text-right border-collapse text-xs">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                    <th class="py-2.5 px-3">التاريخ والوقت</th>
+                    <th class="py-2.5 px-3">نوع الحركة</th>
+                    <th class="py-2.5 px-3">المبلغ</th>
+                    <th class="py-2.5 px-3">طريقة الدفع</th>
+                    <th class="py-2.5 px-3">البيان والملاحظات</th>
+                  </tr>
+                </thead>
+                <tbody id="cust-ledger-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Cards View for Phone -->
+            <div id="cust-ledger-mobile-cards" class="sm:hidden flex flex-col gap-2 p-3 bg-gray-50/50 dark:bg-gray-900/20">
+              <!-- Populated dynamically -->
+            </div>
           </div>
 
           <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
@@ -4505,6 +4525,115 @@
     </div>
   </div>
 
+  <!-- Customer Voucher Modal (سند قبض / صرف مباشر من البطاقة) -->
+  <div id="cust-voucher-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div>
+          <h3 id="cust-voucher-modal-title" class="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+            <span>سند عميل</span>
+          </h3>
+          <p id="cust-voucher-modal-subtitle" class="text-[11px] text-gray-400 mt-0.5">تسجيل حركة نقدية في حساب العميل</p>
+        </div>
+        <button type="button" onclick="window.customersController.closeVoucherModal()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 flex items-center justify-center transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Customer Info Card -->
+      <div class="p-3 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 flex flex-col gap-0.5">
+        <span class="text-[10px] text-gray-400 font-bold">العميل</span>
+        <div id="cust-voucher-name" class="font-black text-sm text-gray-900 dark:text-white">-</div>
+        <div id="cust-voucher-balance" class="text-xs font-bold text-gray-500 mt-0.5">-</div>
+      </div>
+
+      <!-- Amount Input -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-bold text-gray-700 dark:text-gray-300">المبلغ (ج.م): <span class="text-rose-500">*</span></label>
+        <input type="number" id="cust-voucher-amount" step="any" min="0.01" placeholder="مثال: 500" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <!-- Payment Method -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">طريقة التحصيل / الدفع:</label>
+        <select id="cust-voucher-method" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold">
+          <option value="كاش من الدرج">كاش من الدرج (حركة نقدية فورية)</option>
+          <option value="فودافون كاش">محفظة إلكترونية / فودافون كاش</option>
+          <option value="إنستاباي / تحويل بنكي">إنستاباي / تحويل بنكي</option>
+        </select>
+      </div>
+
+      <!-- Note -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">بيان وملاحظات السند:</label>
+        <input type="text" id="cust-voucher-note" placeholder="ملاحظات..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+        <button type="button" onclick="window.customersController.closeVoucherModal()" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إلغاء</button>
+        <button type="button" onclick="window.customersController.submitVoucher()" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>حفظ وتأكيد السند</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Ledger Modal (كشف حساب العميل المنبثق) -->
+  <div id="cust-ledger-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4 max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div>
+          <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+            <span id="cust-modal-ledger-title">كشف حساب العميل</span>
+          </h3>
+          <p id="cust-modal-ledger-balance" class="text-xs font-bold text-gray-500 mt-0.5">الرصيد: 0.00 ج.م</p>
+        </div>
+        <button type="button" onclick="window.customersController.closeLedgerModal()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 flex items-center justify-center transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Ledger Content Container -->
+      <div class="flex-1 overflow-y-auto rounded-2xl border border-gray-100 dark:border-gray-700">
+        <!-- Desktop Table -->
+        <div class="hidden sm:block">
+          <table class="w-full text-right border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700 sticky top-0">
+                <th class="py-2.5 px-3">التاريخ والوقت</th>
+                <th class="py-2.5 px-3">نوع الحركة</th>
+                <th class="py-2.5 px-3">الملاحظات / البيان</th>
+                <th class="py-2.5 px-3">المبلغ</th>
+                <th class="py-2.5 px-3">طريقة الدفع</th>
+              </tr>
+            </thead>
+            <tbody id="cust-modal-ledger-table-body">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div id="cust-modal-ledger-mobile-cards" class="sm:hidden flex flex-col gap-2 p-2.5 bg-gray-50/50 dark:bg-gray-900/20">
+          <!-- Dynamically rendered -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 cursor-pointer">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>طباعة</span>
+        </button>
+        <button type="button" onclick="window.customersController.closeLedgerModal()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Loading Modal -->
   <div id="global-loader" class="fixed inset-0 z-[999] bg-black/60 backdrop-blur-xs flex items-center justify-center hidden">
     <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-3 max-w-xs mx-4 text-center">
@@ -4517,24 +4646,24 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.7.1"></script>
-  <script src="js/api.js?v=2.7.1"></script>
-  <script src="js/sync-manager.js?v=2.7.1"></script>
-  <script src="js/pos-scanner.js?v=2.7.1"></script>
-  <script src="js/settings.js?v=2.7.1"></script>
-  <script src="js/cart.js?v=2.7.1"></script>
-  <script src="js/categories.js?v=2.7.1"></script>
-  <script src="js/inventory.js?v=2.7.1"></script>
-  <script src="js/purchases.js?v=2.7.1"></script>
-  <script src="js/expenses.js?v=2.7.1"></script>
-  <script src="js/orders.js?v=2.7.1"></script>
-  <script src="js/delivery-settlement.js?v=2.7.1"></script>
-  <script src="js/returns.js?v=2.7.1"></script>
-  <script src="js/reports.js?v=2.7.1"></script>
-  <script src="js/employees.js?v=2.7.1"></script>
-  <script src="js/pwa.js?v=2.7.1"></script>
-  <script src="js/auth.js?v=2.7.1"></script>
-  <script src="js/customers.js?v=2.7.1"></script>
-  <script src="js/app.js?v=2.7.1"></script>
+  <script src="js/barcode-parser.js?v=2.7.2"></script>
+  <script src="js/api.js?v=2.7.2"></script>
+  <script src="js/sync-manager.js?v=2.7.2"></script>
+  <script src="js/pos-scanner.js?v=2.7.2"></script>
+  <script src="js/settings.js?v=2.7.2"></script>
+  <script src="js/cart.js?v=2.7.2"></script>
+  <script src="js/categories.js?v=2.7.2"></script>
+  <script src="js/inventory.js?v=2.7.2"></script>
+  <script src="js/purchases.js?v=2.7.2"></script>
+  <script src="js/expenses.js?v=2.7.2"></script>
+  <script src="js/orders.js?v=2.7.2"></script>
+  <script src="js/delivery-settlement.js?v=2.7.2"></script>
+  <script src="js/returns.js?v=2.7.2"></script>
+  <script src="js/reports.js?v=2.7.2"></script>
+  <script src="js/employees.js?v=2.7.2"></script>
+  <script src="js/pwa.js?v=2.7.2"></script>
+  <script src="js/auth.js?v=2.7.2"></script>
+  <script src="js/customers.js?v=2.7.2"></script>
+  <script src="js/app.js?v=2.7.2"></script>
 </body>
 </html>

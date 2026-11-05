@@ -254,6 +254,261 @@ class CustomersController {
     if (window.lucide) window.lucide.createIcons({ root: document.getElementById('view-customers') || document.body });
   }
 
+  // ==================== SUBVIEWS (TABS) NAVIGATION ====================
+  setSubView(subview) {
+    this.currentSubView = subview;
+    const listEl = document.getElementById('cust-subview-list');
+    const voucherEl = document.getElementById('cust-subview-voucher');
+    const ledgerEl = document.getElementById('cust-subview-ledger');
+
+    document.querySelectorAll('.cust-subtab-btn').forEach(btn => {
+      const match = btn.getAttribute('data-subview') === subview;
+      if (match) {
+        btn.className = 'cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1.5 transition cursor-pointer';
+      } else {
+        btn.className = 'cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer';
+      }
+    });
+
+    listEl?.classList.add('hidden');
+    voucherEl?.classList.add('hidden');
+    ledgerEl?.classList.add('hidden');
+
+    if (subview === 'list') {
+      listEl?.classList.remove('hidden');
+      this.renderCustomersList();
+    } else if (subview === 'voucher') {
+      voucherEl?.classList.remove('hidden');
+      this.populateVoucherForm();
+    } else if (subview === 'ledger') {
+      ledgerEl?.classList.remove('hidden');
+      this.populateInlineLedger();
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  populateVoucherForm(preselectedId = null) {
+    const select = document.getElementById('cust-voucher-customer-id');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- اختر العميل بالاسم أو الكود --</option>' +
+      this.customers.map(c => `
+        <option value="${c.id}" ${preselectedId && (c.id === preselectedId || c.code === preselectedId) ? 'selected' : ''}>
+          #${c.code || c.id} - ${c.name} (${c.balance < 0 ? `آجل مطلوب: ${Math.abs(c.balance).toFixed(2)} ج.م` : c.balance > 0 ? `رصيد دائن: ${c.balance.toFixed(2)} ج.م` : 'خالص'})
+        </option>
+      `).join('');
+
+    const titleEl = document.getElementById('cust-voucher-title');
+    const badgeEl = document.getElementById('cust-voucher-type-badge');
+    const submitBtn = document.getElementById('cust-voucher-submit-btn');
+
+    if (this.voucherType === 'payment') {
+      if (titleEl) titleEl.innerHTML = `<span>📤 تسجيل سند صرف (دفع نقدي لعميل)</span>`;
+      if (badgeEl) {
+        badgeEl.textContent = 'صرف (يخرج من درج الكاشير) 🔴';
+        badgeEl.className = 'px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+      }
+      if (submitBtn) {
+        submitBtn.className = 'flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer';
+      }
+    } else {
+      if (titleEl) titleEl.innerHTML = `<span>📥 تسجيل سند قبض / مقبوض من عميل</span>`;
+      if (badgeEl) {
+        badgeEl.textContent = 'مقبوض (يدخل درج الكاشير) 🟢';
+        badgeEl.className = 'px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+      }
+      if (submitBtn) {
+        submitBtn.className = 'flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer';
+      }
+    }
+
+    this.onVoucherCustomerChange();
+  }
+
+  onVoucherCustomerChange() {
+    const select = document.getElementById('cust-voucher-customer-id');
+    const previewEl = document.getElementById('cust-voucher-preview');
+    const amountInp = document.getElementById('cust-voucher-amount');
+    const noteInp = document.getElementById('cust-voucher-note');
+    if (!select || !previewEl) return;
+
+    const custId = parseInt(select.value, 10);
+    const cust = this.customers.find(c => c.id === custId || c.code === custId);
+    if (!cust) {
+      previewEl.innerHTML = '';
+      return;
+    }
+
+    const absDebt = Math.abs(cust.balance).toFixed(2);
+    let balBadge = '';
+    if (cust.balance < 0) {
+      balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200">المديونية الحالية: ${absDebt} ج.م (آجل مطلوب)</span>`;
+      if (amountInp && !amountInp.value && this.voucherType !== 'payment') {
+        amountInp.value = absDebt;
+      }
+    } else if (cust.balance > 0) {
+      balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">رصيد دائن: ${cust.balance.toFixed(2)} ج.م</span>`;
+    } else {
+      balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-500">الحساب خالص (0.00 ج.م)</span>`;
+    }
+
+    previewEl.innerHTML = `
+      <div class="p-3 rounded-2xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i>
+          <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${cust.name} (كود #${cust.code || cust.id})</span>
+        </div>
+        ${balBadge}
+      </div>
+    `;
+
+    if (noteInp && !noteInp.value) {
+      noteInp.value = this.voucherType === 'payment' ? `صرف نقدي لعميل #${cust.code || cust.id}` : `دفعة نقدية من حساب الآجل - عميل #${cust.code || cust.id}`;
+    }
+
+    if (window.lucide) window.lucide.createIcons({ root: previewEl });
+  }
+
+  setFullRemainingVoucherAmount() {
+    const select = document.getElementById('cust-voucher-customer-id');
+    const amountInp = document.getElementById('cust-voucher-amount');
+    if (!select || !amountInp) return;
+    const custId = parseInt(select.value, 10);
+    const cust = this.customers.find(c => c.id === custId || c.code === custId);
+    if (cust && cust.balance < 0) {
+      amountInp.value = Math.abs(cust.balance).toFixed(2);
+      amountInp.focus();
+    }
+  }
+
+  async saveVoucher() {
+    const select = document.getElementById('cust-voucher-customer-id');
+    const amountInp = document.getElementById('cust-voucher-amount');
+    const methodSelect = document.getElementById('cust-voucher-method');
+    const noteInp = document.getElementById('cust-voucher-note');
+
+    const custId = select ? parseInt(select.value, 10) : 0;
+    const cust = this.customers.find(c => c.id === custId || c.code === custId);
+    const amount = parseFloat(amountInp?.value || 0);
+    const method = methodSelect?.value || 'كاش من الدرج';
+    const note = noteInp?.value.trim() || '';
+
+    if (!cust) {
+      window.app?.showToast('يرجى اختيار العميل أولاً', 'error');
+      select?.focus();
+      return;
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      window.app?.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error');
+      amountInp?.focus();
+      return;
+    }
+
+    const action = this.voucherType === 'payment' ? 'pay_customer' : 'customer_receipt';
+    const payload = {
+      customer_id: cust.id,
+      customer_code: cust.code,
+      customer_name: cust.name,
+      amount: amount,
+      payment_method: method,
+      note: note,
+      date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
+
+    window.app?.showLoading(true, 'جاري تسجيل السند وتحديث الحساب...');
+    try {
+      const res = await window.api.post(action, payload);
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم حفظ السند بنجاح!', 'success');
+        if (amountInp) amountInp.value = '';
+        if (noteInp) noteInp.value = '';
+        await this.loadCustomers(true);
+        this.setSubView('list');
+      } else {
+        window.app?.showToast(res.error || 'تعذر حفظ السند!', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ في الاتصال: ' + err.message, 'error');
+    }
+  }
+
+  async populateInlineLedger(preselectedId = null) {
+    let cust = null;
+    if (preselectedId) {
+      cust = this.customers.find(c => c.id === preselectedId || c.code === preselectedId);
+    }
+    if (!cust) {
+      cust = this.customers.find(c => c.balance < 0) || this.customers[0];
+    }
+    if (!cust) return;
+
+    const titleEl = document.getElementById('cust-ledger-title');
+    const balEl = document.getElementById('cust-ledger-balance');
+    const tbody = document.getElementById('cust-ledger-table-body');
+    const mobileCards = document.getElementById('cust-ledger-mobile-cards');
+
+    if (titleEl) titleEl.textContent = `كشف حساب: ${cust.name} (كود #${cust.code || cust.id})`;
+    if (balEl) {
+      const absBal = Math.abs(cust.balance).toLocaleString('ar-EG', { minimumFractionDigits: 2 });
+      balEl.textContent = `${absBal} ج.م ${cust.balance < 0 ? '(مديونية مطلوبة 🔴)' : cust.balance > 0 ? '(رصيد دائن 🟢)' : '(خالص ✅)'}`;
+      balEl.className = `font-mono font-black text-sm ${cust.balance < 0 ? 'text-rose-600 dark:text-rose-400' : cust.balance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500'}`;
+    }
+
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">جاري تحميل حركات الحساب...</td></tr>`;
+    if (mobileCards) mobileCards.innerHTML = `<div class="py-6 text-center text-gray-400 text-xs">جاري تحميل حركات الحساب...</div>`;
+
+    try {
+      const res = await window.api.get('get_customer_ledger', { customer_id: cust.id, customer_name: cust.name });
+      if (res && res.success && Array.isArray(res.transactions)) {
+        if (res.transactions.length === 0) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">لا توجد حركات مسجلة حتى الآن</td></tr>`;
+          if (mobileCards) mobileCards.innerHTML = `<div class="py-6 text-center text-gray-400 text-xs">لا توجد حركات مسجلة حتى الآن</div>`;
+          return;
+        }
+
+        if (tbody) {
+          tbody.innerHTML = res.transactions.map(t => `
+            <tr class="border-b border-gray-100 dark:border-gray-800 text-xs hover:bg-gray-50 dark:hover:bg-gray-800/40">
+              <td class="py-2.5 px-3 font-mono text-gray-500">${t.date || t.created_at}</td>
+              <td class="py-2.5 px-3 font-bold text-gray-800 dark:text-gray-200">${t.type}</td>
+              <td class="py-2.5 px-3 font-mono font-bold ${t.type.includes('قبض') ? 'text-emerald-600' : 'text-rose-600'}">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
+              <td class="py-2.5 px-3 text-gray-500">${t.payment_method || 'كاش'}</td>
+              <td class="py-2.5 px-3 text-gray-600 dark:text-gray-400">${t.note || '-'}</td>
+            </tr>
+          `).join('');
+        }
+
+        if (mobileCards) {
+          mobileCards.innerHTML = res.transactions.map(t => {
+            const isReceipt = t.type.includes('قبض');
+            const colorClass = isReceipt ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+            const badgeClass = isReceipt ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200';
+            return `
+              <div class="p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs flex flex-col gap-1.5 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${badgeClass}">${t.type}</span>
+                  <span class="font-mono text-gray-400 text-[10px]">${t.date || t.created_at || ''}</span>
+                </div>
+                <div class="flex items-center justify-between font-bold pt-1">
+                  <span class="text-gray-700 dark:text-gray-300">${t.note || t.reference || '-'}</span>
+                  <span class="font-mono ${colorClass} text-sm" dir="ltr">${isReceipt ? '+' : '-'}${parseFloat(t.amount || 0).toFixed(2)} ج.م</span>
+                </div>
+                <div class="text-[10px] text-gray-400">${t.payment_method || 'كاش'}</div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    } catch (err) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-rose-500">تعذر جلب الحركات: ${err.message}</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-4 text-center text-rose-500 text-xs">تعذر جلب الحركات: ${err.message}</div>`;
+    }
+  }
+
   openVoucherModal(customerCode, type = 'receipt') {
     const cust = this.customers.find(c => (c.code === customerCode || c.id === customerCode));
     if (!cust) return;
@@ -370,12 +625,19 @@ class CustomersController {
     const modal = document.getElementById('cust-ledger-modal');
     if (!modal) return;
 
-    document.getElementById('cust-ledger-title').textContent = `كشف حساب: ${cust.name} (كود #${cust.code || cust.id})`;
-    document.getElementById('cust-ledger-balance').textContent = `الرصيد الحالي: ${Math.abs(cust.balance).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م ${cust.balance < 0 ? '(مديونية مطلوبة)' : cust.balance > 0 ? '(رصيد دائن)' : '(خالص)'}`;
+    const titleEl = document.getElementById('cust-modal-ledger-title') || document.getElementById('cust-ledger-title');
+    const balEl = document.getElementById('cust-modal-ledger-balance') || document.getElementById('cust-ledger-balance');
+    const tbody = document.getElementById('cust-modal-ledger-table-body') || document.getElementById('cust-ledger-table-body');
+    const mobileCards = document.getElementById('cust-modal-ledger-mobile-cards');
 
-    const tbody = document.getElementById('cust-ledger-table-body');
+    if (titleEl) titleEl.textContent = `كشف حساب: ${cust.name} (كود #${cust.code || cust.id})`;
+    if (balEl) balEl.textContent = `الرصيد الحالي: ${Math.abs(cust.balance).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م ${cust.balance < 0 ? '(مديونية مطلوبة)' : cust.balance > 0 ? '(رصيد دائن)' : '(خالص)'}`;
+
     if (tbody) {
       tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">جاري تحميل حركات الحساب...</td></tr>`;
+    }
+    if (mobileCards) {
+      mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 text-xs">جاري تحميل حركات الحساب...</div>`;
     }
 
     modal.classList.remove('hidden');
@@ -386,22 +648,47 @@ class CustomersController {
       const res = await window.api.get('get_customer_ledger', { customer_id: cust.id, customer_name: cust.name });
       if (res && res.success && Array.isArray(res.transactions)) {
         if (res.transactions.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">لا توجد حركات مسجلة حتى الآن</td></tr>`;
+          if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">لا توجد حركات مسجلة حتى الآن</td></tr>`;
+          if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 text-xs">لا توجد حركات مسجلة حتى الآن</div>`;
           return;
         }
 
-        tbody.innerHTML = res.transactions.map(t => `
-          <tr class="border-b border-gray-100 dark:border-gray-800 text-xs hover:bg-gray-50 dark:hover:bg-gray-800/40">
-            <td class="py-2.5 px-3 font-mono text-gray-500">${t.date || t.created_at}</td>
-            <td class="py-2.5 px-3 font-bold text-gray-800 dark:text-gray-200">${t.type}</td>
-            <td class="py-2.5 px-3 text-gray-600 dark:text-gray-400">${t.note || '-'}</td>
-            <td class="py-2.5 px-3 font-mono font-bold ${t.type.includes('قبض') ? 'text-emerald-600' : 'text-rose-600'}">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
-            <td class="py-2.5 px-3 text-gray-500">${t.payment_method || 'كاش'}</td>
-          </tr>
-        `).join('');
+        if (tbody) {
+          tbody.innerHTML = res.transactions.map(t => `
+            <tr class="border-b border-gray-100 dark:border-gray-800 text-xs hover:bg-gray-50 dark:hover:bg-gray-800/40">
+              <td class="py-2.5 px-3 font-mono text-gray-500">${t.date || t.created_at}</td>
+              <td class="py-2.5 px-3 font-bold text-gray-800 dark:text-gray-200">${t.type}</td>
+              <td class="py-2.5 px-3 text-gray-600 dark:text-gray-400">${t.note || '-'}</td>
+              <td class="py-2.5 px-3 font-mono font-bold ${t.type.includes('قبض') ? 'text-emerald-600' : 'text-rose-600'}">${parseFloat(t.amount || 0).toFixed(2)} ج.م</td>
+              <td class="py-2.5 px-3 text-gray-500">${t.payment_method || 'كاش'}</td>
+            </tr>
+          `).join('');
+        }
+
+        if (mobileCards) {
+          mobileCards.innerHTML = res.transactions.map(t => {
+            const isReceipt = t.type.includes('قبض');
+            const colorClass = isReceipt ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+            const badgeClass = isReceipt ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200';
+            return `
+              <div class="p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs flex flex-col gap-1.5 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${badgeClass}">${t.type}</span>
+                  <span class="font-mono text-gray-400 text-[10px]">${t.date || t.created_at || ''}</span>
+                </div>
+                <div class="flex items-center justify-between font-bold pt-1">
+                  <span class="text-gray-700 dark:text-gray-300">${t.note || t.reference || '-'}</span>
+                  <span class="font-mono ${colorClass} text-sm" dir="ltr">${isReceipt ? '+' : '-'}${parseFloat(t.amount || 0).toFixed(2)} ج.م</span>
+                </div>
+                <div class="text-[10px] text-gray-400">${t.payment_method || 'كاش'}</div>
+              </div>
+            `;
+          }).join('');
+        }
       }
     } catch (err) {
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-rose-500">تعذر جلب الحركات: ${err.message}</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-4 text-center text-rose-500 text-xs">تعذر جلب الحركات: ${err.message}</div>`;
     }
   }
 

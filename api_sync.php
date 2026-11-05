@@ -783,6 +783,138 @@ try {
             break;
 
         // ============================================================
+        // 2.415 كشف حساب مالي تفصيلي للمورد (Supplier Ledger & Statement)
+        // ============================================================
+        case 'get_supplier_ledger':
+            $sup_id = (int)($_GET['supplier_id'] ?? $_POST['supplier_id'] ?? 0);
+            $sup_name = trim($_GET['supplier_name'] ?? $_POST['supplier_name'] ?? '');
+            $from_date = trim($_GET['from_date'] ?? $_POST['from_date'] ?? '');
+            $to_date = trim($_GET['to_date'] ?? $_POST['to_date'] ?? '');
+
+            $sup = null;
+            if ($sup_id > 0) {
+                $stmt = $pdo->prepare("SELECT * FROM suppliers WHERE id = ? OR supplier_code = ? LIMIT 1");
+                $stmt->execute([$sup_id, $sup_id]);
+                $sup = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$sup && !empty($sup_name)) {
+                $stmt = $pdo->prepare("SELECT * FROM suppliers WHERE name = ? LIMIT 1");
+                $stmt->execute([$sup_name]);
+                $sup = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$sup) {
+                echo json_encode(['success' => false, 'error' => 'المورد غير موجود أو تم حذفه!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $actual_id = (int)$sup['id'];
+            $actual_code = (int)($sup['supplier_code'] ?? $actual_id);
+            $actual_name = $sup['name'];
+
+            // 1. فواتير التوريد من جدول purchases
+            $purch_sql = "SELECT id, invoice_number, total_amount, paid_amount, (total_amount - paid_amount) as remaining, date, created_at FROM purchases WHERE (supplier_id = ? OR supplier_id = ? OR supplier_name = ?)";
+            $purch_params = [$actual_id, $actual_code, $actual_name];
+            if (!empty($from_date)) {
+                $purch_sql .= " AND (date >= ? OR created_at >= ?)";
+                $purch_params[] = $from_date . ' 00:00:00';
+                $purch_params[] = $from_date . ' 00:00:00';
+            }
+            if (!empty($to_date)) {
+                $purch_sql .= " AND (date <= ? OR created_at <= ?)";
+                $purch_params[] = $to_date . ' 23:59:59';
+                $purch_params[] = $to_date . ' 23:59:59';
+            }
+            $purch_sql .= " ORDER BY date DESC, id DESC LIMIT 200";
+            $p_stmt = $pdo->prepare($purch_sql);
+            $p_stmt->execute($purch_params);
+            $purch_rows = $p_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. سندات السداد من جدول expenses
+            $exp_sql = "SELECT id, amount, note, date, created_at, payment_method FROM expenses WHERE category = 'سداد موردين' AND (supplier_id = ? OR supplier_id = ? OR note LIKE ?)";
+            $exp_params = [$actual_id, $actual_code, "%{$actual_name}%"];
+            if (!empty($from_date)) {
+                $exp_sql .= " AND (date >= ? OR created_at >= ?)";
+                $exp_params[] = $from_date . ' 00:00:00';
+                $exp_params[] = $from_date . ' 00:00:00';
+            }
+            if (!empty($to_date)) {
+                $exp_sql .= " AND (date <= ? OR created_at <= ?)";
+                $exp_params[] = $to_date . ' 23:59:59';
+                $exp_params[] = $to_date . ' 23:59:59';
+            }
+            $exp_sql .= " ORDER BY date DESC, id DESC LIMIT 200";
+            $e_stmt = $pdo->prepare($exp_sql);
+            $e_stmt->execute($exp_params);
+            $exp_rows = $e_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $transactions = [];
+            $total_purchases = 0.0;
+            $total_payments = 0.0;
+
+            foreach ($purch_rows as $pr) {
+                $tot = (float)$pr['total_amount'];
+                $paid = (float)$pr['paid_amount'];
+                $rem = (float)$pr['remaining'];
+                $total_purchases += $tot;
+
+                $transactions[] = [
+                    'id' => (int)$pr['id'],
+                    'date' => $pr['date'] ?: $pr['created_at'],
+                    'type' => 'فاتورة توريد',
+                    'reference' => $pr['invoice_number'] ?: ('فاتورة #' . $pr['id']),
+                    'credit' => $tot,
+                    'debit' => 0.0,
+                    'remaining' => $rem,
+                    'items' => []
+                ];
+            }
+
+            foreach ($exp_rows as $er) {
+                $amt = (float)$er['amount'];
+                $total_payments += $amt;
+
+                $transactions[] = [
+                    'id' => (int)$er['id'],
+                    'date' => $er['date'] ?: $er['created_at'],
+                    'type' => 'دفعة نقدية مسددة',
+                    'reference' => 'سداد نقدي #' . $er['id'],
+                    'credit' => 0.0,
+                    'debit' => $amt,
+                    'remaining' => 0.0,
+                    'note' => $er['note'],
+                    'payment_method' => $er['payment_method'],
+                    'items' => []
+                ];
+            }
+
+            usort($transactions, function($a, $b) {
+                return strcmp($b['date'] ?? '', $a['date'] ?? '');
+            });
+
+            echo json_encode([
+                'success' => true,
+                'supplier' => [
+                    'id' => (int)$sup['id'],
+                    'supplier_code' => (int)($sup['supplier_code'] ?? $sup['id']),
+                    'name' => $sup['name'],
+                    'phone' => $sup['phone'] ?? '',
+                    'balance' => (float)($sup['balance'] ?? 0.0)
+                ],
+                'summary' => [
+                    'current_balance' => (float)($sup['balance'] ?? 0.0),
+                    'total_purchases' => round($total_purchases, 2),
+                    'total_payments' => round($total_payments, 2),
+                    'purchases_count' => count($purch_rows)
+                ],
+                'filter' => [
+                    'from_date' => $from_date,
+                    'to_date' => $to_date
+                ],
+                'transactions' => $transactions
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 2.42 مزامنة جماعية لموردي دريم سوفت (Bulk Sync DreamSoft Suppliers)
         // ============================================================
         case 'sync_dreamsoft_suppliers':
@@ -2259,6 +2391,7 @@ try {
         case 'customer_receipt':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $cust_id = (int)($data['customer_id'] ?? $data['id'] ?? 0);
+            $cust_code = (int)($data['customer_code'] ?? 0);
             $cust_name = trim($data['customer_name'] ?? '');
             $amount = (float)($data['amount'] ?? 0);
             $note = trim($data['note'] ?? '');
@@ -2270,31 +2403,20 @@ try {
                 exit;
             }
 
-            // زيادة الرصيد (يخفض المديونية السالبة)
-            if ($cust_id > 0) {
-                $upd = $pdo->prepare("UPDATE customers SET balance = balance + ?, total_spent = total_spent + ? WHERE id = ?");
-                $upd->execute([$amount, $amount, $cust_id]);
+            if ($cust_id > 0 || $cust_code > 0) {
+                $upd = $pdo->prepare("UPDATE customers SET balance = balance + ?, remind = GREATEST(0, remind - ?), total_spent = total_spent + ? WHERE id = ? OR code = ?");
+                $upd->execute([$amount, $amount, $amount, $cust_id, $cust_code]);
                 if (empty($cust_name)) {
-                    $cust_name = $pdo->query("SELECT name FROM customers WHERE id = {$cust_id}")->fetchColumn() ?: "عميل #{$cust_id}";
+                    $cust_name = $pdo->query("SELECT name FROM customers WHERE id = {$cust_id} OR code = {$cust_code}")->fetchColumn() ?: "عميل #{$cust_id}";
                 }
             } elseif (!empty($cust_name)) {
-                $upd = $pdo->prepare("UPDATE customers SET balance = balance + ?, total_spent = total_spent + ? WHERE name = ?");
-                $upd->execute([$amount, $amount, $cust_name]);
+                $upd = $pdo->prepare("UPDATE customers SET balance = balance + ?, remind = GREATEST(0, remind - ?), total_spent = total_spent + ? WHERE name = ?");
+                $upd->execute([$amount, $amount, $amount, $cust_name]);
             }
 
             try {
-                $pdo->exec("CREATE TABLE IF NOT EXISTS customer_vouchers (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    customer_id INT DEFAULT NULL,
-                    customer_name VARCHAR(150) NOT NULL,
-                    type VARCHAR(50) NOT NULL,
-                    amount DECIMAL(12,2) NOT NULL,
-                    payment_method VARCHAR(100) DEFAULT 'كاش',
-                    note TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, 'سند قبض', ?, ?, ?, ?)");
-                $ins_v->execute([$cust_id ?: null, $cust_name, $amount, $pm, $note, $date]);
+                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_code, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, ?, 'سند قبض', ?, ?, ?, ?)");
+                $ins_v->execute([$cust_id ?: null, $cust_code ?: null, $cust_name, $amount, $pm, $note, $date]);
             } catch (Exception $e) {}
 
             echo json_encode([
@@ -2309,6 +2431,7 @@ try {
         case 'pay_customer':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $cust_id = (int)($data['customer_id'] ?? $data['id'] ?? 0);
+            $cust_code = (int)($data['customer_code'] ?? 0);
             $cust_name = trim($data['customer_name'] ?? '');
             $amount = (float)($data['amount'] ?? 0);
             $note = trim($data['note'] ?? '');
@@ -2320,27 +2443,17 @@ try {
                 exit;
             }
 
-            if ($cust_id > 0) {
-                $upd = $pdo->prepare("UPDATE customers SET balance = balance - ? WHERE id = ?");
-                $upd->execute([$amount, $cust_id]);
+            if ($cust_id > 0 || $cust_code > 0) {
+                $upd = $pdo->prepare("UPDATE customers SET balance = balance - ?, remind = IF((balance - ?) < 0, ABS(balance - ?), 0.00) WHERE id = ? OR code = ?");
+                $upd->execute([$amount, $amount, $amount, $cust_id, $cust_code]);
                 if (empty($cust_name)) {
-                    $cust_name = $pdo->query("SELECT name FROM customers WHERE id = {$cust_id}")->fetchColumn() ?: "عميل #{$cust_id}";
+                    $cust_name = $pdo->query("SELECT name FROM customers WHERE id = {$cust_id} OR code = {$cust_code}")->fetchColumn() ?: "عميل #{$cust_id}";
                 }
             }
 
             try {
-                $pdo->exec("CREATE TABLE IF NOT EXISTS customer_vouchers (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    customer_id INT DEFAULT NULL,
-                    customer_name VARCHAR(150) NOT NULL,
-                    type VARCHAR(50) NOT NULL,
-                    amount DECIMAL(12,2) NOT NULL,
-                    payment_method VARCHAR(100) DEFAULT 'كاش',
-                    note TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, 'سند صرف', ?, ?, ?, ?)");
-                $ins_v->execute([$cust_id ?: null, $cust_name, $amount, $pm, $note, $date]);
+                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_code, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, ?, 'سند صرف', ?, ?, ?, ?)");
+                $ins_v->execute([$cust_id ?: null, $cust_code ?: null, $cust_name, $amount, $pm, $note, $date]);
             } catch (Exception $e) {}
 
             echo json_encode([
@@ -2353,16 +2466,46 @@ try {
         // 2.653 كشف حساب عميل تفصيلي (Customer Ledger)
         // ============================================================
         case 'get_customer_ledger':
-            $cust_id = (int)($_GET['customer_id'] ?? 0);
+            $cust_id = (int)($_GET['customer_id'] ?? $_POST['customer_id'] ?? 0);
+            $cust_name = trim($_GET['customer_name'] ?? $_POST['customer_name'] ?? '');
+
+            $cust = null;
+            if ($cust_id > 0) {
+                $c_stmt = $pdo->prepare("SELECT * FROM customers WHERE id = ? OR code = ? LIMIT 1");
+                $c_stmt->execute([$cust_id, $cust_id]);
+                $cust = $c_stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$cust && !empty($cust_name)) {
+                $c_stmt = $pdo->prepare("SELECT * FROM customers WHERE name = ? LIMIT 1");
+                $c_stmt->execute([$cust_name]);
+                $cust = $c_stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            $actual_id = $cust ? (int)$cust['id'] : $cust_id;
+            $actual_code = $cust ? (int)($cust['code'] ?? $actual_id) : $cust_id;
+            $actual_name = $cust ? $cust['name'] : $cust_name;
+
             $transactions = [];
             try {
-                $stmt = $pdo->prepare("SELECT type, amount, payment_method, note, created_at as date FROM customer_vouchers WHERE customer_id = ? ORDER BY id DESC LIMIT 50");
-                $stmt->execute([$cust_id]);
+                $stmt = $pdo->prepare("SELECT type, amount, payment_method, note, reference, created_at as date FROM customer_vouchers WHERE customer_id = ? OR customer_code = ? OR customer_name = ? ORDER BY id DESC LIMIT 100");
+                $stmt->execute([$actual_id, $actual_code, $actual_name]);
                 $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
             } catch (Exception $e) {}
 
+            try {
+                $o_stmt = $pdo->prepare("SELECT CONCAT('فاتورة مبيعات #', id) as type, total_price as amount, payment_method, notes as note, id as reference, created_at as date FROM orders WHERE (customer_id = ? OR customer_phone = ?) ORDER BY id DESC LIMIT 50");
+                $o_stmt->execute([$actual_id, $cust['phone'] ?? '']);
+                $orders_tx = $o_stmt->fetchAll(PDO::FETCH_ASSOC);
+                $transactions = array_merge($transactions, $orders_tx);
+            } catch (Exception $e) {}
+
+            usort($transactions, function($a, $b) {
+                return strcmp($b['date'] ?? '', $a['date'] ?? '');
+            });
+
             echo json_encode([
                 'success' => true,
+                'customer' => $cust,
                 'transactions' => $transactions
             ], JSON_UNESCAPED_UNICODE);
             break;

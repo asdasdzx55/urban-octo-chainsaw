@@ -262,7 +262,7 @@ class ExpensesController {
             ${bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
           </td>
           <td class="py-3 px-3 text-center font-bold font-mono text-gray-700 dark:text-gray-300">
-            <span>${s.purchases_count || 0}</span> ${unpaidBadge}
+            <span>${s.invoices_count || s.purchases_count || 0}</span> ${unpaidBadge}
           </td>
           <td class="py-3 px-3 text-left font-bold font-mono text-indigo-600 dark:text-indigo-400" dir="ltr">
             ${parseFloat(s.total_supplied || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
@@ -283,7 +283,10 @@ class ExpensesController {
       `;
     }).join('');
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) {
+      const container = document.getElementById('view-expenses') || document.body;
+      window.lucide.createIcons({ root: container });
+    }
   }
 
   normalizeArabic(str) {
@@ -453,7 +456,7 @@ class ExpensesController {
       const name = `"${(s.name || '').replace(/"/g, '""')}"`;
       const phone = `"${s.phone || ''}"`;
       const bal = parseFloat(s.balance || 0).toFixed(2);
-      const pCount = s.purchases_count || 0;
+      const pCount = s.invoices_count || s.purchases_count || 0;
       const unpCount = s.unpaid_invoices_count || 0;
       const supplied = parseFloat(s.total_supplied || 0).toFixed(2);
       const paid = parseFloat(s.total_paid || 0).toFixed(2);

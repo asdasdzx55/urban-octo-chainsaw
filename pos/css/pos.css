@@ -246,3 +246,37 @@ button:active, .mobile-tab-btn:active {
 }
 
 
+
+/* ==========================================================================
+   Mobile Performance & GPU Acceleration Engine (v2.7.0)
+   ========================================================================== */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Disable expensive backdrop blurs on mobile GPUs to stop lag & frame drops */
+  .backdrop-blur-md, .backdrop-blur-sm, .backdrop-blur-xl, .backdrop-blur-2xl, .backdrop-blur-lg, [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(17, 24, 39, 0.85) !important;
+  }
+  
+  /* Hardware accelerate product cards & prevent layout reflow */
+  .product-card {
+    contain: content;
+    will-change: transform;
+    transform: translateZ(0);
+    transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+  }
+  
+  #products-grid {
+    contain: layout style;
+  }
+
+  /* Native touch momentum scroll without rubber-band lag */
+  .overflow-y-auto {
+    scroll-behavior: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -50,11 +50,12 @@ class App {
     // Health check ping
     this.checkServerHealth();
 
-    // Init Expenses & Suppliers
-    window.expensesController?.init();
-
-    // Init Employees & Payroll in background
-    window.employeesController?.init();
+    // Defer non-critical controllers until tab activation or idle time (Ultra-Fast Startup)
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(() => {
+        window.expensesController?.init();
+      });
+    }
 
     // Init Store Brand Name from Settings
     if (window.settingsController) {
@@ -369,7 +370,7 @@ class App {
           </div>
         </div>
       `;
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) window.lucide.createIcons({ root: grid });
       return;
     }
 
@@ -380,7 +381,7 @@ class App {
           <p class="text-xs font-semibold">لم يتم العثور على أي صنف مطابق للبحث</p>
         </div>
       `;
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) window.lucide.createIcons({ root: grid });
       return;
     }
 
@@ -467,7 +468,7 @@ class App {
       </div>
     ` : '');
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: grid });
   }
 
   loadMoreProducts() {
@@ -756,7 +757,7 @@ class App {
       </div>
     ` : '');
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: grid });
   }
 
   promptQuickDiscount() {

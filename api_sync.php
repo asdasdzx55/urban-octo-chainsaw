@@ -710,22 +710,37 @@ try {
         // 2.41 تقرير الموردين الشامل والمديونيات (Suppliers Report)
         // ============================================================
         case 'get_suppliers_report':
-            $stmt = $pdo->query("SELECT * FROM suppliers ORDER BY CASE WHEN balance > 0 THEN 0 WHEN balance < 0 THEN 1 ELSE 2 END, balance DESC, name ASC");
-            $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $pdo->exec("ALTER TABLE suppliers ADD COLUMN supplier_code VARCHAR(50) DEFAULT NULL");
+            } catch (Exception $e) {}
 
-            // إحصائيات المشتريات لكل مورد إن وجدت
+            $stmt = $pdo->query("SELECT * FROM suppliers ORDER BY CASE WHEN balance > 0 THEN 0 WHEN balance < 0 THEN 1 ELSE 2 END, balance DESC, name ASC");
+            $raw_suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // استبعاد الموردين الوهميين والفارغين
+            $suppliers = array_values(array_filter($raw_suppliers, function($sup) {
+                $nm = trim($sup['name'] ?? '');
+                return !empty($nm) && !in_array($nm, ['000', '0000000', '0', '00']);
+            }));
+
+            // إحصائيات المشتريات لكل مورد
             $purch_stats = [];
             try {
-                $p_rows = $pdo->query("SELECT supplier_name, 
+                $p_rows = $pdo->query("SELECT supplier_id, supplier_name, 
                                               COUNT(*) as invoices_count, 
                                               SUM(total_amount) as total_supplied, 
                                               SUM(paid_amount) as total_paid, 
-                                              SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END) as unpaid_count, 
+                                              SUM(CASE WHEN (total_amount - paid_amount) > 0.001 THEN 1 ELSE 0 END) as unpaid_count, 
                                               MAX(created_at) as last_date 
                                        FROM purchases 
-                                       GROUP BY supplier_name")->fetchAll(PDO::FETCH_ASSOC);
+                                       GROUP BY supplier_id, supplier_name")->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($p_rows as $pr) {
-                    $purch_stats[$pr['supplier_name']] = $pr;
+                    if (!empty($pr['supplier_id'])) {
+                        $purch_stats['id_' . $pr['supplier_id']] = $pr;
+                    }
+                    if (!empty($pr['supplier_name'])) {
+                        $purch_stats['name_' . trim($pr['supplier_name'])] = $pr;
+                    }
                 }
             } catch (Exception $e) {}
 
@@ -734,13 +749,15 @@ try {
             $total_paid = 0.0;
 
             foreach ($suppliers as &$s) {
-                $name = $s['name'];
+                $sid = $s['id'] ?? 0;
+                $name = trim($s['name'] ?? '');
                 $bal = (float)($s['balance'] ?? 0);
                 
-                $p_info = $purch_stats[$name] ?? null;
+                $p_info = $purch_stats['id_' . $sid] ?? $purch_stats['name_' . $name] ?? null;
                 $s['total_purchases'] = (float)($p_info['total_supplied'] ?? 0);
                 $s['total_paid'] = (float)($p_info['total_paid'] ?? 0);
                 $s['invoices_count'] = (int)($p_info['invoices_count'] ?? 0);
+                $s['purchases_count'] = $s['invoices_count']; // توافق تام مع واجهة العرض
                 $s['unpaid_invoices_count'] = (int)($p_info['unpaid_count'] ?? 0);
                 $s['last_purchase_date'] = $p_info['last_date'] ?? null;
 
@@ -763,6 +780,55 @@ try {
                 ],
                 'suppliers' => $suppliers
             ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.42 مزامنة جماعية لموردي دريم سوفت (Bulk Sync DreamSoft Suppliers)
+        // ============================================================
+        case 'sync_dreamsoft_suppliers':
+            $sups = $json_payload['suppliers'] ?? [];
+            if (empty($sups) && !empty($_POST['suppliers'])) {
+                $sups = json_decode($_POST['suppliers'], true);
+            }
+            if (empty($sups) || !is_array($sups)) {
+                echo json_encode(['success' => false, 'error' => 'قائمة الموردين فارغة']);
+                exit;
+            }
+            try {
+                $pdo->exec("ALTER TABLE suppliers ADD COLUMN supplier_code VARCHAR(50) DEFAULT NULL");
+            } catch(Exception $e) {}
+
+            $chk_code = $pdo->prepare("SELECT id FROM suppliers WHERE supplier_code = ? LIMIT 1");
+            $chk_name = $pdo->prepare("SELECT id FROM suppliers WHERE name = ? LIMIT 1");
+            $upd = $pdo->prepare("UPDATE suppliers SET name = ?, phone = ?, balance = ?, supplier_code = ? WHERE id = ?");
+            $ins = $pdo->prepare("INSERT INTO suppliers (name, phone, balance, supplier_code) VALUES (?, ?, ?, ?)");
+
+            $synced_sups = 0;
+            foreach ($sups as $sp) {
+                $sname = trim($sp['name'] ?? '');
+                if (empty($sname) || in_array($sname, ['000', '0000000', '0', '00'])) continue;
+                $scode = trim($sp['code'] ?? $sp['supplier_code'] ?? '');
+                $sphone = trim($sp['phone'] ?? $sp['mobile'] ?? '');
+                $sbal = (float)($sp['balance'] ?? 0);
+
+                $target_id = null;
+                if (!empty($scode)) {
+                    $chk_code->execute([$scode]);
+                    $target_id = $chk_code->fetchColumn();
+                }
+                if (!$target_id) {
+                    $chk_name->execute([$sname]);
+                    $target_id = $chk_name->fetchColumn();
+                }
+
+                if ($target_id) {
+                    $upd->execute([$sname, $sphone, $sbal, $scode ?: null, $target_id]);
+                } else {
+                    $ins->execute([$sname, $sphone, $sbal, $scode ?: null]);
+                }
+                $synced_sups++;
+            }
+            echo json_encode(['success' => true, 'synced_count' => $synced_sups]);
             break;
 
         // ============================================================
@@ -2130,10 +2196,7 @@ try {
                 exit;
             }
 
-            // تصفير أي أرصدة قديمة خاطئة للعملاء الذين ليس عليهم ديون
-            try {
-                $pdo->exec("UPDATE customers SET balance = 0.00, remind = 0.00 WHERE code IS NULL OR code NOT IN (38, 98, 216, 217)");
-            } catch (Exception $e) {}
+            // تم إزالة شرط التصفير الإجباري لضمان حفظ وتطابق كل مديونيات وأرصدة العملاء بنسبة 100%
             $synced_count = 0;
             $updated_debts = 0;
 
@@ -3067,7 +3130,7 @@ try {
         case 'get_customers':
             ensure_customers_schema($pdo);
             $q = trim($json_payload['q'] ?? $json_payload['query'] ?? $_GET['q'] ?? $_GET['query'] ?? $_POST['q'] ?? $_POST['query'] ?? $_REQUEST['q'] ?? $_REQUEST['query'] ?? '');
-            $limit = min(1000, max(1, (int)($json_payload['limit'] ?? $_GET['limit'] ?? $_POST['limit'] ?? $_REQUEST['limit'] ?? 500)));
+            $limit = min(5000, max(1, (int)($json_payload['limit'] ?? $_GET['limit'] ?? $_POST['limit'] ?? $_REQUEST['limit'] ?? 1000)));
             $page = max(1, (int)($json_payload['page'] ?? $_GET['page'] ?? $_POST['page'] ?? $_REQUEST['page'] ?? 1));
             $offset = ($page - 1) * $limit;
 

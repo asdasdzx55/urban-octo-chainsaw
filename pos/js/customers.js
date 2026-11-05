@@ -187,7 +187,7 @@ class CustomersController {
           </button>
         </div>
       `;
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) window.lucide.createIcons({ root: document.getElementById('view-customers') || document.body });
       return;
     }
 
@@ -256,7 +256,7 @@ class CustomersController {
       `;
     }).join('');
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: document.getElementById('view-customers') || document.body });
   }
 
   openVoucherModal(customerCode, type = 'receipt') {
@@ -306,7 +306,7 @@ class CustomersController {
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: document.getElementById('view-customers') || document.body });
 
     setTimeout(() => amountInp?.focus(), 150);
   }
@@ -385,7 +385,7 @@ class CustomersController {
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: document.getElementById('view-customers') || document.body });
 
     try {
       const res = await window.api.get('get_customer_ledger', { customer_id: cust.id, customer_name: cust.name });

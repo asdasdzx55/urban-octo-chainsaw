@@ -77,15 +77,10 @@ class CustomersController {
           const rawBal = parseFloat(c.balance || 0);
           const rec = parseFloat(c.receipts || 0);
 
-          // الحساب المحاسبي لدريم سوفت:
-          // إذا كان remind > 0 فالمديونية المطلوبة من العميل هي remind
-          let finalBal = 0.00;
-          if (remind > 0) {
-            finalBal = -remind; // سالب = مديونية على العميل
-          } else if (rawBal < 0 && remind === 0 && (c.notes && c.notes.includes('حساب آجل'))) {
-            finalBal = rawBal;
-          } else if (rawBal > 0) {
-            finalBal = rawBal; // موجب = رصيد دائن لصالح العميل
+          // الحساب المحاسبي المباشر من دريم سوفت:
+          let finalBal = rawBal;
+          if (finalBal === 0 && remind > 0) {
+            finalBal = -remind;
           }
 
           return {

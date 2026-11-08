@@ -285,6 +285,18 @@ class SyrianHomeAPI {
     return await this.post('sync_delivery_driver', driverPayload);
   }
 
+
+  /**
+   * 19.1 Delete / Deactivate Delivery Driver (حذف أو تعطيل طيار دليفري)
+   */
+  async deleteDeliveryDriver(driverId, name = '', force = true) {
+    return await this.post('delete_delivery_driver', {
+      driver_id: driverId,
+      name: name,
+      force: force ? 1 : 0
+    });
+  }
+
   /**
    * 20. Assign Order to Driver (إسناد طلب لطيار بالاسم)
    */

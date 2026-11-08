@@ -159,9 +159,22 @@ class WebOrdersController {
     if (tbody) {
       tbody.innerHTML = this.salesInvoices.map(inv => {
         const isCredit = inv.payment_method.includes('آجل') || inv.payment_method.includes('دين');
-        const payBadge = isCredit
-          ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200">آجل / دين</span>`
-          : `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200">${inv.payment_method}</span>`;
+        const isDelivery = inv.order_type === 'delivery' || parseFloat(inv.delivery_fee) > 0;
+        const isSettled = ['تم التسليم', 'مكتمل', 'completed', 'تم التقفيل'].includes(inv.status);
+        const isPendingDelivery = isDelivery && !isSettled;
+
+        let payBadge = '';
+        if (isPendingDelivery) {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500 text-white animate-pulse">🛵 دليفري مؤقت (قيد التوصيل)</span>`;
+        } else if (isDelivery && isSettled) {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300">🛵 دليفري خالص وكاشير ✅</span>`;
+        } else if (isCredit) {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200">آجل / دين</span>`;
+        } else {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200">${inv.payment_method}</span>`;
+        }
+
+        const netProductsVal = isDelivery ? Math.max(0, parseFloat(inv.total || 0) - parseFloat(inv.delivery_fee || 0)) : parseFloat(inv.total || 0);
 
         return `
           <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition text-xs">
@@ -174,18 +187,26 @@ class WebOrdersController {
             <td class="py-3 px-3">
               <div class="font-bold text-gray-900 dark:text-white">${inv.customer_name}</div>
               ${inv.customer_phone ? `<div class="text-[10px] text-gray-400 font-mono">${inv.customer_phone}</div>` : ''}
+              ${isDelivery && inv.delivery_person ? `<div class="text-[9.5px] text-indigo-500">الطيار: ${inv.delivery_person}</div>` : ''}
             </td>
             <td class="py-3 px-3">
               ${payBadge}
             </td>
             <td class="py-3 px-3 font-mono font-black text-left text-sm ${isCredit ? 'text-rose-600' : 'text-gray-900 dark:text-white'}" dir="ltr">
-              ${parseFloat(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+              <div>${parseFloat(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+              ${isDelivery && parseFloat(inv.delivery_fee) > 0 ? `<div class="text-[9.5px] font-normal text-gray-400">شامل توصيل ${parseFloat(inv.delivery_fee).toFixed(0)} ج.م</div>` : ''}
             </td>
             <td class="py-3 px-3 text-[11px] text-gray-500">
               ${inv.cashier || 'كاشير المحل'}
             </td>
             <td class="py-3 px-3 text-center">
-              <div class="flex items-center justify-center gap-1.5">
+              <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                ${isPendingDelivery ? `
+                  <button type="button" onclick="window.ordersController.settleDeliveryOrder('${inv.id}', ${inv.total || 0}, ${inv.delivery_fee || 0})" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1 shadow-xs transition cursor-pointer" title="محاسبة الدليفري ونقل الفاتورة نقداً لكاشير دريم سوفت بدون رسوم التوصيل">
+                    <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
+                    <span>💰 محاسبة ونقل للكاشير</span>
+                  </button>
+                ` : ''}
                 <button type="button" onclick="window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="عرض وطباعة الفاتورة الحرارية">
                   <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                   <span>عرض وطباعة</span>
@@ -205,31 +226,50 @@ class WebOrdersController {
     if (mobileCards) {
       mobileCards.innerHTML = this.salesInvoices.map(inv => {
         const isCredit = inv.payment_method.includes('آجل') || inv.payment_method.includes('دين');
-        const payBadge = isCredit
-          ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200">آجل / دين ⚠️</span>`
-          : `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200">${inv.payment_method} 🟢</span>`;
+        const isDelivery = inv.order_type === 'delivery' || parseFloat(inv.delivery_fee) > 0;
+        const isSettled = ['تم التسليم', 'مكتمل', 'completed', 'تم التقفيل'].includes(inv.status);
+        const isPendingDelivery = isDelivery && !isSettled;
+
+        let payBadge = '';
+        if (isPendingDelivery) {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500 text-white animate-pulse">🛵 دليفري مؤقت (قيد التوصيل)</span>`;
+        } else if (isDelivery && isSettled) {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300">🛵 دليفري خالص وكاشير ✅</span>`;
+        } else if (isCredit) {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200">آجل / دين ⚠️</span>`;
+        } else {
+          payBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200">${inv.payment_method} 🟢</span>`;
+        }
 
         return `
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400">#${inv.order_id || inv.id}</span>
                   ${payBadge}
                 </div>
                 <div class="font-bold text-xs text-gray-900 dark:text-white mt-1">${inv.customer_name}</div>
                 <div class="text-[10px] text-gray-400 font-mono mt-0.5">${inv.created_at} • ${inv.cashier || 'كاشير المحل'}</div>
+                ${isDelivery && inv.delivery_person ? `<div class="text-[10px] text-indigo-500 mt-0.5">🛵 الطيار: ${inv.delivery_person}</div>` : ''}
               </div>
               <div class="text-left shrink-0">
                 <div class="text-[10px] text-gray-400 font-bold">الإجمالي</div>
                 <div class="text-base font-black font-mono ${isCredit ? 'text-rose-600' : 'text-gray-900 dark:text-white'}" dir="ltr">
                   ${parseFloat(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                 </div>
+                ${isDelivery && parseFloat(inv.delivery_fee) > 0 ? `<div class="text-[9px] text-gray-400">شامل توصيل ${parseFloat(inv.delivery_fee).toFixed(0)} ج.م</div>` : ''}
               </div>
             </div>
 
             <!-- Action Buttons for Phone -->
             <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+              ${isPendingDelivery ? `
+                <button type="button" onclick="window.ordersController.settleDeliveryOrder('${inv.id}', ${inv.total || 0}, ${inv.delivery_fee || 0})" class="col-span-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
+                  <i data-lucide="hand-coins" class="w-4 h-4"></i>
+                  <span>💰 محاسبة الدليفري وتوريد للكاشير الأساسي</span>
+                </button>
+              ` : ''}
               <button type="button" onclick="window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition shadow-2xs">
                 <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                 <span>عرض وطباعة</span>
@@ -466,6 +506,45 @@ class WebOrdersController {
 
     window.cart?.showReceiptModal(receiptData);
   }
+  async settleDeliveryOrder(rawId, totalAmount, deliveryFee) {
+    const cleanId = String(rawId).replace(/[^0-9]/g, '');
+    const numTotal = parseFloat(totalAmount) || 0;
+    const numFee = parseFloat(deliveryFee) || 0;
+    const netCashierAmount = Math.max(0, numTotal - numFee);
+
+    const confirmed = confirm(
+      `🛵 محاسبة وتحصيل أوردر الدليفري رقم #${cleanId}؟\n\n` +
+      `• إجمالي الأوردر المطلوب: ${numTotal.toFixed(2)} ج.م\n` +
+      `• رسوم خدمة التوصيل للطيار: ${numFee.toFixed(2)} ج.م\n` +
+      `-------------------------------------------\n` +
+      `💰 الصافي الذي سيدخل خزينة الكاشير الأساسي نقداً: ${netCashierAmount.toFixed(2)} ج.م\n\n` +
+      `سيتم تقفيل الفاتورة وترحيلها نقداً فوراً إلى برنامج الكاشير الأساسي (دريم سوفت) بدون خدمة التوصيل.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      window.app?.showLoading(true, 'جاري تقفيل الأوردر وترحيله لكاشير دريم سوفت...');
+      const res = await window.api.settleDeliveryOrder(cleanId);
+      window.app?.showLoading(false);
+
+      if (res && res.success) {
+        window.posScanner?.playSuccessBeep();
+        window.app?.showToast(`✅ تم تحصيل الأوردر #${cleanId} وترحيله نقداً للكاشير الأساسي (${netCashierAmount.toFixed(2)} ج.م) بنجاح!`, 'success');
+        this.loadSalesInvoices();
+        if (window.deliverySettlementController) {
+          window.deliverySettlementController.loadDrivers();
+          window.deliverySettlementController.loadUnassignedOrders();
+        }
+      } else {
+        window.app?.showToast(res.error || 'تعذر تقفيل أوردر الدليفري', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ في العملية: ${err.message || err}`, 'error');
+    }
+  }
+
 }
 
 window.ordersController = new WebOrdersController();

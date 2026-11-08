@@ -461,26 +461,67 @@ try {
             }
             $details_str = implode("\n", $items_text);
             
-            // تحديد الحالة الأولية للأوردر
-            $order_status = (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') ? 'بانتظار الطيار' : 'مكتمل';
+            // 1. حفظ / تحديث بيانات العميل تلقائياً في قاعدة البيانات
+            if (!empty($phone) && strlen(preg_replace('/[^0-9]/', '', $phone)) >= 8) {
+                try {
+                    $clean_ph = preg_replace('/[^0-9]/', '', $phone);
+                    $chk_cust = $pdo->prepare("SELECT id, name, address FROM customers WHERE phone LIKE ? OR phone2 LIKE ? LIMIT 1");
+                    $chk_cust->execute(["%{$clean_ph}%", "%{$clean_ph}%"]);
+                    $c_exist = $chk_cust->fetch(PDO::FETCH_ASSOC);
+                    if ($c_exist) {
+                        $upd_c = $pdo->prepare("UPDATE customers SET 
+                            name = CASE WHEN ? != '' AND ? != 'عميل نقدي' AND ? != 'عميل دليفري' THEN ? ELSE name END,
+                            address = CASE WHEN ? != '' THEN ? ELSE address END,
+                            total_orders = total_orders + 1,
+                            total_spent = total_spent + ?,
+                            last_order_at = NOW(),
+                            last_order_date = NOW()
+                            WHERE id = ?");
+                        $upd_c->execute([$customer, $customer, $customer, $customer, $address, $address, $total, $c_exist['id']]);
+                    } else {
+                        $ins_c = $pdo->prepare("INSERT INTO customers (name, phone, address, total_orders, total_spent, last_order_at, last_order_date, created_at) VALUES (?, ?, ?, 1, ?, NOW(), NOW(), NOW())");
+                        $ins_c->execute([$customer ?: 'عميل دليفري', $phone, $address, $total]);
+                    }
+                } catch (Exception $e) {}
+            }
+
+            // 2. تحديد ما إذا كان الطلب دليفري لحفظه مؤقتاً لحين محاسبة الطيار
+            $req_order_type = strtolower(trim($data['order_type'] ?? ''));
+            $is_delivery = ($req_order_type === 'delivery' || $req_order_type === 'دليفري') 
+                           || (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') 
+                           || ($delivery_fee > 0);
+
+            if ($is_delivery) {
+                $order_type = 'delivery';
+                $order_status = 'قيد التوصيل';
+                $synced_flag = 2; // مؤقت بانتظار محاسبة الدليفري - لا يُرسل لدريم سوفت إلا بعد التحصيل
+                $is_cod = ($payment_method === 'تحصيل عند الاستلام (آجل)' || (isset($data['delivery_pay_mode']) && $data['delivery_pay_mode'] === 'cod'));
+                $pay_status = $is_cod ? 'معلق' : 'مدفوع';
+            } else {
+                $order_type = 'hall';
+                $order_status = 'مكتمل';
+                $synced_flag = 0; // بيع صالة/كاشير عادي يترحل فوراً
+                $pay_status = 'مدفوع';
+            }
 
             $items_json = json_encode($items, JSON_UNESCAPED_UNICODE);
-            $order_type = (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') ? 'delivery' : 'hall';
             $inv_bc = $local_id ? "INV-{$local_id}" : null;
 
-            // حفظ الفاتورة في جدول orders مع وضع synced = 0 للمزامنة الفورية مع دريم سوفت المحلي
+            // حفظ الفاتورة في جدول orders
             $stmt = $pdo->prepare("INSERT INTO orders (
                 customer_name, customer_phone, customer_address, order_details, 
                 total_price, discount_amount, shipping_cost, payment_method, payment_status, 
                 status, source, cashier_name, delivery_person, delivery_fee, created_at, synced,
                 items_json, order_type, invoice_barcode
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'مدفوع', ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             
             $stmt->execute([
                 $customer, $phone, $address, $details_str,
                 $total, $discount, $delivery_fee, $payment_method,
+                $pay_status,
                 $order_status,
                 $source ?: 'phone_pos', $cashier, $delivery_person, $delivery_fee, $date,
+                $synced_flag,
                 $items_json, $order_type, $inv_bc
             ]);
             $remote_order_id = $pdo->lastInsertId();
@@ -491,20 +532,86 @@ try {
             
             // تسجيل إشعار بنظام الإدارة
             try {
+                $notif_title = $is_delivery ? "🛵 طلب توصيل دليفري جديد (فاتورة #{$remote_order_id})" : "🛒 عملية بيع جديدة (فاتورة #{$remote_order_id})";
                 $notif_stmt = $pdo->prepare("INSERT INTO notifications (title, body, link) VALUES (?, ?, ?)");
                 $notif_stmt->execute([
-                    "🛒 عملية بيع جديدة (فاتورة #{$remote_order_id})",
-                    "تمت عملية بيع بمبلغ {$total} ج.م بواسطة ({$cashier}) عبر ({$source})",
+                    $notif_title,
+                    "تم تسجيل طلب بمبلغ {$total} ج.م بواسطة ({$cashier}) عبر ({$source})",
                     "admin_order_details.php?id=" . $remote_order_id
                 ]);
             } catch (Exception $e) {}
             
             echo json_encode([
                 'success' => true,
-                'message' => '✅ تم حفظ الفاتورة وخصم المخزون بنجاح في مركز البيانات المركزي',
+                'message' => $is_delivery ? '🛵 تم حفظ طلب الدليفري مؤقتاً بنجاح بانتظار محاسبة الطيار' : '✅ تم حفظ الفاتورة وخصم المخزون بنجاح في مركز البيانات المركزي',
                 'remote_id' => $remote_order_id,
-                'local_sale_id' => $local_id
+                'order_id' => $remote_order_id,
+                'local_sale_id' => $local_id,
+                'is_delivery' => $is_delivery,
+                'order_status' => $order_status,
+                'is_pending_settlement' => ($synced_flag === 2)
             ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.16 محاسبة أوردر الدليفري وترحيله نقداً للكاشير الأساسي (Settlement)
+        // ============================================================
+        case 'settle_delivery_order':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $order_id = (int)($data['order_id'] ?? 0);
+            $cashier = trim($data['cashier'] ?? 'كاشير المحل');
+            $note = trim($data['note'] ?? 'تم التحصيل من الطيار والتوريد للخزينة');
+
+            if ($order_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم الطلب غير صحيح']);
+                break;
+            }
+
+            try {
+                $chk = $pdo->prepare("SELECT id, total_price, delivery_fee, delivery_person, status FROM orders WHERE id = ?");
+                $chk->execute([$order_id]);
+                $ord = $chk->fetch(PDO::FETCH_ASSOC);
+
+                if (!$ord) {
+                    echo json_encode(['success' => false, 'error' => 'الطلب غير موجود']);
+                    break;
+                }
+
+                // Update order to settled & mark synced = 0 for DreamSoft daemon transfer
+                $upd = $pdo->prepare("UPDATE orders SET 
+                    status = 'تم التسليم',
+                    payment_status = 'مدفوع',
+                    payment_method = 'كاش',
+                    synced = 0
+                    WHERE id = ?");
+                $upd->execute([$order_id]);
+
+                // If driver has custody balance in delivery_drivers, reduce it
+                $drv_name = trim($ord['delivery_person'] ?? '');
+                if (!empty($drv_name) && !str_starts_with($drv_name, 'مؤقت') && $drv_name !== 'ديلفري غير معروف') {
+                    $amt = (float)$ord['total_price'];
+                    $pdo->prepare("UPDATE delivery_drivers SET cash_balance = GREATEST(0, cash_balance - ?) WHERE name = ?")
+                        ->execute([$amt, $drv_name]);
+                }
+
+                // Notification
+                try {
+                    $pdo->prepare("INSERT INTO notifications (title, body, link) VALUES (?, ?, ?)")
+                        ->execute([
+                            "🛵 محاسبة وتوريد أوردر دليفري #{$order_id}",
+                            "تم استلام نقدية الأوردر وترحيله لكاشير دريم سوفت نقداً بدون رسوم توصيل بواسطة ({$cashier})",
+                            "admin_order_details.php?id={$order_id}"
+                        ]);
+                } catch (Exception $e) {}
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => "تمت محاسبة الأوردر #{$order_id} وترحيله نقداً للكاشير الأساسي بنجاح ✓",
+                    'order_id' => $order_id
+                ], JSON_UNESCAPED_UNICODE);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
             break;
 
         // ============================================================

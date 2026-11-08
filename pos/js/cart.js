@@ -542,10 +542,18 @@ class POSCart {
           // Show Success Thermal Receipt Modal & Trigger Cloud / Hardware Print
           this.showReceiptModal(invoiceData);
           this.printViaCloudPrinter(invoiceData);
-          window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وطباعتها بنجاح ✅`, 'success');
+          if (isDelivery) {
+            window.app?.showToast(`🛵 تم حفظ أوردر الدليفري #${realOrderId} وخروج الفاتورة للطيار! (الفاتورة مؤقتة لحين محاسبة الدليفري)`, 'info');
+          } else {
+            window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وطباعتها بنجاح ✅`, 'success');
+          }
         } else {
-          // Saved without printing (عدم الطباعة)
-          window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح بدون طباعة 💾✅`, 'success');
+          // Saved without printing
+          if (isDelivery) {
+            window.app?.showToast(`🛵 تم حفظ أوردر الدليفري #${realOrderId} مؤقتاً لحين محاسبة الطيار`, 'info');
+          } else {
+            window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} بنجاح بدون طباعة 💾✅`, 'success');
+          }
         }
 
         // Update local reports and trigger product reload in background

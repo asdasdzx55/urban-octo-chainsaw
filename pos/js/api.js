@@ -321,6 +321,18 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 22.2.1 Settle Delivery Order & Transfer to Main Cashier
+   * محاسبة أوردر الدليفري وترحيله نقداً للكاشير الأساسي بدون رسوم التوصيل
+   */
+  async settleDeliveryOrder(orderId, cashier = '', note = '') {
+    return await this.post('settle_delivery_order', {
+      order_id: orderId,
+      cashier: cashier || (window.cart?.cashierNotes || 'كاشير المحل'),
+      note: note
+    });
+  }
+
+  /**
    * 22.3 Get Customer Info by Phone (جلب بيانات العميل المسجل بالهاتف تلقائياً)
    */
   async getCustomerByPhone(phone) {

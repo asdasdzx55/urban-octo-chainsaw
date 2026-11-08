@@ -2515,7 +2515,7 @@ try {
             }
             
             $full_note = "[سداد مورد: {$sup_name}] " . $note;
-            $stmt = $pdo->prepare("INSERT INTO expenses (category, amount, note, date, supplier_id, payment_method) VALUES ('سداد موردين', ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO expenses (category, amount, note, date, supplier_id, payment_method, synced) VALUES ('سداد موردين', ?, ?, ?, ?, ?, 0)");
             $stmt->execute([$amount, $full_note, $date, $sup_id ?: null, $pm]);
             
             echo json_encode([
@@ -2630,7 +2630,7 @@ try {
             }
 
             try {
-                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_code, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, ?, 'سند قبض', ?, ?, ?, ?)");
+                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_code, customer_name, type, amount, payment_method, note, created_at, synced) VALUES (?, ?, ?, 'سند قبض', ?, ?, ?, ?, 0)");
                 $ins_v->execute([$cust_id ?: null, $cust_code ?: null, $cust_name, $amount, $pm, $note, $date]);
             } catch (Exception $e) {}
 
@@ -2667,7 +2667,7 @@ try {
             }
 
             try {
-                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_code, customer_name, type, amount, payment_method, note, created_at) VALUES (?, ?, ?, 'سند صرف', ?, ?, ?, ?)");
+                $ins_v = $pdo->prepare("INSERT INTO customer_vouchers (customer_id, customer_code, customer_name, type, amount, payment_method, note, created_at, synced) VALUES (?, ?, ?, 'سند صرف', ?, ?, ?, ?, 0)");
                 $ins_v->execute([$cust_id ?: null, $cust_code ?: null, $cust_name, $amount, $pm, $note, $date]);
             } catch (Exception $e) {}
 
@@ -2708,8 +2708,21 @@ try {
             } catch (Exception $e) {}
 
             try {
-                $o_stmt = $pdo->prepare("SELECT CONCAT('فاتورة مبيعات #', id) as type, total_price as amount, payment_method, notes as note, id as reference, created_at as date FROM orders WHERE (customer_id = ? OR customer_phone = ?) ORDER BY id DESC LIMIT 50");
-                $o_stmt->execute([$actual_id, $cust['phone'] ?? '']);
+                $c_phone = trim($cust['phone'] ?? '');
+                $o_stmt = $pdo->prepare("
+                    SELECT 
+                        CONCAT('فاتورة مبيعات #', id) as type, 
+                        total_price as amount, 
+                        payment_method, 
+                        order_details as note, 
+                        invoice_barcode as reference, 
+                        created_at as date 
+                    FROM orders 
+                    WHERE (customer_phone = ? AND customer_phone != '') 
+                       OR (customer_name = ? AND customer_name != '')
+                    ORDER BY id DESC LIMIT 50
+                ");
+                $o_stmt->execute([$c_phone, $actual_name]);
                 $orders_tx = $o_stmt->fetchAll(PDO::FETCH_ASSOC);
                 $transactions = array_merge($transactions, $orders_tx);
             } catch (Exception $e) {}

@@ -510,7 +510,7 @@ class CustomersController {
   }
 
   openVoucherModal(customerCode, type = 'receipt') {
-    const cust = this.customers.find(c => (c.code === customerCode || c.id === customerCode));
+    const cust = this.customers.find(c => String(c.code) === String(customerCode) || String(c.id) === String(customerCode));
     if (!cust) return;
 
     this.selectedCustomer = cust;
@@ -521,10 +521,10 @@ class CustomersController {
 
     const titleEl = document.getElementById('cust-voucher-modal-title');
     const subtitleEl = document.getElementById('cust-voucher-modal-subtitle');
-    const custNameEl = document.getElementById('cust-voucher-name');
-    const custBalEl = document.getElementById('cust-voucher-balance');
-    const amountInp = document.getElementById('cust-voucher-amount');
-    const noteInp = document.getElementById('cust-voucher-note');
+    const custNameEl = document.getElementById('cust-modal-voucher-name') || document.getElementById('cust-voucher-name');
+    const custBalEl = document.getElementById('cust-modal-voucher-balance') || document.getElementById('cust-voucher-balance');
+    const amountInp = document.getElementById('cust-modal-voucher-amount') || document.getElementById('cust-voucher-amount');
+    const noteInp = document.getElementById('cust-modal-voucher-note') || document.getElementById('cust-voucher-note');
 
     if (custNameEl) custNameEl.textContent = `${cust.name} (كود #${cust.code || cust.id})`;
     
@@ -571,11 +571,13 @@ class CustomersController {
   }
 
   async submitVoucher() {
+    if (this.isSubmitting) return;
     if (!this.selectedCustomer) return;
 
-    const amountInp = document.getElementById('cust-voucher-amount');
-    const noteInp = document.getElementById('cust-voucher-note');
-    const pmInp = document.getElementById('cust-voucher-method');
+    this.isSubmitting = true;
+    const amountInp = document.getElementById('cust-modal-voucher-amount') || document.getElementById('cust-voucher-amount');
+    const noteInp = document.getElementById('cust-modal-voucher-note') || document.getElementById('cust-voucher-note');
+    const pmInp = document.getElementById('cust-modal-voucher-method') || document.getElementById('cust-voucher-method');
 
     const amount = parseFloat(amountInp?.value || 0);
     const note = noteInp?.value.trim() || '';
@@ -614,11 +616,13 @@ class CustomersController {
     } catch (err) {
       window.app?.showLoading(false);
       window.app?.showToast('خطأ في الاتصال بالسيرفر: ' + err.message, 'error');
+    } finally {
+      this.isSubmitting = false;
     }
   }
 
   async openLedgerModal(customerCode) {
-    const cust = this.customers.find(c => (c.code === customerCode || c.id === customerCode));
+    const cust = this.customers.find(c => String(c.code) === String(customerCode) || String(c.id) === String(customerCode));
     if (!cust) return;
 
     this.selectedCustomer = cust;

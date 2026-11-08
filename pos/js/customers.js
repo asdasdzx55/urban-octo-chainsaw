@@ -462,7 +462,7 @@ class CustomersController {
     if (mobileCards) mobileCards.innerHTML = `<div class="py-6 text-center text-gray-400 text-xs">جاري تحميل حركات الحساب...</div>`;
 
     try {
-      const res = await window.api.get('get_customer_ledger', { customer_id: cust.id, customer_name: cust.name });
+      const res = await window.api.get('get_customer_ledger', { customer_id: cust.id, customer_code: cust.code, customer_name: cust.name });
       if (res && res.success && Array.isArray(res.transactions)) {
         if (res.transactions.length === 0) {
           if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">لا توجد حركات مسجلة حتى الآن</td></tr>`;

@@ -2682,12 +2682,18 @@ try {
         // ============================================================
         case 'get_customer_ledger':
             $cust_id = (int)($_GET['customer_id'] ?? $_POST['customer_id'] ?? 0);
+            $cust_code = (int)($_GET['customer_code'] ?? $_POST['customer_code'] ?? 0);
             $cust_name = trim($_GET['customer_name'] ?? $_POST['customer_name'] ?? '');
 
             $cust = null;
             if ($cust_id > 0) {
-                $c_stmt = $pdo->prepare("SELECT * FROM customers WHERE id = ? OR code = ? LIMIT 1");
-                $c_stmt->execute([$cust_id, $cust_id]);
+                $c_stmt = $pdo->prepare("SELECT * FROM customers WHERE id = ? LIMIT 1");
+                $c_stmt->execute([$cust_id]);
+                $cust = $c_stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$cust && $cust_code > 0) {
+                $c_stmt = $pdo->prepare("SELECT * FROM customers WHERE code = ? LIMIT 1");
+                $c_stmt->execute([$cust_code]);
                 $cust = $c_stmt->fetch(PDO::FETCH_ASSOC);
             }
             if (!$cust && !empty($cust_name)) {
@@ -2697,12 +2703,25 @@ try {
             }
 
             $actual_id = $cust ? (int)$cust['id'] : $cust_id;
-            $actual_code = $cust ? (int)($cust['code'] ?? $actual_id) : $cust_id;
-            $actual_name = $cust ? $cust['name'] : $cust_name;
+            $actual_code = $cust ? (int)($cust['code'] ?? 0) : $cust_code;
+            $actual_name = $cust ? trim($cust['name']) : $cust_name;
 
             $transactions = [];
             try {
-                $stmt = $pdo->prepare("SELECT type, amount, payment_method, note, reference, created_at as date FROM customer_vouchers WHERE customer_id = ? OR customer_code = ? OR customer_name = ? ORDER BY id DESC LIMIT 100");
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        type, 
+                        amount, 
+                        payment_method, 
+                        note, 
+                        reference, 
+                        created_at as date 
+                    FROM customer_vouchers 
+                    WHERE (customer_id = ? AND customer_id > 0) 
+                       OR (customer_code = ? AND customer_code > 0) 
+                       OR (customer_name = ? AND customer_name != '') 
+                    ORDER BY id DESC LIMIT 100
+                ");
                 $stmt->execute([$actual_id, $actual_code, $actual_name]);
                 $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
             } catch (Exception $e) {}

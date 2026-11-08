@@ -260,7 +260,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.5.6</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.7.6</span>
         </div>
       </div>
     </div>
@@ -530,7 +530,7 @@
           <span>قفل شاشة الكاشير (تسجيل خروج) 🔒</span>
         </button>
 
-        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.5.6</p>
+        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.7.6</p>
       </div>
 
     </div>
@@ -2495,11 +2495,11 @@
             <i data-lucide="users" class="w-3.5 h-3.5"></i>
             <span>👥 دليل العملاء</span>
           </button>
-          <button type="button" onclick="window.customersController.voucherType='receipt'; window.customersController.setSubView('voucher')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="voucher">
+          <button type="button" onclick="window.customersController.voucherType='receipt'; window.customersController.setSubView('voucher')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="voucher-receipt">
             <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-500"></i>
             <span>📥 سند قبض (مقبوض)</span>
           </button>
-          <button type="button" onclick="window.customersController.voucherType='payment'; window.customersController.setSubView('voucher')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="voucher">
+          <button type="button" onclick="window.customersController.voucherType='payment'; window.customersController.setSubView('voucher')" class="cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer" data-subview="voucher-payment">
             <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-rose-500"></i>
             <span>📤 سند صرف (دفع)</span>
           </button>
@@ -2668,6 +2668,17 @@
               <span class="text-xs font-bold text-gray-400">الرصيد الصافي:</span>
               <span id="cust-ledger-balance" class="font-mono font-black text-sm">0.00 ج.م</span>
             </div>
+          </div>
+
+          <!-- Customer Selector Dropdown for Ledger -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200 dark:border-gray-600">
+            <label for="cust-ledger-customer-select" class="text-xs font-bold text-gray-600 dark:text-gray-300 shrink-0 flex items-center gap-1.5">
+              <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i>
+              <span>اختر العميل:</span>
+            </label>
+            <select id="cust-ledger-customer-select" onchange="window.customersController.onLedgerCustomerChange()" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-white">
+              <option value="">-- اختر العميل بالاسم أو الكود --</option>
+            </select>
           </div>
 
           <div class="rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -4760,7 +4771,7 @@
   <script src="js/employees.js?v=2.7.5"></script>
   <script src="js/pwa.js?v=2.7.5"></script>
   <script src="js/auth.js?v=2.7.5"></script>
-  <script src="js/customers.js?v=2.7.5"></script>
+  <script src="js/customers.js?v=2.7.6"></script>
   <script src="js/app.js?v=2.7.5"></script>
 </body>
 </html>

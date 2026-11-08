@@ -233,15 +233,15 @@ class CustomersController {
 
           <!-- Actions Toolbar -->
           <div class="pt-2 border-t border-gray-100 dark:border-gray-700/60 grid grid-cols-3 gap-1.5">
-            <button onclick="window.customersController.openVoucherModal(${c.code || c.id}, 'receipt')" class="py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs">
+            <button onclick="window.customersController.openVoucherSubView(${c.id}, 'receipt')" class="py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer">
               <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
               <span>قبض [مقبوض]</span>
             </button>
-            <button onclick="window.customersController.openVoucherModal(${c.code || c.id}, 'pay')" class="py-2 px-1 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs">
+            <button onclick="window.customersController.openVoucherSubView(${c.id}, 'pay')" class="py-2 px-1 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer">
               <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
               <span>صرف [دفع]</span>
             </button>
-            <button onclick="window.customersController.openLedgerModal(${c.code || c.id})" class="py-2 px-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs">
+            <button onclick="window.customersController.openLedgerSubView(${c.id})" class="py-2 px-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer">
               <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
               <span>كشف حساب</span>
             </button>
@@ -255,20 +255,32 @@ class CustomersController {
   }
 
   // ==================== SUBVIEWS (TABS) NAVIGATION ====================
-  setSubView(subview) {
-    this.currentSubView = subview;
-    const listEl = document.getElementById('cust-subview-list');
-    const voucherEl = document.getElementById('cust-subview-voucher');
-    const ledgerEl = document.getElementById('cust-subview-ledger');
-
+  updateSubTabButtons(subview) {
     document.querySelectorAll('.cust-subtab-btn').forEach(btn => {
-      const match = btn.getAttribute('data-subview') === subview;
+      let match = false;
+      const dataSub = btn.getAttribute('data-subview');
+      if (subview === 'list' && dataSub === 'list') match = true;
+      else if (subview === 'ledger' && dataSub === 'ledger') match = true;
+      else if (subview === 'voucher') {
+        if (this.voucherType === 'payment' && (dataSub === 'voucher-payment' || dataSub === 'voucher')) match = true;
+        else if (this.voucherType !== 'payment' && (dataSub === 'voucher-receipt' || dataSub === 'voucher')) match = true;
+      }
+
       if (match) {
         btn.className = 'cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1.5 transition cursor-pointer';
       } else {
         btn.className = 'cust-subtab-btn px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition cursor-pointer';
       }
     });
+  }
+
+  setSubView(subview) {
+    this.currentSubView = subview;
+    const listEl = document.getElementById('cust-subview-list');
+    const voucherEl = document.getElementById('cust-subview-voucher');
+    const ledgerEl = document.getElementById('cust-subview-ledger');
+
+    this.updateSubTabButtons(subview);
 
     listEl?.classList.add('hidden');
     voucherEl?.classList.add('hidden');
@@ -288,16 +300,82 @@ class CustomersController {
     if (window.lucide) window.lucide.createIcons();
   }
 
+  openVoucherSubView(customerIdentifier, type = 'receipt') {
+    if (window.app && typeof window.app.switchView === 'function') {
+      window.app.switchView('customers');
+    }
+    this.voucherType = (type === 'pay' || type === 'payment') ? 'payment' : 'receipt';
+    this.currentSubView = 'voucher';
+
+    this.updateSubTabButtons('voucher');
+
+    const listEl = document.getElementById('cust-subview-list');
+    const voucherEl = document.getElementById('cust-subview-voucher');
+    const ledgerEl = document.getElementById('cust-subview-ledger');
+
+    listEl?.classList.add('hidden');
+    ledgerEl?.classList.add('hidden');
+    voucherEl?.classList.remove('hidden');
+
+    this.populateVoucherForm(customerIdentifier);
+
+    setTimeout(() => {
+      voucherEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const amountInp = document.getElementById('cust-voucher-amount');
+      if (amountInp) {
+        amountInp.focus();
+        if (amountInp.value) amountInp.select();
+      }
+    }, 120);
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  openLedgerSubView(customerIdentifier) {
+    if (window.app && typeof window.app.switchView === 'function') {
+      window.app.switchView('customers');
+    }
+    this.currentSubView = 'ledger';
+    this.updateSubTabButtons('ledger');
+
+    const listEl = document.getElementById('cust-subview-list');
+    const voucherEl = document.getElementById('cust-subview-voucher');
+    const ledgerEl = document.getElementById('cust-subview-ledger');
+
+    listEl?.classList.add('hidden');
+    voucherEl?.classList.add('hidden');
+    ledgerEl?.classList.remove('hidden');
+
+    this.populateInlineLedger(customerIdentifier);
+
+    setTimeout(() => {
+      ledgerEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
   populateVoucherForm(preselectedId = null) {
     const select = document.getElementById('cust-voucher-customer-id');
     if (!select) return;
 
+    let targetCust = null;
+    if (preselectedId !== null && preselectedId !== undefined && preselectedId !== '') {
+      targetCust = this.customers.find(c => c.id == preselectedId) || 
+                   this.customers.find(c => c.code == preselectedId) ||
+                   this.customers.find(c => String(c.id) === String(preselectedId) || String(c.code) === String(preselectedId));
+    }
+
     select.innerHTML = '<option value="">-- اختر العميل بالاسم أو الكود --</option>' +
       this.customers.map(c => `
-        <option value="${c.id}" ${preselectedId && (c.id === preselectedId || c.code === preselectedId) ? 'selected' : ''}>
+        <option value="${c.id}" ${targetCust && targetCust.id === c.id ? 'selected' : ''}>
           #${c.code || c.id} - ${c.name} (${c.balance < 0 ? `آجل مطلوب: ${Math.abs(c.balance).toFixed(2)} ج.م` : c.balance > 0 ? `رصيد دائن: ${c.balance.toFixed(2)} ج.م` : 'خالص'})
         </option>
       `).join('');
+
+    if (targetCust) {
+      select.value = String(targetCust.id);
+    }
 
     const titleEl = document.getElementById('cust-voucher-title');
     const badgeEl = document.getElementById('cust-voucher-type-badge');
@@ -331,12 +409,12 @@ class CustomersController {
     const previewEl = document.getElementById('cust-voucher-preview');
     const amountInp = document.getElementById('cust-voucher-amount');
     const noteInp = document.getElementById('cust-voucher-note');
-    if (!select || !previewEl) return;
+    if (!select) return;
 
     const custId = parseInt(select.value, 10);
-    const cust = this.customers.find(c => c.id === custId || c.code === custId);
+    const cust = this.customers.find(c => c.id === custId);
     if (!cust) {
-      previewEl.innerHTML = '';
+      if (previewEl) previewEl.innerHTML = '';
       return;
     }
 
@@ -344,30 +422,36 @@ class CustomersController {
     let balBadge = '';
     if (cust.balance < 0) {
       balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200">المديونية الحالية: ${absDebt} ج.م (آجل مطلوب)</span>`;
-      if (amountInp && !amountInp.value && this.voucherType !== 'payment') {
+      if (amountInp && this.voucherType !== 'payment') {
         amountInp.value = absDebt;
       }
     } else if (cust.balance > 0) {
       balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">رصيد دائن: ${cust.balance.toFixed(2)} ج.م</span>`;
+      if (amountInp && this.voucherType === 'payment') {
+        amountInp.value = Math.abs(cust.balance).toFixed(2);
+      }
     } else {
       balBadge = `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-500">الحساب خالص (0.00 ج.م)</span>`;
+      if (amountInp) amountInp.value = '';
     }
 
-    previewEl.innerHTML = `
-      <div class="p-3 rounded-2xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-          <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i>
-          <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${cust.name} (كود #${cust.code || cust.id})</span>
+    if (previewEl) {
+      previewEl.innerHTML = `
+        <div class="p-3 rounded-2xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i>
+            <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${cust.name} (كود #${cust.code || cust.id})</span>
+          </div>
+          ${balBadge}
         </div>
-        ${balBadge}
-      </div>
-    `;
+      `;
+    }
 
-    if (noteInp && !noteInp.value) {
+    if (noteInp) {
       noteInp.value = this.voucherType === 'payment' ? `صرف نقدي لعميل #${cust.code || cust.id}` : `دفعة نقدية من حساب الآجل - عميل #${cust.code || cust.id}`;
     }
 
-    if (window.lucide) window.lucide.createIcons({ root: previewEl });
+    if (window.lucide && previewEl) window.lucide.createIcons({ root: previewEl });
   }
 
   setFullRemainingVoucherAmount() {
@@ -438,13 +522,27 @@ class CustomersController {
 
   async populateInlineLedger(preselectedId = null) {
     let cust = null;
-    if (preselectedId) {
-      cust = this.customers.find(c => c.id === preselectedId || c.code === preselectedId);
+    if (preselectedId !== null && preselectedId !== undefined && preselectedId !== '') {
+      cust = this.customers.find(c => c.id == preselectedId) || 
+             this.customers.find(c => c.code == preselectedId) ||
+             this.customers.find(c => String(c.id) === String(preselectedId) || String(c.code) === String(preselectedId));
     }
     if (!cust) {
       cust = this.customers.find(c => c.balance < 0) || this.customers[0];
     }
     if (!cust) return;
+
+    // Populate and update customer selector inside ledger subview
+    const select = document.getElementById('cust-ledger-customer-select');
+    if (select) {
+      select.innerHTML = '<option value="">-- اختر العميل بالاسم أو الكود --</option>' +
+        this.customers.map(c => `
+          <option value="${c.id}" ${c.id === cust.id ? 'selected' : ''}>
+            #${c.code || c.id} - ${c.name} (${c.balance < 0 ? `آجل مطلوب: ${Math.abs(c.balance).toFixed(2)} ج.م` : c.balance > 0 ? `دائن: ${c.balance.toFixed(2)} ج.م` : 'خالص'})
+          </option>
+        `).join('');
+      select.value = String(cust.id);
+    }
 
     const titleEl = document.getElementById('cust-ledger-title');
     const balEl = document.getElementById('cust-ledger-balance');
@@ -509,7 +607,15 @@ class CustomersController {
     }
   }
 
+  onLedgerCustomerChange() {
+    const select = document.getElementById('cust-ledger-customer-select');
+    if (!select || !select.value) return;
+    this.populateInlineLedger(parseInt(select.value, 10));
+  }
+
   openVoucherModal(customerCode, type = 'receipt') {
+    this.openVoucherSubView(customerCode, type);
+    return;
     const cust = this.customers.find(c => String(c.code) === String(customerCode) || String(c.id) === String(customerCode));
     if (!cust) return;
 
@@ -622,6 +728,8 @@ class CustomersController {
   }
 
   async openLedgerModal(customerCode) {
+    this.openLedgerSubView(customerCode);
+    return;
     const cust = this.customers.find(c => String(c.code) === String(customerCode) || String(c.id) === String(customerCode));
     if (!cust) return;
 

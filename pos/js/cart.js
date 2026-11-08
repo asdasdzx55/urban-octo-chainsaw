@@ -29,6 +29,8 @@ class POSCart {
       const completed = JSON.parse(localStorage.getItem('pos_completed_orders') || '[]');
       if (completed.length > 0) this.lastInvoice = completed[0];
     } catch(e) {}
+    // Restore active cart from localStorage on startup / page reload
+    this.loadFromStorage();
   }
 
   /* ==================== CART ITEM ACTIONS ==================== */
@@ -215,7 +217,87 @@ class POSCart {
     this.render();
   }
 
-  clearCart() {
+  /* ==================== CART PERSISTENCE (LOCALSTORAGE) ==================== */
+  saveToStorage() {
+    try {
+      if (this.items && this.items.length > 0) {
+        const state = {
+          items: this.items,
+          discountAmount: this.discountAmount,
+          taxRate: this.taxRate,
+          paymentMethod: this.paymentMethod,
+          orderType: this.orderType,
+          deliveryPayMode: this.deliveryPayMode,
+          deliveryPrepaidMethod: this.deliveryPrepaidMethod,
+          deliveryPrepaidRef: this.deliveryPrepaidRef,
+          deliveryFee: this.deliveryFee,
+          deliveryPerson: this.deliveryPerson,
+          customerName: this.customerName,
+          customerPhone: this.customerPhone,
+          customerAddress: this.customerAddress,
+          customerCode: this.customerCode || '',
+          cashierNotes: this.cashierNotes,
+          paidAmount: this.paidAmount,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('pos_active_cart', JSON.stringify(state));
+      } else {
+        localStorage.removeItem('pos_active_cart');
+      }
+    } catch (e) {
+      console.warn('[POSCart] Error saving cart to storage:', e);
+    }
+  }
+
+  loadFromStorage() {
+    try {
+      const saved = localStorage.getItem('pos_active_cart');
+      if (!saved) return false;
+      const data = JSON.parse(saved);
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        this.items = data.items.map(item => ({
+          cart_key: item.cart_key || String(item.product_id),
+          product_id: item.product_id,
+          name: item.name,
+          qty: parseFloat(item.qty || 1),
+          price: parseFloat(item.price || 0),
+          cost: parseFloat(item.cost || 0),
+          barcode: item.barcode || '',
+          local_code: item.local_code || '',
+          unit_type: item.unit_type || 'piece',
+          unit: item.unit || 'قطعة',
+          is_pack: item.is_pack ? 1 : 0,
+          pack_name: item.pack_name || '',
+          pack_multiplier: item.pack_multiplier || 1
+        }));
+
+        this.discountAmount = Math.max(0, parseFloat(data.discountAmount || 0));
+        this.taxRate = parseFloat(data.taxRate || 0);
+        this.paymentMethod = data.paymentMethod || 'cash';
+        this.orderType = data.orderType || 'hall';
+        this.deliveryPayMode = data.deliveryPayMode || 'cod';
+        this.deliveryPrepaidMethod = data.deliveryPrepaidMethod || 'instapay';
+        this.deliveryPrepaidRef = data.deliveryPrepaidRef || '';
+        this.deliveryFee = parseFloat(data.deliveryFee || 0);
+        this.deliveryPerson = data.deliveryPerson || 'ديلفري غير معروف';
+        this.customerName = data.customerName || 'عميل نقدي';
+        this.customerPhone = data.customerPhone || '';
+        this.customerAddress = data.customerAddress || '';
+        this.customerCode = data.customerCode || '';
+        this.cashierNotes = data.cashierNotes || 'كاشير 1';
+        this.paidAmount = parseFloat(data.paidAmount || 0);
+        return true;
+      }
+    } catch (e) {
+      console.warn('[POSCart] Error restoring cart from storage:', e);
+    }
+    return false;
+  }
+
+  clearCart(confirmBefore = false) {
+    if (confirmBefore && this.items.length > 0) {
+      if (!confirm('هل أنت متأكد من تفريغ سلة المبيعات وحذف جميع الأصناف؟')) return;
+    }
     this.items = [];
     this.discountAmount = 0;
     this.paidAmount = 0;
@@ -230,6 +312,10 @@ class POSCart {
     this.customerAddress = '';
     this.customerPhone = '';
     this.customerName = 'عميل نقدي';
+    this.customerCode = '';
+    try {
+      localStorage.removeItem('pos_active_cart');
+    } catch(e) {}
     this.render();
   }
 
@@ -1310,12 +1396,14 @@ class POSCart {
       if (emptyNotice) emptyNotice.classList.remove('hidden');
       if (listContainer) listContainer.innerHTML = '';
       if (mobileListContainer) mobileListContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">السلة فارغة</p>';
+      this.saveToStorage();
       return;
     }
 
     if (emptyNotice) emptyNotice.classList.add('hidden');
     if (listContainer) listContainer.innerHTML = itemsHTML;
     if (mobileListContainer) mobileListContainer.innerHTML = itemsHTML;
+    this.saveToStorage();
   }
 
   /* ==================== CASHIER INVOICE NAVIGATION TOOLBAR ==================== */
@@ -1438,3 +1526,13 @@ class POSCart {
 }
 
 window.cart = new POSCart();
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.cart?.render();
+    });
+  } else {
+    window.cart?.render();
+  }
+}

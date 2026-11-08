@@ -18,6 +18,7 @@ class PurchasesController {
     this.paidAmount = 0;
     this.items = []; // Array of items in current purchase invoice
     this.activeCategory = 'all';
+    this.loadFromStorage();
     this.searchQuery = '';
     this.categories = [];
     this.invoiceNumber = '';
@@ -518,8 +519,40 @@ class PurchasesController {
     this.renderCart();
   }
 
+  saveToStorage() {
+    try {
+      if (this.items && this.items.length > 0) {
+        localStorage.setItem('pos_purchases_cart', JSON.stringify({
+          items: this.items,
+          selectedSupplierId: this.selectedSupplierId,
+          invoiceNumber: this.invoiceNumber,
+          invoiceDate: this.invoiceDate,
+          paidAmount: this.paidAmount
+        }));
+      } else {
+        localStorage.removeItem('pos_purchases_cart');
+      }
+    } catch (e) {}
+  }
+
+  loadFromStorage() {
+    try {
+      const saved = localStorage.getItem('pos_purchases_cart');
+      if (!saved) return;
+      const data = JSON.parse(saved);
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        this.items = data.items;
+        if (data.selectedSupplierId) this.selectedSupplierId = data.selectedSupplierId;
+        if (data.invoiceNumber) this.invoiceNumber = data.invoiceNumber;
+        if (data.invoiceDate) this.invoiceDate = data.invoiceDate;
+        if (data.paidAmount) this.paidAmount = parseFloat(data.paidAmount || 0);
+      }
+    } catch (e) {}
+  }
+
   clearPurchaseCart() {
     this.items = [];
+    try { localStorage.removeItem('pos_purchases_cart'); } catch(e) {}
     this.generateInvoiceNumber();
     this.renderCart();
   }
@@ -575,6 +608,7 @@ class PurchasesController {
     }
 
     emptyNotice?.classList.add('hidden');
+    this.saveToStorage();
     list.innerHTML = this.items.map((item, idx) => {
       const isWeight = item.unit_type === 'weight';
       const step = isWeight ? '0.25' : '1';

@@ -25,6 +25,8 @@ class App {
   async init() {
     this.applyTheme(this.theme);
     this.bindEvents();
+    // Render persistent cart items on startup
+    window.cart?.render();
 
     // Render initial products from local cache immediately (instant startup)
     if (this.products.length > 0) {

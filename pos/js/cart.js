@@ -388,10 +388,20 @@ class POSCart {
 
   /* ==================== CHECKOUT & SUBMIT SALE ==================== */
   async checkout(shouldPrint = true) {
+    if (this.isSubmitting) {
+      console.warn('Checkout already in progress, ignoring duplicate trigger.');
+      return;
+    }
     if (this.items.length === 0) {
       window.app?.showToast('سلة المشتريات فارغة!', 'error');
       return;
     }
+
+    this.isSubmitting = true;
+    const submitBtn = document.getElementById('btn-submit-payment');
+    const saveOnlyBtn = document.getElementById('btn-submit-save-only');
+    if (submitBtn) submitBtn.disabled = true;
+    if (saveOnlyBtn) saveOnlyBtn.disabled = true;
 
     const total = this.getTotal();
 
@@ -433,6 +443,7 @@ class POSCart {
 
     const payload = {
       local_sale_id: Date.now(),
+      source: 'phone_pos',
       customer_name: (this.customerName || (isDelivery ? 'عميل دليفري' : 'عميل نقدي')).trim(),
       customer_phone: (this.customerPhone || '').trim(),
       phone: (this.customerPhone || '').trim(),
@@ -602,6 +613,12 @@ class POSCart {
       } else {
         window.app?.showToast(`تم حفظ الفاتورة #${offlineOrderId} محلياً بدون طباعة (وضع أوفلاين) 💾📦`, 'info');
       }
+    } finally {
+      this.isSubmitting = false;
+      const submitBtn = document.getElementById('btn-submit-payment');
+      const saveOnlyBtn = document.getElementById('btn-submit-save-only');
+      if (submitBtn) submitBtn.disabled = false;
+      if (saveOnlyBtn) saveOnlyBtn.disabled = false;
     }
   }
 

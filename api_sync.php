@@ -366,6 +366,44 @@ try {
             $data = !empty($json_payload) ? $json_payload : $_POST;
             
             $local_id = $data['local_sale_id'] ?? null;
+            $inv_bc = $local_id ? "INV-{$local_id}" : null;
+
+            // 1. منع التكرار بناءً على باركود الفاتورة المحلي
+            if (!empty($inv_bc)) {
+                $chk = $pdo->prepare("SELECT id, invoice_barcode FROM orders WHERE invoice_barcode = ? LIMIT 1");
+                $chk->execute([$inv_bc]);
+                $existing = $chk->fetch(PDO::FETCH_ASSOC);
+                if ($existing) {
+                    echo json_encode([
+                        'success' => true,
+                        'order_id' => (int)$existing['id'],
+                        'remote_id' => (int)$existing['id'],
+                        'invoice_barcode' => $existing['invoice_barcode'] ?: $inv_bc,
+                        'message' => 'Order already recorded'
+                    ]);
+                    break;
+                }
+            }
+
+            // 2. منع التكرار العرضي خلال 15 ثانية لنفس المبلغ
+            $chk_total = (float)($data['total'] ?? 0);
+            $chk_cust = trim($data['customer'] ?? 'عميل كاشير');
+            if ($chk_total > 0) {
+                $chk2 = $pdo->prepare("SELECT id, invoice_barcode FROM orders WHERE customer_name = ? AND total_price = ? AND created_at >= (NOW() - INTERVAL 15 SECOND) ORDER BY id DESC LIMIT 1");
+                $chk2->execute([$chk_cust, $chk_total]);
+                $existing2 = $chk2->fetch(PDO::FETCH_ASSOC);
+                if ($existing2) {
+                    echo json_encode([
+                        'success' => true,
+                        'order_id' => (int)$existing2['id'],
+                        'remote_id' => (int)$existing2['id'],
+                        'invoice_barcode' => $existing2['invoice_barcode'] ?: "INV-{$existing2['id']}",
+                        'message' => 'Duplicate checkout prevented'
+                    ]);
+                    break;
+                }
+            }
+
             $customer = trim($data['customer'] ?? 'عميل كاشير');
             $phone = trim($data['phone'] ?? '');
             $address = trim($data['address'] ?? '');

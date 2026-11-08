@@ -100,7 +100,7 @@
 
   <!-- Custom POS Styles -->
   <link rel="stylesheet" href="css/pos.css?v=2.7.5">
-  <link rel="stylesheet" href="css/receipt.css?v=2.7.5">
+  <link rel="stylesheet" href="css/receipt.css?v=2.8.2">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
@@ -169,6 +169,9 @@
       } catch(e) {}
     })();
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-24 md:pb-0 lg:h-screen lg:overflow-hidden">
 
@@ -260,7 +263,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.8.1</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.8.2</span>
         </div>
       </div>
     </div>
@@ -530,7 +533,7 @@
           <span>قفل شاشة الكاشير (تسجيل خروج) 🔒</span>
         </button>
 
-        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.8.1</p>
+        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.8.2</p>
       </div>
 
     </div>
@@ -4073,7 +4076,7 @@
 
   <!-- ==================== RECEIPT PREVIEW MODAL ==================== -->
   <div id="receipt-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 hidden">
-    <div class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-3xl p-4 sm:p-5 max-w-md w-full flex flex-col gap-3.5 shadow-2xl max-h-[92vh] border border-gray-100 dark:border-gray-800 animate-scale-in">
+    <div class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-3xl p-4 sm:p-5 max-w-lg w-full flex flex-col gap-3.5 shadow-2xl max-h-[92vh] border border-gray-100 dark:border-gray-800 animate-scale-in">
       
       <div class="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-gray-800">
         <div class="flex items-center gap-2">

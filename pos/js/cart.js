@@ -928,18 +928,7 @@ class POSCart {
 
         <div class="bw-divider-solid"></div>
 
-        <!-- Return & Exchange Policy Terms -->
-        <div class="bw-terms-box">
-          <div style="font-weight: bold; margin-bottom: 2px;">تعليمات وسياسة الاستبدال والاسترجاع:</div>
-          <ul>
-            <li>• الاستبدال والاسترجاع خلال 14 يوماً بموجب أصل الفاتورة.</li>
-            <li>• يُشترط أن تكون السلعة بحالتها الأصلية غير مفتوحة وبغلافها.</li>
-            <li>• المخبوزات الطازجة والمجمدات لا تُرد بعد الاستلام حرصاً على سلامتكم.</li>
-            <li>• جميع الأسعار شاملة ضريبة القيمة المضافة 14%.</li>
-          </ul>
-        </div>
 
-        <div class="bw-divider-double"></div>
 
         <!-- Receipt Footer -->
         <div class="bw-footer">

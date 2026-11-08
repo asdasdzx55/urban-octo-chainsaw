@@ -649,6 +649,8 @@ class POSCart {
       pmDisplay = 'إنستاباي';
     } else if (inv.payment_method === 'فيزا' || inv.payment_method === 'card') {
       pmDisplay = 'بطاقة بنكية';
+    } else if (inv.payment_method === 'آجل' || inv.payment_method === 'credit') {
+      pmDisplay = 'حساب آجل (على ذمة العميل)';
     } else if (inv.payment_method) {
       pmDisplay = inv.payment_method;
     }
@@ -657,43 +659,53 @@ class POSCart {
       store_name: 'سوبر ماركت المنزل السوري',
       store_phone: '01000000000',
       store_phone2: '',
-      store_address: 'القاهرة - مصر',
-      receipt_sub: 'للمنتجات والمواد الغذائية السورية الأصلية',
-      receipt_footer: 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاستبدال والاسترجاع'
+      store_address: 'الفرع الرئيسي • شارع الجيش • خدمة التوصيل',
+      receipt_sub: 'أشهى المنتجات والمواد الغذائية السورية والشرقية',
+      receipt_footer: 'شكراً لزيارتكم • نسعد بخدمتكم دائماً ❤️'
     };
 
     const phones = [store.store_phone, store.store_phone2].filter(Boolean);
     const phonesText = phones.join(' • ');
     const totalQtyCount = inv.items ? inv.items.reduce((acc, itm) => acc + (parseFloat(itm.qty) || 1), 0) : 0;
-    const isDelivery = inv.order_type === 'delivery' || parseFloat(inv.delivery_fee) > 0 || !!inv.address;
+    const isDelivery = inv.order_type === 'delivery' || inv.order_type === 'دليفري' || parseFloat(inv.delivery_fee) > 0 || !!inv.address;
     const isPrepaid = inv.delivery_pay_mode === 'prepaid' || (parseFloat(inv.paid_amount) >= parseFloat(inv.total) && inv.amount_to_collect === 0);
+    const netTotal = parseFloat(inv.total || inv.total_price || 0);
+    const paidVal = parseFloat(inv.paid_amount || 0);
+    const changeVal = paidVal >= netTotal ? (paidVal - netTotal) : 0;
 
     return `
       <div class="bw-receipt">
         
-        <!-- Header -->
+        <!-- Store Brand Header -->
         <div class="bw-header">
+          <div class="bw-divider-top"></div>
           <h1 class="bw-title">${store.store_name}</h1>
-          <div class="bw-sub">${store.receipt_sub || 'للمنتجات والمواد الغذائية السورية'}</div>
-          ${phonesText ? `<div class="bw-info"><b>هاتف:</b> <span class="bw-mono">${phonesText}</span></div>` : ''}
-          ${store.store_address ? `<div class="bw-info"><b>العنوان:</b> ${store.store_address}</div>` : ''}
+          <div class="bw-stars">★  ★  ★</div>
+          <div class="bw-sub">${store.receipt_sub || 'أشهى المنتجات والمواد الغذائية السورية والشرقية'}</div>
+          <div class="bw-info"><b>الفرع:</b> ${store.store_address || 'الفرع الرئيسي • شارع الجيش • خدمة التوصيل'}</div>
+          ${phonesText ? `<div class="bw-info"><b>هاتف وخدمة عملاء:</b> <span class="bw-mono">${phonesText}</span></div>` : ''}
+          <div class="bw-tax-reg">س.ت: 45210  •  ر.ض: 541-890-332</div>
         </div>
 
-        <div class="bw-divider-double"></div>
+        <!-- Framed Invoice Title Banner -->
+        <div class="bw-title-banner">فاتورة مبيعات نقدية مبسطة</div>
 
-        <!-- Invoice Details Table -->
+        <!-- Invoice Details Box -->
         <table class="bw-meta-table">
           <tr>
-            <td style="width: 50%;"><b>رقم الفاتورة:</b> <span class="bw-mono">#${inv.order_id}</span></td>
+            <td style="width: 50%;"><b>رقم الفاتورة:</b> <span class="bw-mono font-bold">#${inv.order_id}</span></td>
             <td style="width: 50%; text-align: left;"><b>التاريخ:</b> <span class="bw-mono">${inv.created_at || new Date().toLocaleString('ar-EG')}</span></td>
           </tr>
           <tr>
-            <td><b>الكاشير:</b> ${inv.cashier || 'كاشير 1'}</td>
-            <td style="text-align: left;"><b>العميل:</b> ${inv.customer_name || 'عميل نقدي'}</td>
+            <td><b>الكاشير:</b> ${inv.cashier || inv.cashier_name || 'كاشير 1'} (نقطة #1)</td>
+            <td style="text-align: left;"><b>طريقة الدفع:</b> ${pmDisplay}</td>
           </tr>
-          <tr>
-            <td colspan="2"><b>طريقة الدفع:</b> ${pmDisplay}</td>
-          </tr>
+          ${(inv.customer_name && inv.customer_name !== 'عميل نقدي') ? `
+            <tr>
+              <td><b>العميل:</b> ${inv.customer_name}</td>
+              <td style="text-align: left;"><b>الهاتف:</b> <span class="bw-mono">${inv.customer_phone || inv.phone || '-'}</span></td>
+            </tr>
+          ` : ''}
         </table>
 
         <!-- Delivery Box If Applicable -->
@@ -702,8 +714,8 @@ class POSCart {
             <div class="bw-delivery-title">🛵 طلب توصيل منزلي (دليفري)</div>
             <table class="bw-meta-table">
               <tr>
-                <td><b>الهاتف:</b> <span class="bw-mono">${inv.customer_phone || inv.phone || '-'}</span></td>
-                <td style="text-align: left;"><b>الطيار:</b> ${inv.delivery_person || 'غير محدد'}</td>
+                <td><b>هاتف العميل:</b> <span class="bw-mono">${inv.customer_phone || inv.phone || '-'}</span></td>
+                <td style="text-align: left;"><b>الطيار:</b> ${inv.delivery_person || 'كابتن التوصيل'}</td>
               </tr>
               ${inv.address ? `
                 <tr>
@@ -712,7 +724,7 @@ class POSCart {
               ` : ''}
               <tr>
                 <td colspan="2" style="text-align: center; font-weight: bold; padding-top: 3px; border-top: 1px dashed #000;">
-                  ${isPrepaid ? '✅ مدفوعة مسبقاً (لا يُحصل أي مبلغ)' : `⏳ تحصيل عند الاستلام: ${parseFloat(inv.total).toFixed(2)} ج.م`}
+                  ${isPrepaid ? '✅ مدفوعة مسبقاً (لا يُحصل أي مبلغ من العميل)' : `⏳ مطلوب تحصيل عند الاستلام: ${netTotal.toFixed(2)} ج.م`}
                 </td>
               </tr>
             </table>
@@ -721,7 +733,7 @@ class POSCart {
 
         <div class="bw-divider-solid"></div>
 
-        <!-- Items Table (جدول الأصناف الأسود والأبيض المنسق) -->
+        <!-- Items Table -->
         <table class="bw-items-table">
           <thead>
             <tr>
@@ -734,28 +746,38 @@ class POSCart {
           </thead>
           <tbody>
             ${inv.items && inv.items.map((item, idx) => {
-              const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
-              const qtyDisplay = item.is_pack 
-                ? `${item.qty} كرتونة` 
-                : (isWeight ? (item.qty < 1 ? `${Math.round(item.qty * 1000)} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : `${item.qty} ق`);
-              const lineTotal = (parseFloat(item.price) * parseFloat(item.qty)).toFixed(2);
+              const rawQty = parseFloat(item.qty) || 1;
+              const isWeight = item.unit_type === 'weight' || item.unit === 'كجم' || (rawQty % 1 !== 0);
+              let qtyDisplay = '';
+              if (isWeight) {
+                qtyDisplay = rawQty < 1 ? `${Math.round(rawQty * 1000)} جم` : `${rawQty.toFixed(3)} كجم`;
+              } else if (item.is_pack) {
+                qtyDisplay = `${Math.round(rawQty)} كرتونة`;
+              } else {
+                qtyDisplay = `${Math.round(rawQty)} ق`;
+              }
+              const itemCode = item.local_code || item.code || item.barcode;
+              const lineTotal = (parseFloat(item.price) * rawQty).toFixed(2);
               return `
                 <tr>
                   <td class="td-num">${idx + 1}</td>
                   <td class="td-name">
                     <div class="item-title">${item.name}</div>
-                    ${item.local_code ? `<span class="item-code">كود: ${item.local_code}</span>` : ''}
+                    ${itemCode ? `<span class="item-code">كود: ${itemCode}</span>` : ''}
                   </td>
                   <td class="td-qty">${qtyDisplay}</td>
                   <td class="td-price">${parseFloat(item.price).toFixed(2)}</td>
-                  <td class="td-total">${lineTotal}</td>
+                  <td class="td-total">${lineTotal} ج.م</td>
                 </tr>
               `;
             }).join('')}
           </tbody>
         </table>
 
-        <div class="bw-divider-solid"></div>
+        <!-- Items Count & Quantity Summary -->
+        <div class="bw-summary-bar">
+          عدد الأصناف: <b>${inv.items ? inv.items.length : 0}</b> صنف  •  إجمالي الكميات والأوزان: <b>${totalQtyCount % 1 === 0 ? totalQtyCount : totalQtyCount.toFixed(3)}</b>
+        </div>
 
         <!-- Totals & Payment Summary Table -->
         <table class="bw-summary-table">
@@ -767,14 +789,7 @@ class POSCart {
           ${parseFloat(inv.discount) > 0 ? `
             <tr>
               <td>الخصم الممنوح:</td>
-              <td class="bw-val">-${parseFloat(inv.discount).toFixed(2)} ج.م</td>
-            </tr>
-          ` : ''}
-
-          ${(inv.payment_fee && parseFloat(inv.payment_fee) > 0) ? `
-            <tr>
-              <td>رسوم / ضريبة دفع (${inv.payment_method || 'إلكتروني'}):</td>
-              <td class="bw-val">+${parseFloat(inv.payment_fee).toFixed(2)} ج.م</td>
+              <td class="bw-val" style="color: #b91c1c;">-${parseFloat(inv.discount).toFixed(2)} ج.م</td>
             </tr>
           ` : ''}
 
@@ -784,49 +799,65 @@ class POSCart {
               <td class="bw-val">+${parseFloat(inv.delivery_fee).toFixed(2)} ج.م</td>
             </tr>
           ` : ''}
-
-          <tr class="bw-grand-row">
-            <td>الإجمالي النهائي المطلوب:</td>
-            <td class="bw-grand-val">${parseFloat(inv.total).toFixed(2)} ج.م</td>
-          </tr>
-
-          ${(!isDelivery && (inv.payment_method === 'cash' || inv.payment_method === 'نقدي' || !inv.payment_method)) ? `
-            <tr>
-              <td>المبلغ المدفوع نقداً:</td>
-              <td class="bw-val">${parseFloat(inv.paid_amount || inv.total).toFixed(2)} ج.م</td>
-            </tr>
-            <tr>
-              <td>المتبقي (الباقي للعميل):</td>
-              <td class="bw-val" style="font-weight: 900; font-size: 13px;">${parseFloat(inv.change || 0).toFixed(2)} ج.م</td>
-            </tr>
-          ` : ''}
-
-          <tr>
-            <td colspan="2" style="text-align: center; font-size: 10px; padding-top: 4px; border-top: 1px dashed #000;">
-              عدد الأصناف: <b>${inv.items ? inv.items.length : 0}</b> صنف (<b>${totalQtyCount % 1 === 0 ? totalQtyCount : totalQtyCount.toFixed(3)}</b> كمية)
-            </td>
-          </tr>
         </table>
+
+        <!-- High-Visibility Grand Total Box -->
+        <div class="bw-grand-box">
+          <span class="bw-grand-label">الإجمالي الصافي النهائي:</span>
+          <span class="bw-grand-val">${netTotal.toFixed(2)} ج.م</span>
+        </div>
+
+        ${(!isDelivery && paidVal > 0) ? `
+          <table class="bw-summary-table" style="margin-top: 3px;">
+            <tr>
+              <td>المبلغ المدفوع نقدياً:</td>
+              <td class="bw-val">${paidVal.toFixed(2)} ج.م</td>
+            </tr>
+            <tr>
+              <td><b>المتبقي (الباقي للعميل):</b></td>
+              <td class="bw-val" style="font-size: 13px; font-weight: 900;">${changeVal.toFixed(2)} ج.م</td>
+            </tr>
+          </table>
+        ` : ''}
+
+        ${(inv.payment_method === 'آجل' || inv.payment_method === 'credit') ? `
+          <div style="text-align: center; font-weight: bold; font-size: 11px; padding: 4px; background: #fef3c7; border: 1px solid #d97706; border-radius: 4px; margin: 4px 0;">
+            ⚠️ حساب آجل على ذمة العميل
+          </div>
+        ` : ''}
 
         <!-- Barcode Section -->
         <div class="bw-barcode">
           <svg class="receipt-svg-barcode" data-barcode="${inv.invoice_barcode || `INV-${inv.order_id}`}"></svg>
-          <div class="bw-barcode-text">${inv.invoice_barcode || `INV-${inv.order_id}`}</div>
+          <div class="bw-barcode-text">* ${inv.invoice_barcode || `INV-${inv.order_id}`} *</div>
+        </div>
+
+        <div class="bw-divider-solid"></div>
+
+        <!-- Return & Exchange Policy Terms -->
+        <div class="bw-terms-box">
+          <div style="font-weight: bold; margin-bottom: 2px;">تعليمات وسياسة الاستبدال والاسترجاع:</div>
+          <ul>
+            <li>• الاستبدال والاسترجاع خلال 14 يوماً بموجب أصل الفاتورة.</li>
+            <li>• يُشترط أن تكون السلعة بحالتها الأصلية غير مفتوحة وبغلافها.</li>
+            <li>• المخبوزات الطازجة والمجمدات لا تُرد بعد الاستلام حرصاً على سلامتكم.</li>
+            <li>• جميع الأسعار شاملة ضريبة القيمة المضافة 14%.</li>
+          </ul>
         </div>
 
         <div class="bw-divider-double"></div>
 
         <!-- Receipt Footer -->
         <div class="bw-footer">
-          <p><b>${store.receipt_footer || 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاسترجاع'}</b></p>
-          <p style="font-size: 9.5px; margin-top: 2px;">الأسعار شاملة الضريبة • نظام كاشير المنزل السوري 2026</p>
+          <p class="bw-footer-farewell"><b>${store.receipt_footer || 'شكراً لزيارتكم • نسعد بخدمتكم دائماً ❤️'}</b></p>
+          <p style="font-size: 9.5px; color: #444; margin-top: 2px;">نظام كاشير المنزل السوري 2026 • Syrian House POS</p>
         </div>
 
       </div>
     `;
   }
 
-  renderBarcodes(inv) {
+    renderBarcodes(inv) {
     if (!window.JsBarcode) return;
     try {
       document.querySelectorAll(".receipt-svg-barcode").forEach(el => {
@@ -892,23 +923,46 @@ class POSCart {
 
     const cleanItems = (Array.isArray(rawItems) ? rawItems : []).map(it => ({
       name: it.name || it.item_name || 'صنف',
-      qty: it.qty || it.quantity || 1,
-      price: it.price || it.unit_price || 0,
-      total: it.total || it.total_price || ((it.qty || 1) * (it.price || 0))
+      qty: parseFloat(it.qty || it.quantity || 1),
+      price: parseFloat(it.price || it.unit_price || 0),
+      total: parseFloat(it.total || it.total_price || ((it.qty || 1) * (it.price || 0))),
+      unit: it.unit || it.unit_type || '',
+      local_code: it.local_code || it.code || it.barcode || '',
+      is_pack: !!it.is_pack
     }));
+
+    const store = window.settingsController ? window.settingsController.getStoreInfo() : {
+      store_name: 'سوبر ماركت المنزل السوري',
+      store_phone: '01000000000',
+      store_phone2: '',
+      store_address: 'الفرع الرئيسي • شارع الجيش • خدمة التوصيل',
+      receipt_sub: 'أشهى المنتجات والمواد الغذائية السورية والشرقية',
+      receipt_footer: 'شكراً لزيارتكم • نسعد بخدمتكم دائماً ❤️'
+    };
+
+    const isDelivery = invoice.order_type === 'delivery' || invoice.order_type === 'دليفري' || parseFloat(invoice.delivery_fee) > 0 || !!invoice.address;
 
     const payload = {
       order_id: invoice.order_id || invoice.id || '',
-      invoice_barcode: invoice.invoice_barcode || '',
+      invoice_barcode: invoice.invoice_barcode || `INV-${invoice.order_id || invoice.id || '000'}`,
       date: invoice.date || invoice.created_at || new Date().toLocaleString('ar-EG'),
-      cashier_name: invoice.cashier_name || 'كاشير 1',
+      cashier_name: invoice.cashier_name || invoice.cashier || 'كاشير 1',
       customer_name: invoice.customer_name || 'عميل نقدي',
-      customer_phone: invoice.customer_phone || '',
+      customer_phone: invoice.customer_phone || invoice.phone || '',
+      order_type: isDelivery ? 'دليفري' : 'صالة',
+      delivery_person: invoice.delivery_person || '',
+      address: invoice.address || '',
       payment_method: invoice.payment_method || 'كاش',
-      total_price: invoice.total_price || invoice.net || invoice.total || 0,
-      discount: invoice.discount || invoice.discount_amount || 0,
+      total_price: parseFloat(invoice.total || invoice.total_price || invoice.net || 0),
+      discount: parseFloat(invoice.discount || invoice.discount_amount || 0),
+      delivery_fee: parseFloat(invoice.delivery_fee || 0),
+      paid_amount: parseFloat(invoice.paid_amount || 0),
       items: cleanItems,
-      footer: 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاسترجاع'
+      store_name: store.store_name,
+      store_phone: [store.store_phone, store.store_phone2].filter(Boolean).join(' • ') || '01000000000',
+      store_address: store.store_address,
+      receipt_sub: store.receipt_sub,
+      footer: store.receipt_footer || 'شكراً لزيارتكم • نسعد بخدمتكم دائماً ❤️'
     };
 
     try {
@@ -958,43 +1012,73 @@ class POSCart {
         box-shadow: none !important;
       }
       .bw-header { text-align: center; margin-bottom: 6px; }
-      .bw-title { font-size: 18px; font-weight: 900; margin: 0 0 3px 0; color: #000 !important; }
-      .bw-sub { font-size: 11px; font-weight: 700; margin-bottom: 3px; color: #000 !important; }
-      .bw-info { font-size: 10px; margin: 1.5px 0; font-weight: 600; color: #000 !important; }
-      .bw-divider-double { border-top: 2px solid #000; margin: 6px 0; }
-      .bw-divider-solid { border-top: 1px solid #000; margin: 6px 0; }
-      .bw-divider-dashed { border-top: 1px dashed #000; margin: 6px 0; }
-      .bw-meta-table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin: 3px 0; }
-      .bw-meta-table td { padding: 2px 1px; vertical-align: middle; color: #000 !important; }
-      .bw-mono { font-family: 'Courier New', monospace; font-weight: bold; }
-      .bw-delivery-box { border: 1.5px solid #000; border-radius: 6px; padding: 5px 6px; margin: 5px 0; }
-      .bw-delivery-title { font-weight: 900; font-size: 11.5px; text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 4px; }
-      .bw-items-table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 10.5px; border: 1.5px solid #000; table-layout: fixed; word-wrap: break-word; }
-      .bw-items-table thead th { border: 1px solid #000; border-bottom: 2px solid #000; background: #e8e8e8 !important; color: #000 !important; font-weight: 900; padding: 4px 2px; text-align: center; font-size: 10px; }
-      .bw-items-table tbody td { border: 1px solid #000; padding: 3.5px 2px; vertical-align: middle; color: #000 !important; }
+      .bw-divider-top { border-top: 3px solid #000; margin-bottom: 6px; }
+      .bw-title { font-size: 18px; font-weight: 900; margin: 0 0 2px 0; color: #000 !important; }
+      .bw-stars { font-size: 11px; letter-spacing: 2px; margin-bottom: 2px; color: #000 !important; }
+      .bw-sub { font-size: 10.5px; font-weight: 700; margin-bottom: 2px; color: #000 !important; }
+      .bw-info { font-size: 9.5px; margin: 1.5px 0; font-weight: 600; color: #000 !important; }
+      .bw-tax-reg { font-size: 9px; font-weight: 600; color: #333 !important; margin-top: 2px; }
+      .bw-title-banner {
+        background: #000 !important;
+        color: #fff !important;
+        font-size: 12px;
+        font-weight: 900;
+        text-align: center;
+        padding: 3px 0;
+        border-radius: 4px;
+        margin: 6px 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bw-divider-double { border-top: 2px solid #000; margin: 5px 0; }
+      .bw-divider-solid { border-top: 1px solid #000; margin: 5px 0; }
+      .bw-divider-dashed { border-top: 1px dashed #000; margin: 5px 0; }
+      .bw-meta-table { width: 100%; border-collapse: collapse; font-size: 10px; margin: 3px 0; border: 1px solid #000; border-radius: 4px; }
+      .bw-meta-table td { padding: 3px 4px; vertical-align: middle; color: #000 !important; }
+      .bw-mono { font-family: 'Courier New', monospace; }
+      .bw-delivery-box { border: 1.5px solid #000; border-radius: 6px; padding: 4px 5px; margin: 5px 0; }
+      .bw-delivery-title { font-weight: 900; font-size: 11px; text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
+      .bw-items-table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 10px; border: 1.5px solid #000; table-layout: fixed; word-wrap: break-word; }
+      .bw-items-table thead th { border: 1px solid #000; border-bottom: 2px solid #000; background: #e8e8e8 !important; color: #000 !important; font-weight: 900; padding: 4px 2px; text-align: center; font-size: 9.5px; }
+      .bw-items-table tbody td { border: 1px solid #000; padding: 3px 2px; vertical-align: middle; color: #000 !important; }
       .bw-items-table .th-num, .bw-items-table .td-num { width: 7%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; }
-      .bw-items-table .th-name, .bw-items-table .td-name { width: 45%; text-align: right; }
-      .bw-items-table .item-title { font-weight: 800; line-height: 1.25; color: #000 !important; font-size: 10.5px; }
-      .bw-items-table .item-code { font-size: 8.5px; color: #333 !important; font-family: 'Courier New', monospace; display: block; }
-      .bw-items-table .th-qty, .bw-items-table .td-qty { width: 20%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; font-size: 10px; }
-      .bw-items-table .th-price, .bw-items-table .td-price { width: 14%; text-align: center; font-family: 'Courier New', monospace; font-size: 10px; }
-      .bw-items-table .th-total, .bw-items-table .td-total { width: 14%; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; font-size: 10.5px; }
-      .bw-summary-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 5px 0; table-layout: fixed; }
-      .bw-summary-table td { padding: 2.5px 1px; color: #000 !important; }
+      .bw-items-table .th-name, .bw-items-table .td-name { width: 44%; text-align: right; }
+      .bw-items-table .item-title { font-weight: 800; line-height: 1.2; color: #000 !important; font-size: 10px; }
+      .bw-items-table .item-code { font-size: 8.5px; color: #444 !important; font-family: 'Courier New', monospace; display: block; }
+      .bw-items-table .th-qty, .bw-items-table .td-qty { width: 21%; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; font-size: 9.5px; }
+      .bw-items-table .th-price, .bw-items-table .td-price { width: 14%; text-align: center; font-family: 'Courier New', monospace; font-size: 9.5px; }
+      .bw-items-table .th-total, .bw-items-table .td-total { width: 14%; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; font-size: 10px; }
+      .bw-summary-bar { text-align: center; font-size: 9.5px; padding: 3px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; margin: 4px 0; font-weight: 600; }
+      .bw-summary-table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin: 4px 0; table-layout: fixed; }
+      .bw-summary-table td { padding: 2px 1px; color: #000 !important; }
       .bw-summary-table .bw-val { text-align: left; font-family: 'Courier New', monospace; font-weight: 800; }
-      .bw-summary-table .bw-grand-row td { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 1px; font-size: 13.5px; font-weight: 900; }
-      .bw-summary-table .bw-grand-val { text-align: left; font-family: 'Courier New', monospace; font-size: 15px; font-weight: 900; }
-      .bw-barcode { text-align: center; margin: 6px 0 3px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .bw-grand-box {
+        border: 2px solid #000;
+        background: #e8e8e8 !important;
+        padding: 5px 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 5px 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bw-grand-label { font-weight: 900; font-size: 11.5px; color: #000 !important; }
+      .bw-grand-val { font-weight: 900; font-size: 15px; font-family: 'Courier New', monospace; color: #000 !important; }
+      .bw-barcode { text-align: center; margin: 6px 0 2px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
       .bw-barcode svg { max-width: 100%; height: 35px; }
-      .bw-barcode-text { font-family: 'Courier New', monospace; font-size: 10.5px; font-weight: 900; letter-spacing: 1px; color: #000 !important; }
-      .bw-footer { text-align: center; font-size: 9.5px; color: #000 !important; line-height: 1.35; margin-top: 5px; }
-      .bw-footer p { margin: 2px 0; }
+      .bw-barcode-text { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #000 !important; }
+      .bw-terms-box { font-size: 8.5px; line-height: 1.35; margin: 5px 0; padding-top: 3px; color: #000 !important; }
+      .bw-terms-box ul { list-style: none; padding: 0; margin: 2px 0; }
+      .bw-terms-box li { margin-bottom: 1.5px; }
+      .bw-footer { text-align: center; font-size: 9.5px; color: #000 !important; line-height: 1.35; margin-top: 4px; }
+      .bw-footer p { margin: 1.5px 0; }
+      .bw-footer-farewell { font-size: 11px; font-weight: 800; }
       @media print {
         .no-print { display: none !important; }
       }
     `;
   }
-
   printInvoice(inv) {
     if (!inv && this.lastInvoice) inv = this.lastInvoice;
     if (!inv) return;

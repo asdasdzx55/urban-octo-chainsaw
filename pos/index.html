@@ -99,12 +99,12 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 
   <!-- Custom POS Styles -->
-  <link rel="stylesheet" href="css/pos.css?v=2.7.2">
-  <link rel="stylesheet" href="css/receipt.css?v=2.7.2">
+  <link rel="stylesheet" href="css/pos.css?v=2.7.3">
+  <link rel="stylesheet" href="css/receipt.css?v=2.7.3">
 
   <!-- Global Application Version Guard & Resilient Sub-View Dispatchers -->
   <script>
-    window.APP_VERSION = '2.7.2';
+    window.APP_VERSION = '2.7.3';
     (function() {
       const stored = localStorage.getItem('pos_installed_version');
       if (stored !== window.APP_VERSION) {
@@ -737,17 +737,114 @@
           <p class="text-xs text-gray-500 mt-0.5">متابعة وإسناد طلبات المتجر، تقفيل حسابات وعهد الطيارين، وتوريد الكاش للخزينة</p>
         </div>
 
-        <!-- Main Sub Tabs: [ 📦 طلبات الأونلاين ] vs [ 🛵 تقفيل حسابات الطيارين ] -->
-        <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl self-start sm:self-auto">
-          <button type="button" onclick="window.app.switchDeliveryHubSubTab('orders')" id="hub-tab-orders" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs transition flex items-center gap-1.5">
-            <i data-lucide="globe" class="w-4 h-4"></i>
-            <span>طلبات الأونلاين والمتجر</span>
+        <!-- Main Sub Tabs: [ 🧾 سجل فواتير المبيعات ] vs [ 📦 طلبات الأونلاين ] vs [ 🛵 تقفيل حسابات الطيارين ] -->
+        <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700/60 p-1.5 rounded-2xl self-start sm:self-auto overflow-x-auto no-scrollbar">
+          <button type="button" onclick="window.app.switchDeliveryHubSubTab('sales')" id="hub-tab-sales" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+            <span>🧾 سجل فواتير المبيعات</span>
           </button>
-          <button type="button" onclick="window.app.switchDeliveryHubSubTab('settlement')" id="hub-tab-settlement" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center gap-1.5">
+          <button type="button" onclick="window.app.switchDeliveryHubSubTab('orders')" id="hub-tab-orders" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="globe" class="w-4 h-4"></i>
+            <span>📦 طلبات المتجر</span>
+          </button>
+          <button type="button" onclick="window.app.switchDeliveryHubSubTab('settlement')" id="hub-tab-settlement" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center gap-1.5 cursor-pointer">
             <i data-lucide="hand-coins" class="w-4 h-4 text-emerald-500"></i>
             <span>🛵 تقفيل عهد الدليفري</span>
           </button>
         </div>
+      </div>
+
+      <!-- ==================== SUB PANEL 0: SALES INVOICES ARCHIVE ==================== -->
+      <div id="hub-panel-sales" class="flex flex-col gap-4">
+        
+        <!-- Header & Quick KPIs -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">إجمالي المبيعات المكتملة</span>
+            <div id="sales-kpi-total-amount" class="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono mt-2">0.00 ج.م</div>
+          </div>
+          <div class="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">عدد فواتير البيع</span>
+            <div id="sales-kpi-count" class="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-2">0 فاتورة</div>
+          </div>
+          <div class="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <span class="text-xs font-bold text-amber-700 dark:text-amber-300">متوسط قيمة الفاتورة</span>
+            <div id="sales-kpi-avg" class="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-2">0.00 ج.م</div>
+          </div>
+          <div class="bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 rounded-2xl p-4 flex flex-col justify-between">
+            <span class="text-xs font-bold text-purple-700 dark:text-purple-300">المزامنة مع دريم سوفت</span>
+            <div class="text-xs font-black text-purple-600 dark:text-purple-400 mt-2 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>12,251+ فاتورة مسجلة</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <!-- Search Input -->
+          <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="sales-search-input" 
+              placeholder="ابحث برقم الفاتورة (مثال: #12050) أو العميل أو الهاتف..." 
+              oninput="window.ordersController.onSalesSearchInput(this.value)"
+              class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+            >
+          </div>
+
+          <!-- Date Filters -->
+          <div class="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
+            <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-xs font-bold">
+              <button type="button" onclick="window.ordersController.filterSalesPeriod('all')" class="sales-period-btn px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer" data-period="all">الكل</button>
+              <button type="button" onclick="window.ordersController.filterSalesPeriod('today')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="today">اليوم</button>
+              <button type="button" onclick="window.ordersController.filterSalesPeriod('week')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="week">الأسبوع</button>
+              <button type="button" onclick="window.ordersController.filterSalesPeriod('month')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="month">هذا الشهر</button>
+            </div>
+
+            <button type="button" onclick="window.ordersController.loadSalesInvoices(true)" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="تحديث الفواتير">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Invoices List Container -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs flex flex-col">
+          <!-- Desktop Table -->
+          <div class="hidden sm:block overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+                  <th class="py-3 px-3">رقم الفاتورة</th>
+                  <th class="py-3 px-3">التاريخ والوقت</th>
+                  <th class="py-3 px-3">العميل / الهاتف</th>
+                  <th class="py-3 px-3">طريقة الدفع</th>
+                  <th class="py-3 px-3 text-left">إجمالي الفاتورة</th>
+                  <th class="py-3 px-3">الكاشير / المصدر</th>
+                  <th class="py-3 px-3 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="sales-invoices-table-body">
+                <!-- Dynamically rendered -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div id="sales-invoices-mobile-cards" class="sm:hidden flex flex-col gap-2.5 p-3">
+            <!-- Dynamically rendered -->
+          </div>
+
+          <!-- Pagination / Load More -->
+          <div class="p-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
+            <span id="sales-pagination-info" class="text-gray-400 text-[11px]">عرض 50 فاتورة</span>
+            <button type="button" id="btn-load-more-sales" onclick="window.ordersController.loadMoreSalesInvoices()" class="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold transition flex items-center gap-1.5 cursor-pointer">
+              <span>تحميل المزيد من الفواتير القديمة ⬇️</span>
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <!-- ==================== SUB PANEL 1: ONLINE ORDERS ==================== -->
@@ -4646,24 +4743,24 @@
   <div id="receipt-print-area"></div>
 
   <!-- Application Scripts -->
-  <script src="js/barcode-parser.js?v=2.7.2"></script>
-  <script src="js/api.js?v=2.7.2"></script>
-  <script src="js/sync-manager.js?v=2.7.2"></script>
-  <script src="js/pos-scanner.js?v=2.7.2"></script>
-  <script src="js/settings.js?v=2.7.2"></script>
-  <script src="js/cart.js?v=2.7.2"></script>
-  <script src="js/categories.js?v=2.7.2"></script>
-  <script src="js/inventory.js?v=2.7.2"></script>
-  <script src="js/purchases.js?v=2.7.2"></script>
-  <script src="js/expenses.js?v=2.7.2"></script>
-  <script src="js/orders.js?v=2.7.2"></script>
-  <script src="js/delivery-settlement.js?v=2.7.2"></script>
-  <script src="js/returns.js?v=2.7.2"></script>
-  <script src="js/reports.js?v=2.7.2"></script>
-  <script src="js/employees.js?v=2.7.2"></script>
-  <script src="js/pwa.js?v=2.7.2"></script>
-  <script src="js/auth.js?v=2.7.2"></script>
-  <script src="js/customers.js?v=2.7.2"></script>
-  <script src="js/app.js?v=2.7.2"></script>
+  <script src="js/barcode-parser.js?v=2.7.3"></script>
+  <script src="js/api.js?v=2.7.3"></script>
+  <script src="js/sync-manager.js?v=2.7.3"></script>
+  <script src="js/pos-scanner.js?v=2.7.3"></script>
+  <script src="js/settings.js?v=2.7.3"></script>
+  <script src="js/cart.js?v=2.7.3"></script>
+  <script src="js/categories.js?v=2.7.3"></script>
+  <script src="js/inventory.js?v=2.7.3"></script>
+  <script src="js/purchases.js?v=2.7.3"></script>
+  <script src="js/expenses.js?v=2.7.3"></script>
+  <script src="js/orders.js?v=2.7.3"></script>
+  <script src="js/delivery-settlement.js?v=2.7.3"></script>
+  <script src="js/returns.js?v=2.7.3"></script>
+  <script src="js/reports.js?v=2.7.3"></script>
+  <script src="js/employees.js?v=2.7.3"></script>
+  <script src="js/pwa.js?v=2.7.3"></script>
+  <script src="js/auth.js?v=2.7.3"></script>
+  <script src="js/customers.js?v=2.7.3"></script>
+  <script src="js/app.js?v=2.7.3"></script>
 </body>
 </html>

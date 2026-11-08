@@ -426,20 +426,30 @@ try {
             // تحديد الحالة الأولية للأوردر
             $order_status = (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') ? 'بانتظار الطيار' : 'مكتمل';
 
-            // حفظ الفاتورة في جدول orders
+            $items_json = json_encode($items, JSON_UNESCAPED_UNICODE);
+            $order_type = (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') ? 'delivery' : 'hall';
+            $inv_bc = $local_id ? "INV-{$local_id}" : null;
+
+            // حفظ الفاتورة في جدول orders مع وضع synced = 0 للمزامنة الفورية مع دريم سوفت المحلي
             $stmt = $pdo->prepare("INSERT INTO orders (
                 customer_name, customer_phone, customer_address, order_details, 
                 total_price, discount_amount, shipping_cost, payment_method, payment_status, 
-                status, source, cashier_name, delivery_person, delivery_fee, created_at, synced
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'مدفوع', ?, ?, ?, ?, ?, ?, 1)");
+                status, source, cashier_name, delivery_person, delivery_fee, created_at, synced,
+                items_json, order_type, invoice_barcode
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'مدفوع', ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)");
             
             $stmt->execute([
                 $customer, $phone, $address, $details_str,
                 $total, $discount, $delivery_fee, $payment_method,
                 $order_status,
-                $source, $cashier, $delivery_person, $delivery_fee, $date
+                $source ?: 'phone_pos', $cashier, $delivery_person, $delivery_fee, $date,
+                $items_json, $order_type, $inv_bc
             ]);
             $remote_order_id = $pdo->lastInsertId();
+            if (empty($inv_bc)) {
+                $inv_bc = "INV-{$remote_order_id}";
+                $pdo->prepare("UPDATE orders SET invoice_barcode = ? WHERE id = ?")->execute([$inv_bc, $remote_order_id]);
+            }
             
             // تسجيل إشعار بنظام الإدارة
             try {
@@ -461,7 +471,174 @@ try {
 
         // ============================================================
         // 2.2 تسجيل فاتورة مشتريات / توريد من مورد (Purchase Invoice API)
+                // ============================================================
+        // 2.15 جلب فواتير المبيعات المكتملة والأرشيف التاريخي (Sales Invoices Log)
         // ============================================================
+        case 'get_completed_orders':
+            $limit = min(200, max(1, (int)($_GET['limit'] ?? $_POST['limit'] ?? 50)));
+            $page = max(1, (int)($_GET['page'] ?? $_POST['page'] ?? 1));
+            $offset = ($page - 1) * $limit;
+            $search = trim($_GET['search'] ?? $_GET['q'] ?? $_POST['search'] ?? $_POST['q'] ?? '');
+            $from_date = trim($_GET['from_date'] ?? $_POST['from_date'] ?? '');
+            $to_date = trim($_GET['to_date'] ?? $_POST['to_date'] ?? '');
+            $status = trim($_GET['status'] ?? $_POST['status'] ?? '');
+
+            $where = ["(status != 'ملغي' OR status IS NULL)"];
+            $params = [];
+
+            if (!empty($search)) {
+                $num_clean = preg_replace('/[^0-9]/', '', $search);
+                if (!empty($num_clean)) {
+                    $where[] = "(invoice_barcode LIKE ? OR id = ? OR customer_name LIKE ? OR customer_phone LIKE ?)";
+                    $params[] = "%{$num_clean}%";
+                    $params[] = (int)$num_clean;
+                    $params[] = "%{$search}%";
+                    $params[] = "%{$search}%";
+                } else {
+                    $where[] = "(customer_name LIKE ? OR customer_phone LIKE ? OR cashier_name LIKE ?)";
+                    $params[] = "%{$search}%";
+                    $params[] = "%{$search}%";
+                    $params[] = "%{$search}%";
+                }
+            }
+
+            if (!empty($from_date)) {
+                $where[] = "created_at >= ?";
+                $params[] = $from_date . " 00:00:00";
+            }
+            if (!empty($to_date)) {
+                $where[] = "created_at <= ?";
+                $params[] = $to_date . " 23:59:59";
+            }
+            if (!empty($status)) {
+                $where[] = "status = ?";
+                $params[] = $status;
+            }
+
+            $where_sql = implode(' AND ', $where);
+
+            $cnt_stmt = $pdo->prepare("SELECT COUNT(*) FROM orders WHERE {$where_sql}");
+            $cnt_stmt->execute($params);
+            $total_records = (int)$cnt_stmt->fetchColumn();
+
+            $sum_stmt = $pdo->prepare("SELECT COALESCE(SUM(total_price), 0) FROM orders WHERE {$where_sql}");
+            $sum_stmt->execute($params);
+            $total_sum = (float)$sum_stmt->fetchColumn();
+
+            $sql = "SELECT id, invoice_barcode, customer_name, customer_phone, customer_address, total_price, discount_amount, payment_method, payment_status, status, cashier_name, delivery_person, delivery_fee, created_at, order_type, source, items_json, order_details FROM orders WHERE {$where_sql} ORDER BY created_at DESC, id DESC LIMIT {$offset}, {$limit}";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $orders = [];
+            foreach ($rows as $r) {
+                $items = [];
+                if (!empty($r['items_json'])) {
+                    $items = json_decode($r['items_json'], true) ?: [];
+                }
+
+                $inv_id = $r['invoice_barcode'] ?: ('INV-' . $r['id']);
+
+                $orders[] = [
+                    'id' => (int)$r['id'],
+                    'order_id' => $inv_id,
+                    'invoice_barcode' => $inv_id,
+                    'customer_name' => $r['customer_name'] ?: 'عميل نقدي',
+                    'customer_phone' => $r['customer_phone'] ?: '',
+                    'customer_address' => $r['customer_address'] ?: '',
+                    'total' => (float)$r['total_price'],
+                    'subtotal' => (float)$r['total_price'] + (float)$r['discount_amount'],
+                    'discount' => (float)$r['discount_amount'],
+                    'payment_method' => $r['payment_method'] ?: 'كاش',
+                    'payment_status' => $r['payment_status'] ?: 'مدفوع',
+                    'status' => $r['status'] ?: 'completed',
+                    'cashier' => $r['cashier_name'] ?: 'كاشير المحل',
+                    'delivery_person' => $r['delivery_person'] ?: '',
+                    'delivery_fee' => (float)$r['delivery_fee'],
+                    'created_at' => $r['created_at'],
+                    'order_type' => $r['order_type'] ?: 'hall',
+                    'source' => $r['source'] ?: 'dreamsoft',
+                    'items' => $items,
+                    'details' => $r['order_details'] ?: ''
+                ];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($orders),
+                'total_count' => $total_records,
+                'total_sales' => $total_sum,
+                'page' => $page,
+                'limit' => $limit,
+                'orders' => $orders
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.16 جلب تفاصيل فاتورة محددة بالرقم أو الباركود (Get Order Details)
+        // ============================================================
+        case 'get_order_details':
+            $q = trim($_GET['order_id'] ?? $_GET['barcode'] ?? $_GET['id'] ?? $_GET['q'] ?? $_POST['order_id'] ?? $_POST['barcode'] ?? '');
+            if (empty($q)) {
+                echo json_encode(['success' => false, 'error' => 'يرجى إدخال رقم الفاتورة']);
+                exit;
+            }
+
+            $num_clean = preg_replace('/[^0-9]/', '', $q);
+
+            $ord = null;
+            if (!empty($num_clean)) {
+                $stmt = $pdo->prepare("SELECT * FROM orders WHERE invoice_barcode = ? OR invoice_barcode = ? OR id = ? LIMIT 1");
+                $stmt->execute([$q, "INV-{$num_clean}", (int)$num_clean]);
+                $ord = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$ord) {
+                $stmt = $pdo->prepare("SELECT * FROM orders WHERE invoice_barcode LIKE ? OR customer_phone = ? LIMIT 1");
+                $stmt->execute(["%{$q}%", $q]);
+                $ord = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$ord) {
+                echo json_encode(['success' => false, 'error' => "لم يتم العثور على فاتورة برقم: {$q}"]);
+                exit;
+            }
+
+            $items = [];
+            if (!empty($ord['items_json'])) {
+                $items = json_decode($ord['items_json'], true) ?: [];
+            }
+
+            $inv_id = $ord['invoice_barcode'] ?: ('INV-' . $ord['id']);
+            $order_data = [
+                'id' => (int)$ord['id'],
+                'order_id' => $inv_id,
+                'invoice_barcode' => $inv_id,
+                'customer_name' => $ord['customer_name'] ?: 'عميل نقدي',
+                'customer_phone' => $ord['customer_phone'] ?: '',
+                'customer_address' => $ord['customer_address'] ?: '',
+                'total' => (float)$ord['total_price'],
+                'subtotal' => (float)$ord['total_price'] + (float)$ord['discount_amount'],
+                'discount' => (float)$ord['discount_amount'],
+                'payment_method' => $ord['payment_method'] ?: 'كاش',
+                'status' => $ord['status'] ?: 'completed',
+                'cashier' => $ord['cashier_name'] ?: 'كاشير المحل',
+                'delivery_person' => $ord['delivery_person'] ?: '',
+                'delivery_fee' => (float)$ord['delivery_fee'],
+                'created_at' => $ord['created_at'],
+                'order_type' => $ord['order_type'] ?: 'hall',
+                'source' => $ord['source'] ?: 'dreamsoft',
+                'items' => $items,
+                'details' => $ord['order_details'] ?: ''
+            ];
+
+            echo json_encode([
+                'success' => true,
+                'order' => $order_data,
+                'items' => $items
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+// ============================================================
         case 'push_purchase':
         case 'record_purchase':
         case 'create_purchase':

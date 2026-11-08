@@ -851,29 +851,35 @@ class App {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  switchDeliveryHubSubTab(tab) {
+  switchDeliveryHubSubTab(tab = 'sales') {
+    const btnSales = document.getElementById('hub-tab-sales');
     const btnOrders = document.getElementById('hub-tab-orders');
     const btnSettlement = document.getElementById('hub-tab-settlement');
+    const panelSales = document.getElementById('hub-panel-sales');
     const panelOrders = document.getElementById('hub-panel-orders');
     const panelSettlement = document.getElementById('hub-panel-settlement');
 
-    if (tab === 'orders') {
+    // Reset all tabs
+    [btnSales, btnOrders, btnSettlement].forEach(btn => {
+      btn?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+      btn?.classList.add('text-gray-600', 'dark:text-gray-300');
+    });
+    [panelSales, panelOrders, panelSettlement].forEach(p => p?.classList.add('hidden'));
+
+    if (tab === 'sales') {
+      btnSales?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+      btnSales?.classList.remove('text-gray-600', 'dark:text-gray-300');
+      panelSales?.classList.remove('hidden');
+      window.ordersController?.loadSalesInvoices();
+    } else if (tab === 'orders') {
       btnOrders?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
       btnOrders?.classList.remove('text-gray-600', 'dark:text-gray-300');
-      btnSettlement?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
-      btnSettlement?.classList.add('text-gray-600', 'dark:text-gray-300');
-
       panelOrders?.classList.remove('hidden');
-      panelSettlement?.classList.add('hidden');
       window.ordersController?.loadOrders('pending');
     } else {
       btnSettlement?.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
       btnSettlement?.classList.remove('text-gray-600', 'dark:text-gray-300');
-      btnOrders?.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
-      btnOrders?.classList.add('text-gray-600', 'dark:text-gray-300');
-
       panelSettlement?.classList.remove('hidden');
-      panelOrders?.classList.add('hidden');
       window.deliverySettlementController?.init();
     }
 

@@ -53,6 +53,251 @@ class WebOrdersController {
     }
   }
 
+
+  // ==================== SALES INVOICES ARCHIVE & LOG ====================
+  initSalesLog() {
+    this.salesInvoices = [];
+    this.salesPage = 1;
+    this.salesLimit = 50;
+    this.salesSearchQuery = '';
+    this.salesPeriodFilter = 'all';
+    this.totalSalesCount = 0;
+  }
+
+  async loadSalesInvoices(reset = true) {
+    if (!this.salesInvoices) this.initSalesLog();
+
+    if (reset) {
+      this.salesPage = 1;
+      this.salesInvoices = [];
+    }
+
+    const tbody = document.getElementById('sales-invoices-table-body');
+    const mobileCards = document.getElementById('sales-invoices-mobile-cards');
+    const btnMore = document.getElementById('btn-load-more-sales');
+
+    if (reset) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">جاري تحميل سجل فواتير المبيعات...</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">جاري تحميل فواتير المبيعات...</div>`;
+    }
+
+    const params = {
+      page: this.salesPage,
+      limit: this.salesLimit
+    };
+    if (this.salesSearchQuery) params.search = this.salesSearchQuery;
+
+    // Period dates
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+
+    if (this.salesPeriodFilter === 'today') {
+      params.from_date = todayStr;
+      params.to_date = todayStr;
+    } else if (this.salesPeriodFilter === 'week') {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      params.from_date = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    } else if (this.salesPeriodFilter === 'month') {
+      params.from_date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
+    }
+
+    try {
+      const res = await window.api.get('get_completed_orders', params);
+
+      if (res && res.success && Array.isArray(res.orders)) {
+        if (reset) {
+          this.salesInvoices = res.orders;
+        } else {
+          this.salesInvoices = this.salesInvoices.concat(res.orders);
+        }
+        this.totalSalesCount = res.total_count || 0;
+
+        // Update KPIs
+        const totalAmountEl = document.getElementById('sales-kpi-total-amount');
+        const countEl = document.getElementById('sales-kpi-count');
+        const avgEl = document.getElementById('sales-kpi-avg');
+
+        if (totalAmountEl) totalAmountEl.textContent = `${(res.total_sales || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م`;
+        if (countEl) countEl.textContent = `${(res.total_count || 0).toLocaleString()} فاتورة`;
+        if (avgEl && res.total_count > 0) {
+          const avg = (res.total_sales || 0) / res.total_count;
+          avgEl.textContent = `${avg.toFixed(2)} ج.م`;
+        }
+
+        const infoEl = document.getElementById('sales-pagination-info');
+        if (infoEl) infoEl.textContent = `عرض ${this.salesInvoices.length} من إجمالي ${this.totalSalesCount} فاتورة`;
+
+        if (btnMore) {
+          btnMore.style.display = (this.salesInvoices.length < this.totalSalesCount) ? 'inline-flex' : 'none';
+        }
+
+        this.renderSalesInvoices();
+      } else {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">لا توجد فواتير مطابقة للبحث أو الفلتر</td></tr>`;
+        if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">لا توجد فواتير مطابقة</div>`;
+      }
+    } catch (err) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500 font-bold">خطأ في جلب الفواتير: ${err.message}</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-rose-500 font-bold text-xs">خطأ: ${err.message}</div>`;
+    }
+  }
+
+  renderSalesInvoices() {
+    const tbody = document.getElementById('sales-invoices-table-body');
+    const mobileCards = document.getElementById('sales-invoices-mobile-cards');
+    if (!this.salesInvoices) return;
+
+    if (this.salesInvoices.length === 0) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">لا توجد فواتير مسجلة</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">لا توجد فواتير مسجلة</div>`;
+      return;
+    }
+
+    // 1. Desktop Table
+    if (tbody) {
+      tbody.innerHTML = this.salesInvoices.map(inv => {
+        const isCredit = inv.payment_method.includes('آجل') || inv.payment_method.includes('دين');
+        const payBadge = isCredit
+          ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200">آجل / دين</span>`
+          : `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200">${inv.payment_method}</span>`;
+
+        return `
+          <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition text-xs">
+            <td class="py-3 px-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              #${inv.order_id || inv.id}
+            </td>
+            <td class="py-3 px-3 font-mono text-gray-500 text-[11px]">
+              ${inv.created_at}
+            </td>
+            <td class="py-3 px-3">
+              <div class="font-bold text-gray-900 dark:text-white">${inv.customer_name}</div>
+              ${inv.customer_phone ? `<div class="text-[10px] text-gray-400 font-mono">${inv.customer_phone}</div>` : ''}
+            </td>
+            <td class="py-3 px-3">
+              ${payBadge}
+            </td>
+            <td class="py-3 px-3 font-mono font-black text-left text-sm ${isCredit ? 'text-rose-600' : 'text-gray-900 dark:text-white'}" dir="ltr">
+              ${parseFloat(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+            </td>
+            <td class="py-3 px-3 text-[11px] text-gray-500">
+              ${inv.cashier || 'كاشير المحل'}
+            </td>
+            <td class="py-3 px-3 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <button type="button" onclick="window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="عرض وطباعة الفاتورة الحرارية">
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                  <span>عرض وطباعة</span>
+                </button>
+                <button type="button" onclick="window.ordersController.refundInvoiceDirect('${inv.order_id || inv.id}')" class="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center gap-1 border border-rose-200 dark:border-rose-900/60 transition cursor-pointer" title="استرجاع أصناف الفاتورة">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <span>مرتجع</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 2. Mobile Responsive Touch Cards
+    if (mobileCards) {
+      mobileCards.innerHTML = this.salesInvoices.map(inv => {
+        const isCredit = inv.payment_method.includes('آجل') || inv.payment_method.includes('دين');
+        const payBadge = isCredit
+          ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200">آجل / دين ⚠️</span>`
+          : `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200">${inv.payment_method} 🟢</span>`;
+
+        return `
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400">#${inv.order_id || inv.id}</span>
+                  ${payBadge}
+                </div>
+                <div class="font-bold text-xs text-gray-900 dark:text-white mt-1">${inv.customer_name}</div>
+                <div class="text-[10px] text-gray-400 font-mono mt-0.5">${inv.created_at} • ${inv.cashier || 'كاشير المحل'}</div>
+              </div>
+              <div class="text-left shrink-0">
+                <div class="text-[10px] text-gray-400 font-bold">الإجمالي</div>
+                <div class="text-base font-black font-mono ${isCredit ? 'text-rose-600' : 'text-gray-900 dark:text-white'}" dir="ltr">
+                  ${parseFloat(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons for Phone -->
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+              <button type="button" onclick="window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition shadow-2xs">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>عرض وطباعة</span>
+              </button>
+              <button type="button" onclick="window.ordersController.refundInvoiceDirect('${inv.order_id || inv.id}')" class="py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-200 dark:border-rose-900/60 transition shadow-2xs">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>استرجاع / مرتجع</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  onSalesSearchInput(val) {
+    this.salesSearchQuery = val.trim();
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => {
+      this.loadSalesInvoices(true);
+    }, 300);
+  }
+
+  filterSalesPeriod(period) {
+    this.salesPeriodFilter = period;
+    document.querySelectorAll('.sales-period-btn').forEach(btn => {
+      if (btn.getAttribute('data-period') === period) {
+        btn.className = 'sales-period-btn px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer';
+      } else {
+        btn.className = 'sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer';
+      }
+    });
+    this.loadSalesInvoices(true);
+  }
+
+  loadMoreSalesInvoices() {
+    this.salesPage += 1;
+    this.loadSalesInvoices(false);
+  }
+
+  async viewInvoiceReceipt(invoiceId) {
+    try {
+      window.app?.showLoading(true, 'جاري تحميل الفاتورة...');
+      const res = await window.api.getOrderDetails(invoiceId);
+      window.app?.showLoading(false);
+
+      if (res && res.success && res.order) {
+        window.cartController?.showReceiptModal(res.order);
+      } else {
+        window.app?.showToast('تعذر العثور على بيانات الفاتورة', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ في عرض الفاتورة: ${err.message}`, 'error');
+    }
+  }
+
+  refundInvoiceDirect(invoiceId) {
+    if (window.app && window.app.currentView !== 'returns') {
+      window.app.switchView('returns');
+    }
+    setTimeout(() => {
+      window.returnsController?.searchInvoice(invoiceId);
+    }, 150);
+  }
+
   renderOrders() {
     const container = document.getElementById('web-orders-list');
     if (!container) return;

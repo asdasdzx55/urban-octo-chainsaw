@@ -260,7 +260,7 @@
             <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
           </span>
           <span class="text-[11px] text-gray-400 hidden md:inline shrink-0">• كاشير 1</span>
-          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.7.6</span>
+          <span class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">v2.7.7</span>
         </div>
       </div>
     </div>
@@ -530,7 +530,7 @@
           <span>قفل شاشة الكاشير (تسجيل خروج) 🔒</span>
         </button>
 
-        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.7.6</p>
+        <p class="text-[10px] text-gray-400 text-center mt-1">سوبر ماركت المنزل السوري • POS v2.7.7</p>
       </div>
 
     </div>
@@ -4092,7 +4092,7 @@
           <button type="button" onclick="window.cart?.navigateInvoice(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer" title="الفاتورة التالية (تقدم)">
             <i data-lucide="chevron-left" class="w-4 h-4"></i>
           </button>
-          <button type="button" onclick="window.cart?.printReceiptDirectly()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center transition cursor-pointer" title="طباعة الفاتورة 🖨️">
+          <button type="button" onclick="window.cart?.printViaCloudPrinter()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center transition cursor-pointer" title="طباعة كاشير XP-80C 🖨️">
             <i data-lucide="printer" class="w-4 h-4"></i>
           </button>
           <button type="button" onclick="window.cart?.newSale()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition cursor-pointer shadow-xs" title="فاتورة جديدة ➕">
@@ -4116,9 +4116,9 @@
           <span>واتساب 📲</span>
         </button>
 
-        <button type="button" id="btn-print-receipt" onclick="window.cart?.printReceiptDirectly()" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="طباعة الفاتورة">
+        <button type="button" id="btn-print-receipt" onclick="window.cart?.printViaCloudPrinter()" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-indigo-600/25 flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer" title="إرسال أمر الطباعة لطابعة الكاشير XP-80C">
           <i data-lucide="printer" class="w-4 h-4"></i>
-          <span>طباعة فورية 🖨️</span>
+          <span>طباعة كاشير (XP-80C) 🖨️</span>
         </button>
       </div>
 
@@ -4755,11 +4755,11 @@
 
   <!-- Application Scripts -->
   <script src="js/barcode-parser.js?v=2.7.5"></script>
-  <script src="js/api.js?v=2.7.5"></script>
+  <script src="js/api.js?v=2.7.7"></script>
   <script src="js/sync-manager.js?v=2.7.5"></script>
   <script src="js/pos-scanner.js?v=2.7.5"></script>
   <script src="js/settings.js?v=2.7.5"></script>
-  <script src="js/cart.js?v=2.7.5"></script>
+  <script src="js/cart.js?v=2.7.7"></script>
   <script src="js/categories.js?v=2.7.5"></script>
   <script src="js/inventory.js?v=2.7.5"></script>
   <script src="js/purchases.js?v=2.7.5"></script>
@@ -4771,7 +4771,7 @@
   <script src="js/employees.js?v=2.7.5"></script>
   <script src="js/pwa.js?v=2.7.5"></script>
   <script src="js/auth.js?v=2.7.5"></script>
-  <script src="js/customers.js?v=2.7.6"></script>
+  <script src="js/customers.js?v=2.7.7"></script>
   <script src="js/app.js?v=2.7.5"></script>
 </body>
 </html>

@@ -2758,6 +2758,70 @@ try {
             break;
 
         // ============================================================
+        // 2.654 نظام الطباعة السحابية لطابعة الكاشير (Cloud POS Print Queue)
+        // ============================================================
+        case 'push_print_job':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $job_type = trim($data['job_type'] ?? 'receipt');
+            $printer_name = trim($data['printer_name'] ?? 'XP-80C');
+            $raw_payload = $data['payload'] ?? '';
+            if (is_array($raw_payload)) {
+                $payload_json = json_encode($raw_payload, JSON_UNESCAPED_UNICODE);
+            } else {
+                $payload_json = (string)$raw_payload;
+            }
+
+            if (empty($payload_json)) {
+                echo json_encode(['success' => false, 'error' => 'بيانات الفاتورة فارغة'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            try {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS print_queue (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        job_type VARCHAR(50) DEFAULT 'receipt',
+                        printer_name VARCHAR(100) DEFAULT 'XP-80C',
+                        payload LONGTEXT NOT NULL,
+                        status VARCHAR(20) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        printed_at DATETIME NULL,
+                        INDEX idx_status (status)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ");
+            } catch (Exception $e) {}
+
+            $stmt = $pdo->prepare("INSERT INTO print_queue (job_type, printer_name, payload, status) VALUES (?, ?, ?, 'pending')");
+            $stmt->execute([$job_type, $printer_name, $payload_json]);
+            $job_id = $pdo->lastInsertId();
+
+            echo json_encode([
+                'success' => true,
+                'job_id' => (int)$job_id,
+                'message' => '🖨️ تم إرسال أمر الطباعة لطابعة الكاشير بنجاح!'
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        case 'get_pending_print_jobs':
+            $printer = trim($_GET['printer_name'] ?? 'XP-80C');
+            $stmt = $pdo->prepare("SELECT id, job_type, printer_name, payload, created_at FROM print_queue WHERE status = 'pending' AND (printer_name = ? OR printer_name = '' OR printer_name IS NULL) ORDER BY id ASC LIMIT 5");
+            $stmt->execute([$printer]);
+            $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'jobs' => $jobs], JSON_UNESCAPED_UNICODE);
+            break;
+
+        case 'mark_print_job_done':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $job_id = (int)($data['job_id'] ?? 0);
+            $status = trim($data['status'] ?? 'printed');
+            if ($job_id > 0) {
+                $stmt = $pdo->prepare("UPDATE print_queue SET status = ?, printed_at = NOW() WHERE id = ?");
+                $stmt->execute([$status, $job_id]);
+            }
+            echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 7. سحب أرباح / مسحوبات للمالك أو الشريك (Partner Withdrawal)
         // ============================================================
         case 'partner_withdraw':

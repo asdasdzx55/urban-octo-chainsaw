@@ -539,11 +539,9 @@ class POSCart {
         document.getElementById('checkout-modal')?.classList.add('hidden');
 
         if (shouldPrint) {
-          // Show Success Thermal Receipt Modal & Trigger Chrome Print
+          // Show Success Thermal Receipt Modal & Trigger Cloud / Hardware Print
           this.showReceiptModal(invoiceData);
-          try {
-            this.printReceiptDirectly();
-          } catch(e) {}
+          this.printViaCloudPrinter(invoiceData);
           window.app?.showToast(`تم حفظ الفاتورة #${realOrderId} وطباعتها بنجاح ✅`, 'success');
         } else {
           // Saved without printing (عدم الطباعة)
@@ -876,6 +874,61 @@ class POSCart {
       return;
     }
     this.printInvoice(this.lastInvoice);
+  }
+
+  async printViaCloudPrinter(inv = null) {
+    const invoice = inv || this.lastInvoice;
+    if (!invoice) {
+      window.app?.showToast('لا توجد فاتورة محددة للطباعة', 'warning');
+      return;
+    }
+
+    window.app?.showToast('جاري إرسال أمر الطباعة لطابعة الكاشير (XP-80C)... 🖨️', 'info');
+
+    let rawItems = invoice.items || [];
+    if (typeof rawItems === 'string') {
+      try { rawItems = JSON.parse(rawItems); } catch(e) { rawItems = []; }
+    }
+
+    const cleanItems = (Array.isArray(rawItems) ? rawItems : []).map(it => ({
+      name: it.name || it.item_name || 'صنف',
+      qty: it.qty || it.quantity || 1,
+      price: it.price || it.unit_price || 0,
+      total: it.total || it.total_price || ((it.qty || 1) * (it.price || 0))
+    }));
+
+    const payload = {
+      order_id: invoice.order_id || invoice.id || '',
+      invoice_barcode: invoice.invoice_barcode || '',
+      date: invoice.date || invoice.created_at || new Date().toLocaleString('ar-EG'),
+      cashier_name: invoice.cashier_name || 'كاشير 1',
+      customer_name: invoice.customer_name || 'عميل نقدي',
+      customer_phone: invoice.customer_phone || '',
+      payment_method: invoice.payment_method || 'كاش',
+      total_price: invoice.total_price || invoice.net || invoice.total || 0,
+      discount: invoice.discount || invoice.discount_amount || 0,
+      items: cleanItems,
+      footer: 'شكراً لزيارتكم • يُرجى الاحتفاظ بالفاتورة للاسترجاع'
+    };
+
+    try {
+      const res = await window.api.pushPrintJob({
+        job_type: 'receipt',
+        printer_name: 'XP-80C',
+        payload: payload
+      });
+
+      if (res && res.success) {
+        window.app?.showToast('✅ تم إرسال الفاتورة للطابعة! تخرج الورقة الآن من الكاشير 🖨️', 'success');
+      } else {
+        window.app?.showToast(res.error || 'تعذر إرسال أمر الطباعة لطابعة الكاشير', 'error');
+        this.printReceiptDirectly();
+      }
+    } catch (err) {
+      console.warn('Cloud print error:', err);
+      window.app?.showToast('خطأ في إرسال أمر الطباعة، جاري الفتح على الموبايل...', 'info');
+      this.printReceiptDirectly();
+    }
   }
 
   getReceiptPrintStyles() {

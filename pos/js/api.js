@@ -219,6 +219,13 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 14.1 Push Print Job to Cashier Thermal Printer (الطباعة السحابية لطابعة الكاشير)
+   */
+  async pushPrintJob(jobPayload) {
+    return await this.post('push_print_job', jobPayload);
+  }
+
+  /**
    * 15. Submit Purchase Invoice (تسجيل فاتورة مشتريات / توريد وزيادة المخزون)
    */
   async pushPurchase(purchasePayload) {

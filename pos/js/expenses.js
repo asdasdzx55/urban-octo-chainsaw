@@ -312,20 +312,28 @@ class ExpensesController {
 
         return `
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <div class="font-black text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full ${bal > 0 ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
-                  <span>${s.name}</span>
-                </div>
-                <div class="text-[11px] text-gray-400 flex items-center gap-2 mt-1">
-                  <span>كود #${s.supplier_code || s.code || s.id}</span>
-                  <span>•</span>
-                  ${phoneLink}
+            <!-- Supplier Header: Name & Code (Full Width, Never Crushed) -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2 leading-snug">
+                    <span class="w-2.5 h-2.5 rounded-full shrink-0 ${bal > 0 ? 'bg-rose-500 shadow-xs shadow-rose-500/50' : (bal < 0 ? 'bg-blue-500 shadow-xs shadow-blue-500/50' : 'bg-emerald-500 shadow-xs shadow-emerald-500/50')}"></span>
+                    <span class="break-words font-extrabold text-[15px]">${s.name}</span>
+                  </div>
+                  <div class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                    <span class="font-mono font-bold bg-gray-100 dark:bg-gray-700/60 px-1.5 py-0.5 rounded text-[10px]">كود #${s.supplier_code || s.code || s.id}</span>
+                    <span>•</span>
+                    ${phoneLink}
+                  </div>
                 </div>
               </div>
-              <div class="text-left shrink-0">
-                ${balBadge}
+
+              <!-- Dedicated Balance Row (Clean, readable, full space) -->
+              <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/50">
+                <span class="text-xs text-gray-500 dark:text-gray-400 font-bold">الرصيد المالي:</span>
+                <div class="shrink-0">
+                  ${balBadge}
+                </div>
               </div>
             </div>
 

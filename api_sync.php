@@ -3208,7 +3208,8 @@ try {
                 $ord['total_price'] = (float)$ord['total_price'];
                 $ord['shipping_cost'] = (float)($ord['shipping_cost'] ?? 0);
                 $ord['payment_method'] = $ord['payment_method'] ?? 'كاش';
-                $ord['is_cash'] = (mb_stripos($ord['payment_method'], 'كاش') !== false || mb_stripos($ord['payment_method'], 'cash') !== false || empty($ord['payment_method']));
+                $pm = $ord['payment_method'];
+                $ord['is_cash'] = (empty($pm) || mb_stripos($pm, 'كاش') !== false || mb_stripos($pm, 'cash') !== false || mb_stripos($pm, 'استلام') !== false || mb_stripos($pm, 'تحصيل') !== false);
 
                 $status = trim($ord['status'] ?? 'جديد');
                 $created_date = substr($ord['created_at'] ?? '', 0, 10);
@@ -3289,7 +3290,8 @@ try {
             $upd->execute([$new_status, $order_id]);
 
             // إذا تم التسليم وكان كاش، نضيف المبلغ لعهدة الطيار
-            $is_cash = (mb_stripos($order['payment_method'] ?? '', 'كاش') !== false || mb_stripos($order['payment_method'] ?? '', 'cash') !== false || empty($order['payment_method']));
+            $pm = $order['payment_method'] ?? '';
+            $is_cash = (empty($pm) || mb_stripos($pm, 'كاش') !== false || mb_stripos($pm, 'cash') !== false || mb_stripos($pm, 'استلام') !== false || mb_stripos($pm, 'تحصيل') !== false);
             if ($new_status === 'تم التسليم' && $is_cash) {
                 $amt = (float)$order['total_price'];
                 $pdo->prepare("UPDATE delivery_drivers SET cash_balance = cash_balance + ? WHERE name = ?")->execute([$amt, $driver_name]);

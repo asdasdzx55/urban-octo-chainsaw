@@ -410,11 +410,18 @@ class DeliverySettlementController {
             <p class="text-[10px] text-gray-400 mt-0.5 truncate max-w-xs">${ord.customer_address || ord.address || '-'}</p>
           </div>
 
-          <div class="text-left">
+          <div class="text-left flex flex-col items-end">
             <span class="font-mono font-black text-gray-900 dark:text-white">${parseFloat(ord.total_price || 0).toFixed(2)} ج.م</span>
             <p class="text-[10px] font-bold ${isCod ? 'text-amber-600' : 'text-emerald-600'}">
               ${isCod ? '💵 تحصيل كاش' : '✅ مدفوع مسبقاً'}
             </p>
+            ${!isDelivered ? `
+              <button type="button" onclick="event.stopPropagation(); window.ordersController?.settleDeliveryOrder('${ord.id}', ${ord.total_price || 0}, ${ord.delivery_fee || 0}); window.deliverySettlementController?.closeSettleModal();" 
+                      class="mt-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] flex items-center justify-center gap-1 shadow-xs transition cursor-pointer" title="محاسبة هذا الأوردر وتوريد الصافي نقداً لخزينة دريم سوفت">
+                <i data-lucide="hand-coins" class="w-3 h-3"></i>
+                <span>تقفيل وتوريد للصندوق 💰</span>
+              </button>
+            ` : `<span class="text-[9.5px] text-emerald-600 font-bold block mt-0.5">✅ تم التوريد للصندوق</span>`}
           </div>
         </div>
       `;

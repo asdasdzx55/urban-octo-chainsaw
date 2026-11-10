@@ -1651,6 +1651,12 @@ try {
             $driver_name = trim($data['driver_name'] ?? '');
             $amount = (float)($data['amount'] ?? 0);
 
+            if ($driver_id > 0 && empty($driver_name)) {
+                $st_name = $pdo->prepare("SELECT name FROM delivery_drivers WHERE id = ?");
+                $st_name->execute([$driver_id]);
+                $driver_name = $st_name->fetchColumn() ?: '';
+            }
+
             if ($driver_id > 0) {
                 if ($amount > 0) {
                     $pdo->prepare("UPDATE delivery_drivers SET cash_balance = GREATEST(0, cash_balance - ?) WHERE id = ?")->execute([$amount, $driver_id]);
@@ -1665,9 +1671,21 @@ try {
                 }
             }
 
+            // ترحيل كافة فواتير الدليفري المعلقة للطيار فوراً إلى الصندوق والخزينة بدريم سوفت (synced = 0)
+            if (!empty($driver_name)) {
+                $upd_orders = $pdo->prepare("UPDATE orders SET 
+                    status = 'تم التسليم',
+                    payment_status = 'مدفوع',
+                    payment_method = 'كاش',
+                    synced = 0
+                    WHERE (delivery_person = ? OR delivery_person LIKE ?) 
+                      AND synced != 1");
+                $upd_orders->execute([$driver_name, "%{$driver_name}%"]);
+            }
+
             echo json_encode([
                 'success' => true,
-                'message' => '✅ تم تصفية عهدة الطيار بنجاح.'
+                'message' => '✅ تم تصفية عهدة الطيار وترحيل الفواتير نقدياً إلى الخزينة والصندوق بنجاح.'
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -3172,12 +3190,12 @@ try {
                 break;
             }
 
-            // التأكد من جلب الأوردرات المسندة لهذا الطيار فقط
-            $stmt = $pdo->prepare("SELECT * FROM orders WHERE delivery_person = ? ORDER BY id DESC LIMIT 50");
-            $stmt->execute([$driver_name]);
+            // التأكد من جلب الأوردرات المسندة لهذا الطيار بمرونة (عمر أو عمر طيار)
+            $stmt = $pdo->prepare("SELECT * FROM orders WHERE (delivery_person = ? OR delivery_person LIKE ?) ORDER BY id DESC LIMIT 50");
+            $stmt->execute([$driver_name, "%{$driver_name}%"]);
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // تصنيف وإحصاء أوردرات هذا الطيار
+            // تصنيف وإحصاء أوردرات هذا الطيار بدقة
             $in_transit = [];
             $pending = [];
             $delivered_today = [];
@@ -3192,14 +3210,19 @@ try {
                 $ord['payment_method'] = $ord['payment_method'] ?? 'كاش';
                 $ord['is_cash'] = (mb_stripos($ord['payment_method'], 'كاش') !== false || mb_stripos($ord['payment_method'], 'cash') !== false || empty($ord['payment_method']));
 
-                $status = $ord['status'] ?? 'جديد';
+                $status = trim($ord['status'] ?? 'جديد');
                 $created_date = substr($ord['created_at'] ?? '', 0, 10);
 
-                if ($status === 'جاري التوصيل' || $status === 'في الطريق') {
+                // أوردرات في الطريق / قيد التوصيل
+                if (in_array($status, ['قيد التوصيل', 'جاري التوصيل', 'في الطريق', 'مع الطيار'])) {
                     $in_transit[] = $ord;
-                } elseif ($status === 'بانتظار الطيار' || $status === 'جديد' || $status === 'مؤقتة' || $status === 'معلق') {
+                }
+                // أوردرات بانتظار الطيار أو قيد التجهيز
+                elseif (in_array($status, ['بانتظار الطيار', 'بانتظار الاستلام', 'قيد التجهيز', 'جديد', 'مؤقتة', 'معلق', 'pending'])) {
                     $pending[] = $ord;
-                } elseif ($status === 'تم التسليم' || $status === 'مكتملة') {
+                }
+                // أوردرات تم تسليمها
+                elseif (in_array($status, ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'])) {
                     if ($created_date === $today) {
                         $delivered_today[] = $ord;
                     }
@@ -3207,6 +3230,8 @@ try {
                         $total_cash_in_hand += $ord['total_price'];
                     }
                     $total_commission += $ord['shipping_cost'];
+                } else {
+                    $in_transit[] = $ord;
                 }
             }
             unset($ord);
@@ -3249,9 +3274,9 @@ try {
                 break;
             }
 
-            // التحقق من أن الأوردر مسند لهذا الطيار
-            $chk = $pdo->prepare("SELECT id, total_price, payment_method, status FROM orders WHERE id = ? AND delivery_person = ?");
-            $chk->execute([$order_id, $driver_name]);
+            // التحقق من أن الأوردر مسند لهذا الطيار بمرونة
+            $chk = $pdo->prepare("SELECT id, total_price, payment_method, status FROM orders WHERE id = ? AND (delivery_person = ? OR delivery_person LIKE ?)");
+            $chk->execute([$order_id, $driver_name, "%{$driver_name}%"]);
             $order = $chk->fetch(PDO::FETCH_ASSOC);
 
             if (!$order) {
@@ -3484,7 +3509,7 @@ try {
             }
 
             try {
-                $upd = $pdo->prepare("UPDATE orders SET status = 'تم التسليم', payment_status = 'مدفوع', delivery_person = ? WHERE id = ?");
+                $upd = $pdo->prepare("UPDATE orders SET status = 'تم التسليم', payment_status = 'مدفوع', payment_method = 'كاش', delivery_person = ?, synced = 0 WHERE id = ?");
                 $upd->execute(["مؤقت: " . $driver_note, $order_id]);
 
                 echo json_encode(['success' => true, 'message' => 'تم تقفيل الأوردر المؤقت بنجاح']);

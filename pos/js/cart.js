@@ -764,8 +764,32 @@ class POSCart {
     const isDelivery = inv.order_type === 'delivery' || inv.order_type === 'دليفري' || parseFloat(inv.delivery_fee) > 0 || !!inv.address;
     const isPrepaid = inv.delivery_pay_mode === 'prepaid' || (parseFloat(inv.paid_amount) >= parseFloat(inv.total) && inv.amount_to_collect === 0);
     const netTotal = parseFloat(inv.total || inv.total_price || 0);
+    const deliveryFee = parseFloat(inv.delivery_fee || 0);
+    const discountVal = parseFloat(inv.discount || inv.discount_amount || 0);
     const paidVal = parseFloat(inv.paid_amount || 0);
     const changeVal = paidVal >= netTotal ? (paidVal - netTotal) : 0;
+
+    // Calculate Items Subtotal strictly BEFORE delivery and discount
+    let subtotalVal = 0;
+    if (Array.isArray(inv.items) && inv.items.length > 0) {
+      subtotalVal = inv.items.reduce((acc, itm) => {
+        const p = parseFloat(itm.price || itm.unit_price || 0);
+        const q = parseFloat(itm.qty || itm.quantity || 1);
+        return acc + (p * q);
+      }, 0);
+    }
+    if (subtotalVal <= 0) {
+      if (inv.subtotal && parseFloat(inv.subtotal) > 0) {
+        const rawSub = parseFloat(inv.subtotal);
+        if (Math.abs(rawSub - netTotal) < 0.01 && deliveryFee > 0) {
+          subtotalVal = Math.max(0, netTotal - deliveryFee + discountVal);
+        } else {
+          subtotalVal = rawSub;
+        }
+      } else {
+        subtotalVal = Math.max(0, netTotal - deliveryFee + discountVal);
+      }
+    }
 
     return `
       <div class="bw-receipt">
@@ -877,7 +901,7 @@ class POSCart {
         <table class="bw-summary-table">
           <tr>
             <td>المجموع الفرعي:</td>
-            <td class="bw-val">${parseFloat(inv.subtotal || inv.total).toFixed(2)} ج.م</td>
+            <td class="bw-val">${subtotalVal.toFixed(2)} ج.م</td>
           </tr>
 
           ${parseFloat(inv.discount) > 0 ? `
@@ -1024,6 +1048,11 @@ class POSCart {
     };
 
     const isDelivery = invoice.order_type === 'delivery' || invoice.order_type === 'دليفري' || parseFloat(invoice.delivery_fee) > 0 || !!invoice.address;
+    const netTotal = parseFloat(invoice.total || invoice.total_price || invoice.net || 0);
+    const delivFee = parseFloat(invoice.delivery_fee || 0);
+    const discVal = parseFloat(invoice.discount || invoice.discount_amount || 0);
+    let itemsSum = cleanItems.reduce((acc, itm) => acc + (parseFloat(itm.price || 0) * parseFloat(itm.qty || 1)), 0);
+    const subtotalVal = itemsSum > 0 ? itemsSum : Math.max(0, netTotal - delivFee + discVal);
 
     const payload = {
       order_id: invoice.order_id || invoice.id || '',
@@ -1036,9 +1065,10 @@ class POSCart {
       delivery_person: invoice.delivery_person || '',
       address: invoice.address || '',
       payment_method: invoice.payment_method || 'كاش',
-      total_price: parseFloat(invoice.total || invoice.total_price || invoice.net || 0),
-      discount: parseFloat(invoice.discount || invoice.discount_amount || 0),
-      delivery_fee: parseFloat(invoice.delivery_fee || 0),
+      subtotal: subtotalVal,
+      total_price: netTotal,
+      discount: discVal,
+      delivery_fee: delivFee,
       paid_amount: parseFloat(invoice.paid_amount || 0),
       items: cleanItems,
       store_name: store.store_name,

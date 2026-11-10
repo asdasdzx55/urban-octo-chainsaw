@@ -484,6 +484,18 @@ class WebOrdersController {
     const order = this.orders.find(o => o.id === orderId);
     if (!order) return;
 
+    const rawTotal = parseFloat(order.total || order.total_price || 0);
+    const delivFee = parseFloat(order.delivery_fee || order.delivery_cost || 0);
+    const disc = parseFloat(order.discount || order.discount_amount || 0);
+    const rawItems = order.items || [];
+    let itemsSubtotal = 0;
+    if (Array.isArray(rawItems) && rawItems.length > 0) {
+      itemsSubtotal = rawItems.reduce((s, itm) => s + (parseFloat(itm.price || itm.unit_price || 0) * (parseFloat(itm.qty || itm.quantity || 1))), 0);
+    }
+    if (itemsSubtotal <= 0) {
+      itemsSubtotal = Math.max(0, rawTotal - delivFee + disc);
+    }
+
     const receiptData = {
       order_id: order.id,
       invoice_barcode: `WEB-ORD-${order.id}`,
@@ -494,13 +506,14 @@ class WebOrdersController {
       phone: order.customer_phone || '',
       address: order.address || '',
       delivery_person: order.delivery_person || '',
+      delivery_fee: delivFee,
       order_type: 'delivery',
-      payment_method: order.payment_method,
-      items: order.items || [],
-      subtotal: parseFloat(order.total || 0),
-      discount: 0,
-      total: parseFloat(order.total || 0),
-      paid_amount: parseFloat(order.total || 0),
+      payment_method: order.payment_method || 'كاش',
+      items: rawItems,
+      subtotal: itemsSubtotal,
+      discount: disc,
+      total: rawTotal,
+      paid_amount: rawTotal,
       change: 0
     };
 

@@ -683,6 +683,18 @@ try {
                 }
 
                 $inv_id = $r['invoice_barcode'] ?: ('INV-' . $r['id']);
+                $tot = (float)$r['total_price'];
+                $disc = (float)($r['discount_amount'] ?? 0);
+                $deliv = (float)($r['delivery_fee'] ?? 0);
+                $items_sum = 0.0;
+                if (!empty($items)) {
+                    foreach ($items as $it) {
+                        $p = (float)($it['price'] ?? $it['unit_price'] ?? 0);
+                        $q = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                        $items_sum += ($p * $q);
+                    }
+                }
+                $subtotal = ($items_sum > 0) ? $items_sum : max(0.0, $tot - $deliv + $disc);
 
                 $orders[] = [
                     'id' => (int)$r['id'],
@@ -691,8 +703,8 @@ try {
                     'customer_name' => $r['customer_name'] ?: 'عميل نقدي',
                     'customer_phone' => $r['customer_phone'] ?: '',
                     'customer_address' => $r['customer_address'] ?: '',
-                    'total' => (float)$r['total_price'],
-                    'subtotal' => (float)$r['total_price'] + (float)$r['discount_amount'],
+                    'total' => $tot,
+                    'subtotal' => $subtotal,
                     'discount' => (float)$r['discount_amount'],
                     'payment_method' => $r['payment_method'] ?: 'كاش',
                     'payment_status' => $r['payment_status'] ?: 'مدفوع',
@@ -754,6 +766,18 @@ try {
             }
 
             $inv_id = $ord['invoice_barcode'] ?: ('INV-' . $ord['id']);
+            $tot = (float)$ord['total_price'];
+            $disc = (float)($ord['discount_amount'] ?? 0);
+            $deliv = (float)($ord['delivery_fee'] ?? 0);
+            $items_sum = 0.0;
+            if (!empty($items)) {
+                foreach ($items as $it) {
+                    $p = (float)($it['price'] ?? $it['unit_price'] ?? 0);
+                    $q = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                    $items_sum += ($p * $q);
+                }
+            }
+            $subtotal = ($items_sum > 0) ? $items_sum : max(0.0, $tot - $deliv + $disc);
             $order_data = [
                 'id' => (int)$ord['id'],
                 'order_id' => $inv_id,
@@ -761,8 +785,8 @@ try {
                 'customer_name' => $ord['customer_name'] ?: 'عميل نقدي',
                 'customer_phone' => $ord['customer_phone'] ?: '',
                 'customer_address' => $ord['customer_address'] ?: '',
-                'total' => (float)$ord['total_price'],
-                'subtotal' => (float)$ord['total_price'] + (float)$ord['discount_amount'],
+                'total' => $tot,
+                'subtotal' => $subtotal,
                 'discount' => (float)$ord['discount_amount'],
                 'payment_method' => $ord['payment_method'] ?: 'كاش',
                 'status' => $ord['status'] ?: 'completed',

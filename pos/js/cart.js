@@ -568,6 +568,32 @@ class POSCart {
       }))
     };
 
+    if (shouldPrint) {
+      payload.print_job = {
+        job_type: 'receipt',
+        printer_name: 'XP-80C',
+        payload: this.buildCloudPrintPayload({
+          order_id: '',
+          invoice_barcode: `INV-${payload.local_sale_id}`,
+          created_at: new Date().toLocaleString('ar-EG'),
+          cashier: this.cashierNotes,
+          customer_name: payload.customer_name,
+          customer_phone: payload.customer_phone,
+          phone: payload.customer_phone,
+          address: payload.address,
+          delivery_person: finalDeliveryPerson,
+          delivery_fee: deliveryFee,
+          order_type: isDelivery ? 'delivery' : 'hall',
+          delivery_pay_mode: payload.delivery_pay_mode,
+          payment_method: paymentMethodLabel,
+          items: [...this.items],
+          discount: this.discountAmount,
+          total: total,
+          paid_amount: paidAmount
+        })
+      };
+    }
+
     try {
       window.app?.showLoading(true, shouldPrint ? 'جاري حفظ وطباعة الفاتورة...' : 'جاري حفظ الفاتورة في السيستم...');
       const result = await window.api.pushSale(payload);
@@ -625,9 +651,11 @@ class POSCart {
         document.getElementById('checkout-modal')?.classList.add('hidden');
 
         if (shouldPrint) {
-          // Show Success Thermal Receipt Modal & Trigger Cloud / Hardware Print
+          // Show Success Thermal Receipt Modal & Trigger Cloud / Hardware Print (1 round-trip when server already queued it)
           this.showReceiptModal(invoiceData);
-          this.printViaCloudPrinter(invoiceData);
+          if (!result.print_queued && !result.already_recorded) {
+            this.printViaCloudPrinter(invoiceData);
+          }
           if (isDelivery) {
             window.app?.showToast(`🛵 تم حفظ أوردر الدليفري #${realOrderId} وخروج الفاتورة للطيار! (الفاتورة مؤقتة لحين محاسبة الدليفري)`, 'info');
           } else {
@@ -1014,15 +1042,7 @@ class POSCart {
     this.printInvoice(this.lastInvoice);
   }
 
-  async printViaCloudPrinter(inv = null) {
-    const invoice = inv || this.lastInvoice;
-    if (!invoice) {
-      window.app?.showToast('لا توجد فاتورة محددة للطباعة', 'warning');
-      return;
-    }
-
-    window.app?.showToast('جاري إرسال أمر الطباعة لطابعة الكاشير (XP-80C)... 🖨️', 'info');
-
+  buildCloudPrintPayload(invoice) {
     let rawItems = invoice.items || [];
     if (typeof rawItems === 'string') {
       try { rawItems = JSON.parse(rawItems); } catch(e) { rawItems = []; }
@@ -1051,10 +1071,10 @@ class POSCart {
     const netTotal = parseFloat(invoice.total || invoice.total_price || invoice.net || 0);
     const delivFee = parseFloat(invoice.delivery_fee || 0);
     const discVal = parseFloat(invoice.discount || invoice.discount_amount || 0);
-    let itemsSum = cleanItems.reduce((acc, itm) => acc + (parseFloat(itm.price || 0) * parseFloat(itm.qty || 1)), 0);
+    const itemsSum = cleanItems.reduce((acc, itm) => acc + (parseFloat(itm.price || 0) * parseFloat(itm.qty || 1)), 0);
     const subtotalVal = itemsSum > 0 ? itemsSum : Math.max(0, netTotal - delivFee + discVal);
 
-    const payload = {
+    return {
       order_id: invoice.order_id || invoice.id || '',
       invoice_barcode: invoice.invoice_barcode || `INV-${invoice.order_id || invoice.id || '000'}`,
       date: invoice.date || invoice.created_at || new Date().toLocaleString('ar-EG'),
@@ -1077,6 +1097,17 @@ class POSCart {
       receipt_sub: store.receipt_sub,
       footer: store.receipt_footer || 'شكراً لزيارتكم • نسعد بخدمتكم دائماً ❤️'
     };
+  }
+
+  async printViaCloudPrinter(inv = null) {
+    const invoice = inv || this.lastInvoice;
+    if (!invoice) {
+      window.app?.showToast('لا توجد فاتورة محددة للطباعة', 'warning');
+      return;
+    }
+
+    window.app?.showToast('جاري إرسال أمر الطباعة لطابعة الكاشير (XP-80C)... 🖨️', 'info');
+    const payload = this.buildCloudPrintPayload(invoice);
 
     try {
       const res = await window.api.pushPrintJob({

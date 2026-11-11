@@ -75,6 +75,42 @@ function verify_api_auth() {
 }
 
 // دالة لتوحيد وتوليد كل الصيغ المحتملة لرقم الهاتف المصري (010..., 201..., 1...)
+// Shared helper for fast cloud receipt queueing without repeating DDL every request
+if (!function_exists('enqueue_pos_print_job')) {
+    function enqueue_pos_print_job($pdo, $printer_name, $job_type, $raw_payload) {
+        $payload_json = is_array($raw_payload)
+            ? json_encode($raw_payload, JSON_UNESCAPED_UNICODE)
+            : (string)$raw_payload;
+        if (empty($payload_json)) {
+            return 0;
+        }
+        $job_type = trim((string)$job_type) ?: 'receipt';
+        $printer_name = trim((string)$printer_name) ?: 'XP-80C';
+        $insert_sql = "INSERT INTO print_queue (job_type, printer_name, payload, status) VALUES (?, ?, ?, 'pending')";
+        try {
+            $stmt = $pdo->prepare($insert_sql);
+            $stmt->execute([$job_type, $printer_name, $payload_json]);
+            return (int)$pdo->lastInsertId();
+        } catch (PDOException $e) {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS print_queue (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    job_type VARCHAR(50) DEFAULT 'receipt',
+                    printer_name VARCHAR(100) DEFAULT 'XP-80C',
+                    payload LONGTEXT NOT NULL,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    printed_at DATETIME NULL,
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+            $stmt = $pdo->prepare($insert_sql);
+            $stmt->execute([$job_type, $printer_name, $payload_json]);
+            return (int)$pdo->lastInsertId();
+        }
+    }
+}
+
 if (!function_exists('normalize_egypt_phone_variants')) {
     function normalize_egypt_phone_variants($raw_phone) {
         $digits = preg_replace('/[^\d]/', '', (string)$raw_phone);
@@ -651,6 +687,7 @@ try {
                 if ($existing) {
                     echo json_encode([
                         'success' => true,
+                        'already_recorded' => true,
                         'order_id' => (int)$existing['id'],
                         'remote_id' => (int)$existing['id'],
                         'invoice_barcode' => $existing['invoice_barcode'] ?: $inv_bc,
@@ -670,6 +707,7 @@ try {
                 if ($existing2) {
                     echo json_encode([
                         'success' => true,
+                        'already_recorded' => true,
                         'order_id' => (int)$existing2['id'],
                         'remote_id' => (int)$existing2['id'],
                         'invoice_barcode' => $existing2['invoice_barcode'] ?: "INV-{$existing2['id']}",
@@ -804,6 +842,26 @@ try {
                 $inv_bc = "INV-{$remote_order_id}";
                 $pdo->prepare("UPDATE orders SET invoice_barcode = ? WHERE id = ?")->execute([$inv_bc, $remote_order_id]);
             }
+
+            $print_queued = false;
+            $print_job_id = 0;
+            if (!empty($data['print_job']) && is_array($data['print_job']) && !empty($data['print_job']['payload'])) {
+                try {
+                    $pj = $data['print_job'];
+                    $pj_payload = is_array($pj['payload']) ? $pj['payload'] : (json_decode((string)$pj['payload'], true) ?: []);
+                    if (!empty($pj_payload)) {
+                        $pj_payload['order_id'] = (int)$remote_order_id;
+                        $pj_payload['invoice_barcode'] = $inv_bc;
+                        $print_job_id = enqueue_pos_print_job(
+                            $pdo,
+                            $pj['printer_name'] ?? 'XP-80C',
+                            $pj['job_type'] ?? 'receipt',
+                            $pj_payload
+                        );
+                        $print_queued = ($print_job_id > 0);
+                    }
+                } catch (Exception $e) {}
+            }
             
             // تسجيل إشعار بنظام الإدارة
             try {
@@ -823,8 +881,11 @@ try {
                 'order_id' => $remote_order_id,
                 'local_sale_id' => $local_id,
                 'is_delivery' => $is_delivery,
+                'invoice_barcode' => $inv_bc,
                 'order_status' => $order_status,
-                'is_pending_settlement' => ($synced_flag === 2)
+                'is_pending_settlement' => ($synced_flag === 2),
+                'print_queued' => $print_queued,
+                'print_job_id' => $print_job_id
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -3234,39 +3295,20 @@ try {
             $job_type = trim($data['job_type'] ?? 'receipt');
             $printer_name = trim($data['printer_name'] ?? 'XP-80C');
             $raw_payload = $data['payload'] ?? '';
-            if (is_array($raw_payload)) {
-                $payload_json = json_encode($raw_payload, JSON_UNESCAPED_UNICODE);
-            } else {
-                $payload_json = (string)$raw_payload;
-            }
-
-            if (empty($payload_json)) {
+            if (empty($raw_payload)) {
                 echo json_encode(['success' => false, 'error' => 'بيانات الفاتورة فارغة'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
-            try {
-                $pdo->exec("
-                    CREATE TABLE IF NOT EXISTS print_queue (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        job_type VARCHAR(50) DEFAULT 'receipt',
-                        printer_name VARCHAR(100) DEFAULT 'XP-80C',
-                        payload LONGTEXT NOT NULL,
-                        status VARCHAR(20) DEFAULT 'pending',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        printed_at DATETIME NULL,
-                        INDEX idx_status (status)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                ");
-            } catch (Exception $e) {}
-
-            $stmt = $pdo->prepare("INSERT INTO print_queue (job_type, printer_name, payload, status) VALUES (?, ?, ?, 'pending')");
-            $stmt->execute([$job_type, $printer_name, $payload_json]);
-            $job_id = $pdo->lastInsertId();
+            $job_id = enqueue_pos_print_job($pdo, $printer_name, $job_type, $raw_payload);
+            if ($job_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'بيانات الفاتورة فارغة'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
 
             echo json_encode([
                 'success' => true,
-                'job_id' => (int)$job_id,
+                'job_id' => $job_id,
                 'message' => '🖨️ تم إرسال أمر الطباعة لطابعة الكاشير بنجاح!'
             ], JSON_UNESCAPED_UNICODE);
             break;

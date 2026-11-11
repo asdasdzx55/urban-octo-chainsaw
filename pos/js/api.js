@@ -132,6 +132,20 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 3.1 Lookup a product directly by exact database ID
+   */
+  async lookupProductById(productId) {
+    try {
+      const pid = parseInt(productId, 10);
+      if (!pid || pid <= 0) return { success: false, error: 'Invalid product ID' };
+      return await this.get('lookup_barcode', { id: pid });
+    } catch (e) {
+      console.warn('lookupProductById API notice:', e.message);
+      return { success: false, error: e.message };
+    }
+  }
+
+  /**
    * 4. Submit a new sales invoice & deduct stock
    */
   async pushSale(salePayload) {

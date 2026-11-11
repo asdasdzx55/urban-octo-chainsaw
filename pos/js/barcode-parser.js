@@ -95,6 +95,77 @@ class BarcodeParser {
     };
   }
 
+  static _splitAllBarcodes(product) {
+    const rawAll = String(product?.all_barcodes ?? '').trim().toLowerCase();
+    if (!rawAll) return [];
+    return rawAll.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+  }
+
+  static _matchTier(parsed, product) {
+    if (!parsed || !product) return 99;
+
+    const pBarcode = String(product.barcode ?? '').trim().toLowerCase();
+    const pBarcode2 = String(product.barcode2 ?? '').trim().toLowerCase();
+    const pBarcode3 = String(product.barcode3 ?? '').trim().toLowerCase();
+    const pPackBarcode = String(product.pack_barcode ?? '').trim().toLowerCase();
+    const pLocal = String(product.local_code ?? '').trim().toLowerCase();
+    const directBarcodes = [pBarcode, pBarcode2, pBarcode3, pPackBarcode].filter(Boolean);
+
+    if (parsed.isScale) {
+      const code = String(parsed.itemCode || '').toLowerCase();
+      const codeNum = String(parsed.itemCodeNumeric || '').toLowerCase();
+      const orig = String(parsed.originalBarcode || '').toLowerCase();
+
+      if (directBarcodes.some(b => b === orig || b === code || b === codeNum || (b.startsWith('20') && b.slice(2, 7) === code))) {
+        return 0;
+      }
+      const list = BarcodeParser._splitAllBarcodes(product);
+      if (list.some(t => t === code || t === codeNum || t === orig)) {
+        return 1;
+      }
+      if (pLocal && (pLocal === code || pLocal === codeNum)) {
+        return 2;
+      }
+      return 99;
+    }
+
+    const raw = String(parsed.originalBarcode || '').toLowerCase();
+    const rawNum = String(parsed.itemCodeNumeric || '').toLowerCase();
+    if (!raw) return 99;
+
+    if (directBarcodes.includes(raw)) return 0;
+    const list = BarcodeParser._splitAllBarcodes(product);
+    if (list.includes(raw)) return 1;
+    if (pLocal && (pLocal === raw || (rawNum && pLocal === rawNum))) return 2;
+    if (rawNum && rawNum !== raw && (directBarcodes.includes(rawNum) || list.includes(rawNum))) {
+      return 3;
+    }
+    return 99;
+  }
+
+  /**
+   * Find the highest-priority matching product for a parsed barcode structure.
+   * Never matches database ID as a barcode to avoid numeric ID collisions.
+   * @param {Object} parsed Parsed barcode object
+   * @param {Array} products Product catalog array
+   * @returns {Object|null} Best matched product or null
+   */
+  static findBestMatch(parsed, products) {
+    if (!parsed || !Array.isArray(products) || products.length === 0) return null;
+    let bestProd = null;
+    let bestTier = 99;
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      const tier = BarcodeParser._matchTier(parsed, p);
+      if (tier < bestTier) {
+        bestTier = tier;
+        bestProd = p;
+        if (tier === 0) break;
+      }
+    }
+    return bestProd;
+  }
+
   /**
    * Helper to check if a product matches a parsed barcode structure safely
    * Handles strings, numbers, nulls, and variations in product object fields
@@ -103,54 +174,7 @@ class BarcodeParser {
    * @returns {boolean} True if matched
    */
   static matchesProduct(parsed, product) {
-    if (!parsed || !product) return false;
-
-    // Safely coerce all properties to lowercase strings
-    const pBarcode = String(product.barcode !== undefined && product.barcode !== null ? product.barcode : '').trim().toLowerCase();
-    const pLocal = String(product.local_code !== undefined && product.local_code !== null ? product.local_code : '').trim().toLowerCase();
-    const pId = String(product.id !== undefined && product.id !== null ? product.id : '').trim().toLowerCase();
-    const pAllBarcodes = String(product.all_barcodes !== undefined && product.all_barcodes !== null ? product.all_barcodes : '').trim().toLowerCase();
-
-    if (parsed.isScale) {
-      const code = String(parsed.itemCode || '').toLowerCase();
-      const codeNum = String(parsed.itemCodeNumeric || '').toLowerCase();
-      const orig = String(parsed.originalBarcode || '').toLowerCase();
-
-      // 1. Check local_code match (e.g. "10725" or 10725)
-      if (pLocal && (pLocal === code || pLocal === codeNum)) return true;
-
-      // 2. Check barcode match (e.g. "10725" or "2010725" or exact 13-digit code)
-      if (pBarcode && (pBarcode === code || pBarcode === codeNum || pBarcode === orig)) return true;
-      if (pBarcode.startsWith('20') && pBarcode.slice(2, 7) === code) return true;
-
-      // 3. Check ID match
-      if (pId && (pId === code || pId === codeNum)) return true;
-
-      // 4. Check all_barcodes if comma/space separated
-      if (pAllBarcodes) {
-        const list = pAllBarcodes.split(/[,;\s]+/).map(s => s.trim().toLowerCase());
-        if (list.includes(code) || list.includes(codeNum) || list.includes(orig)) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    // Standard barcode matching
-    const raw = String(parsed.originalBarcode || '').toLowerCase();
-    const rawNum = String(parsed.itemCodeNumeric || '').toLowerCase();
-
-    if (pBarcode && (pBarcode === raw || pBarcode === rawNum)) return true;
-    if (pLocal && (pLocal === raw || pLocal === rawNum)) return true;
-    if (pId && (pId === raw || pId === rawNum)) return true;
-
-    if (pAllBarcodes) {
-      const list = pAllBarcodes.split(/[,;\s]+/).map(s => s.trim().toLowerCase());
-      if (list.includes(raw) || list.includes(rawNum)) return true;
-    }
-
-    return false;
+    return BarcodeParser._matchTier(parsed, product) < 99;
   }
 }
 

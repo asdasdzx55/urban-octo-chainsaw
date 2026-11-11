@@ -394,13 +394,49 @@ try {
         // ============================================================
         case 'lookup_barcode':
         case 'search_barcode':
-            $barcode = trim($_GET['barcode'] ?? $json_payload['barcode'] ?? $_GET['q'] ?? '');
-            if (empty($barcode)) {
+            $req_id = (int)($_GET['id'] ?? $json_payload['id'] ?? $_GET['product_id'] ?? $json_payload['product_id'] ?? 0);
+            $barcode = trim((string)($_GET['barcode'] ?? $json_payload['barcode'] ?? $_GET['q'] ?? ''));
+            if ($req_id <= 0 && $barcode === '') {
                 echo json_encode(['success' => false, 'error' => 'يرجى تحديد الباركود.'], JSON_UNESCAPED_UNICODE);
                 break;
             }
-            $stmt = $pdo->prepare("SELECT id, name, category, sub_category, price, old_price, cost, stock, barcode, barcode2, barcode3, local_code, all_barcodes, image_url, image_url AS image, category AS category_name, description, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty FROM products WHERE barcode = ? OR barcode2 = ? OR barcode3 = ? OR local_code = ? OR pack_barcode = ? OR all_barcodes LIKE ? OR id = ? LIMIT 1");
-            $stmt->execute([$barcode, $barcode, $barcode, $barcode, $barcode, '%' . $barcode . '%', is_numeric($barcode) ? (int)$barcode : 0]);
+            $select_cols = "SELECT id, name, category, sub_category, price, old_price, cost, stock, barcode, barcode2, barcode3, local_code, all_barcodes, image_url, image_url AS image, category AS category_name, description, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty, COALESCE(is_pos_visible, 1) AS is_pos_visible FROM products";
+            if ($req_id > 0) {
+                $stmt = $pdo->prepare("{$select_cols} WHERE id = ? LIMIT 1");
+                $stmt->execute([$req_id]);
+            } else {
+                // Exact prioritized lookup ONLY: prevents substring all_barcodes LIKE '%short%' or numeric IDs from returning a different product
+                $trimmed_bc = preg_match('/^0+([1-9]\d*)$/', $barcode, $m_trim) ? $m_trim[1] : $barcode;
+                $norm_all = "REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(all_barcodes, ''), ' ', ''), ';', ','), CHAR(13), ''), CHAR(10), ',')";
+                $stmt = $pdo->prepare("
+                    {$select_cols}
+                    WHERE (
+                        barcode = ?
+                        OR barcode2 = ?
+                        OR barcode3 = ?
+                        OR pack_barcode = ?
+                        OR FIND_IN_SET(?, {$norm_all}) > 0
+                        OR local_code = ?
+                        OR (? <> ? AND local_code = ?)
+                    )
+                    ORDER BY
+                        COALESCE(is_pos_visible, 1) DESC,
+                        (CASE
+                            WHEN barcode = ? THEN 0
+                            WHEN barcode2 = ? OR barcode3 = ? OR pack_barcode = ? THEN 1
+                            WHEN FIND_IN_SET(?, {$norm_all}) > 0 THEN 2
+                            WHEN local_code = ? THEN 3
+                            ELSE 4
+                        END) ASC,
+                        id ASC
+                    LIMIT 1
+                ");
+                $stmt->execute([
+                    $barcode, $barcode, $barcode, $barcode, $barcode, $barcode,
+                    $trimmed_bc, $barcode, $trimmed_bc,
+                    $barcode, $barcode, $barcode, $barcode, $barcode, $barcode,
+                ]);
+            }
             $prod = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($prod) {
                 $prod['id'] = (int)$prod['id'];
@@ -446,7 +482,8 @@ try {
             $limit = max(1, min(100, (int)($_GET['limit'] ?? $json_payload['limit'] ?? 30)));
             $vis_sql = storefrontVisibleProductSql();
 
-            $where = ["1=1"];
+            $include_archived = !empty($_GET['include_archived']) || !empty($json_payload['include_archived']);
+            $where = [$include_archived ? "1=1" : "COALESCE(is_pos_visible, 1) = 1"];
             $params = [];
             if ($filter === 'with_image') {
                 $where[] = $vis_sql;
@@ -461,7 +498,7 @@ try {
             }
 
             $order = $q !== ''
-                ? "ORDER BY (CASE WHEN barcode = ? OR barcode2 = ? OR barcode3 = ? OR pack_barcode = ? OR local_code = ? THEN 0 WHEN name LIKE ? THEN 1 ELSE 2 END), id DESC"
+                ? "ORDER BY (CASE WHEN barcode = ? OR barcode2 = ? OR barcode3 = ? OR pack_barcode = ? THEN 0 WHEN local_code = ? THEN 1 WHEN name LIKE ? THEN 2 ELSE 3 END), id DESC"
                 : "ORDER BY id DESC";
             $sql = "SELECT id, name, category, sub_category, price, old_price, cost, stock, barcode, barcode2, barcode3, local_code, all_barcodes, image_url, description, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty FROM products WHERE " . implode(' AND ', $where) . " {$order} LIMIT {$limit}";
             $stmt = $pdo->prepare($sql);

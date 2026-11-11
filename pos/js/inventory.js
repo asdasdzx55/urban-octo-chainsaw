@@ -68,6 +68,8 @@ class InventoryController {
     this.originalStock = 0;
     this.pendingImageBase64 = null;
     this.searchDebounceTimer = null;
+    this._auditSearchSeq = 0;
+    this._refreshReqSeq = 0;
     this.isScanningToInputField = false;
     this.isScanningToPackField = false;
     this.initCategoryDatalists();
@@ -176,19 +178,40 @@ class InventoryController {
     box.classList.remove('hidden');
   }
 
+  upsertLocalProduct(prod) {
+    if (!prod || !prod.id || !Array.isArray(window.app?.products)) return;
+    const pid = Number(prod.id);
+    const idx = window.app.products.findIndex(item => Number(item.id) === pid);
+    if (idx > -1) {
+      window.app.products[idx] = { ...window.app.products[idx], ...prod };
+    } else {
+      window.app.products.unshift(prod);
+    }
+  }
+
+  async refreshSelectedProductFromServer(targetProduct) {
+    const targetId = Number(targetProduct?.id || 0);
+    if (!navigator.onLine || !targetId) return;
+    const reqSeq = ++this._refreshReqSeq;
+    try {
+      const fresh = await window.api.lookupProductById(targetId);
+      if (reqSeq !== this._refreshReqSeq) return;
+      if (!fresh || !fresh.success || !fresh.product) return;
+      if (Number(fresh.product.id) !== targetId) return;
+      if (Number(this.selectedProduct?.id || 0) !== targetId) return;
+      this.upsertLocalProduct(fresh.product);
+      this.loadProductToForm(fresh.product);
+    } catch (e) {}
+  }
+
   async selectSearchResult(idx) {
     const p = (this._lastSearchMatches || [])[idx];
     if (!p) return;
+    clearTimeout(this.searchDebounceTimer);
+    this._auditSearchSeq++;
     this.hideSearchResults();
     this.loadProductToForm(p);
-    if (p.id && navigator.onLine) {
-      try {
-        const fresh = await window.api.lookupBarcode(String(p.id));
-        if (fresh && fresh.success && fresh.product && this.selectedProduct?.id === p.id) {
-          this.loadProductToForm(fresh.product);
-        }
-      } catch (e) {}
-    }
+    await this.refreshSelectedProductFromServer(p);
   }
 
   escapeHtmlStr(str) {
@@ -484,13 +507,18 @@ class InventoryController {
     }
   }
 
-  async searchProductForAudit(query) {
+  async searchProductForAudit(query, isLiveTyping = false) {
+    if (!isLiveTyping) {
+      clearTimeout(this.searchDebounceTimer);
+    }
     const q = (query || document.getElementById('inv-search-input')?.value || '').trim();
     if (!q) {
       this.hideSearchResults();
       window.app?.showToast('يرجى إدخال اسم المنتج أو الباركود', 'error');
       return;
     }
+
+    const searchSeq = ++this._auditSearchSeq;
 
     const parsed = window.BarcodeParser ? window.BarcodeParser.parse(q) : {
       isScale: /^20\d{11}$/.test(q),
@@ -501,43 +529,46 @@ class InventoryController {
     const qLower = q.toLowerCase();
     const localList = Array.isArray(window.app?.products) ? window.app.products : [];
 
-    // 1. Check exact barcode / scale / local_code / pack_barcode match first (auto-open!)
-    const exactMatch = localList.find(p => {
-      if (window.BarcodeParser && window.BarcodeParser.matchesProduct(parsed, p)) return true;
-      return (p.barcode && String(p.barcode).trim() === q) ||
-             (p.barcode2 && String(p.barcode2).trim() === q) ||
-             (p.barcode3 && String(p.barcode3).trim() === q) ||
-             (p.pack_barcode && String(p.pack_barcode).trim() === q) ||
-             (p.local_code && String(p.local_code).trim().toLowerCase() === qLower);
-    });
+    // 1. Check prioritized exact barcode / scale / local_code / pack_barcode match first (auto-open!)
+    // Avoid auto-opening on very short partial typing (e.g. 2-5 digits while user is still typing).
+    const allowAutoOpen = !isLiveTyping || parsed.isScale || q.length >= 6;
+    const exactMatch = allowAutoOpen ? (
+      window.BarcodeParser
+        ? window.BarcodeParser.findBestMatch(parsed, localList)
+        : localList.find(p =>
+            (p.barcode && String(p.barcode).trim() === q) ||
+            (p.barcode2 && String(p.barcode2).trim() === q) ||
+            (p.barcode3 && String(p.barcode3).trim() === q) ||
+            (p.pack_barcode && String(p.pack_barcode).trim() === q) ||
+            (p.local_code && String(p.local_code).trim().toLowerCase() === qLower)
+          )
+    ) : null;
 
     if (exactMatch) {
       this.hideSearchResults();
       this.loadProductToForm(exactMatch);
-      if (navigator.onLine && exactMatch.id) {
-        window.api.lookupBarcode(String(exactMatch.id)).then(fresh => {
-          if (fresh && fresh.success && fresh.product && this.selectedProduct?.id === exactMatch.id) {
-            this.loadProductToForm(fresh.product);
-          }
-        }).catch(() => {});
-      }
+      this.refreshSelectedProductFromServer(exactMatch);
       return;
     }
 
-    // 2. Gather multi-match candidates by name / partial barcode / category
+    // 2. Gather multi-match candidates by name / partial barcode / local_code
     let matches = localList.filter(p => {
       const n = String(p.name || '').toLowerCase();
       const b = String(p.barcode || '').toLowerCase();
+      const b2 = String(p.barcode2 || '').toLowerCase();
+      const b3 = String(p.barcode3 || '').toLowerCase();
+      const bp = String(p.pack_barcode || '').toLowerCase();
       const lc = String(p.local_code || '').toLowerCase();
       const allB = String(p.all_barcodes || '').toLowerCase();
-      return n.includes(qLower) || b.includes(qLower) || lc.includes(qLower) || allB.includes(qLower);
+      return n.includes(qLower) || b.includes(qLower) || b2.includes(qLower) || b3.includes(qLower) || bp.includes(qLower) || lc.includes(qLower) || allB.includes(qLower);
     }).slice(0, 24);
 
     if (navigator.onLine && matches.length < 5) {
       try {
-        if (!arguments[1]) window.app?.showLoading(true, 'جاري البحث عن الصنف...');
+        if (!isLiveTyping) window.app?.showLoading(true, 'جاري البحث عن الصنف...');
         const searchRes = await window.api.searchProducts(q, 24);
         window.app?.showLoading(false);
+        if (searchSeq !== this._auditSearchSeq) return;
         if (searchRes && searchRes.success && Array.isArray(searchRes.products) && searchRes.products.length > 0) {
           const seenIds = new Set(matches.map(m => Number(m.id)));
           searchRes.products.forEach(sp => {
@@ -552,9 +583,12 @@ class InventoryController {
       }
     }
 
-    if (matches.length === 1 && !arguments[1]) {
+    if (searchSeq !== this._auditSearchSeq) return;
+
+    if (matches.length === 1 && !isLiveTyping) {
       this.hideSearchResults();
       this.loadProductToForm(matches[0]);
+      this.refreshSelectedProductFromServer(matches[0]);
       return;
     }
     if (matches.length > 0) {
@@ -562,17 +596,19 @@ class InventoryController {
       return;
     }
 
-    // 3. Fallback direct barcode API check
+    // 3. Fallback direct barcode API check (for newly synced products not yet in local cache)
     try {
       window.app?.showLoading(true, 'جاري الاستعلام عن الباركود...');
       const res = await window.api.lookupBarcode(parsed.isScale ? parsed.itemCode : q);
       window.app?.showLoading(false);
+      if (searchSeq !== this._auditSearchSeq) return;
       if (res && res.success && res.product) {
         this.hideSearchResults();
+        this.upsertLocalProduct(res.product);
         this.loadProductToForm(res.product);
       } else {
         this.renderSearchResults([], q);
-        if (!arguments[1]) window.posScanner?.playErrorTone?.();
+        if (!isLiveTyping) window.posScanner?.playErrorTone?.();
       }
     } catch (e) {
       window.app?.showLoading(false);
@@ -916,7 +952,7 @@ class InventoryController {
         window.posScanner?.playSuccessBeep();
         const msgText = (res.adjustment && res.adjustment.adjusted && res.message)
           ? res.message
-          : (this.selectedProduct.isNew ? '??? ????? ????? (' + name + ') ????? ?' : '?? ????? ????? (' + name + ') ????? ?');
+          : (this.selectedProduct.isNew ? 'تم إضافة الصنف (' + name + ') بنجاح ✅' : 'تم تحديث بيانات الصنف (' + name + ') بنجاح ✅');
         window.app?.showToast(msgText, 'success');
 
         const newId = res.product_id || (this.selectedProduct.id || Date.now());
@@ -928,7 +964,7 @@ class InventoryController {
             if (upRes && upRes.success) {
               finalImgUrl = upRes.image_url || finalImgUrl;
               finalHasImg = true;
-              window.app?.showToast('? ?? ??? ?????? ???? ????? ??? ??????!', 'success');
+              window.app?.showToast('📷 تم رفع الصورة ونشر المنتج على المتجر!', 'success');
             }
           } catch (upErr) {}
           this.pendingImageBase64 = null;

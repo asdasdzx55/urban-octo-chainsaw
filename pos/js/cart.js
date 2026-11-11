@@ -129,16 +129,15 @@ class POSCart {
       unit: 'كجم'
     };
 
-    // 1. Check local cached products first for instant response
-    let product = window.app?.products?.find(p => {
-      if (window.BarcodeParser) {
-        return window.BarcodeParser.matchesProduct(parsed, p);
-      }
-      const pBarcode = String(p.barcode || '').trim();
-      const pLocal = String(p.local_code || '').trim().toLowerCase();
-      const code = String(parsed.itemCode || '').toLowerCase();
-      return (pBarcode && pBarcode === code) || (pLocal && pLocal === code);
-    });
+    // 1. Check local cached products first for instant response (prioritized exact match)
+    let product = window.BarcodeParser
+      ? window.BarcodeParser.findBestMatch(parsed, window.app?.products || [])
+      : window.app?.products?.find(p => {
+          const pBarcode = String(p.barcode || '').trim();
+          const pLocal = String(p.local_code || '').trim().toLowerCase();
+          const code = String(parsed.itemCode || '').toLowerCase();
+          return (pBarcode && pBarcode === code) || (pLocal && pLocal === code);
+        });
 
     if (product) {
       const productToAdd = parsed.isScale ? {

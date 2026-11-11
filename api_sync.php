@@ -5,6 +5,7 @@ if (!ob_start("ob_gzhandler")) ob_start();
  * واجهة المزامنة المركزية الشاملة لسوبر ماركت المنزل السوري
  */
 require_once 'config.php';
+require_once __DIR__ . '/storefront_helpers.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -298,16 +299,41 @@ try {
                 $stmt = $pdo->query("SELECT * FROM products ORDER BY id ASC");
             }
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
+            $gal_map = [];
+            try {
+                $gal_rows = $pdo->query("
+                    SELECT product_id, image_path FROM product_images
+                    WHERE image_path IS NOT NULL
+                      AND TRIM(image_path) <> ''
+                      AND LOWER(TRIM(image_path)) NOT LIKE '%placeholder.php%'
+                      AND LOWER(TRIM(image_path)) NOT LIKE '%no-image%'
+                    ORDER BY is_main DESC, id ASC
+                ")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($gal_rows as $gr) {
+                    $gpid = (int)$gr['product_id'];
+                    if (!isset($gal_map[$gpid]) && isRealProductImage($gr['image_path'])) {
+                        $gal_map[$gpid] = trim((string)$gr['image_path']);
+                    }
+                }
+            } catch (Exception $e) {}
+
             // تنسيق الأرقام والحقول
             foreach ($products as &$p) {
                 $p['id'] = (int)$p['id'];
                 $p['price'] = (float)$p['price'];
+                $p['old_price'] = ($p['old_price'] !== null && $p['old_price'] !== '') ? (float)$p['old_price'] : null;
                 $p['cost'] = (float)($p['cost'] ?? 0);
                 $p['stock'] = (float)($p['stock'] ?? 100);
                 $p['barcode'] = $p['barcode'] ?? '';
                 $p['local_code'] = $p['local_code'] ?? '';
                 $p['all_barcodes'] = $p['all_barcodes'] ?? ($p['barcode'] ?: '');
+                $p['description'] = $p['description'] ?? '';
+                $resolved_img = isRealProductImage($p['image_url'] ?? '')
+                    ? trim((string)$p['image_url'])
+                    : ($gal_map[$p['id']] ?? '');
+                $p['image_url'] = $resolved_img;
+                $p['has_real_image'] = ($resolved_img !== '');
                 $p['is_weight_based'] = (!empty($p['is_weight_based']) || ($p['unit_type'] ?? '') === 'weight' || ($p['unit_type'] ?? '') === 'وزن') ? 1 : 0;
                 $p['unit_type'] = !empty($p['unit_type']) ? $p['unit_type'] : ($p['is_weight_based'] ? 'وزن' : 'قطعة');
                 $p['has_pack'] = !empty($p['has_pack']) ? 1 : 0;
@@ -317,7 +343,6 @@ try {
                 $p['pack_qty'] = (float)($p['pack_qty'] ?? 1);
             }
             unset($p);
-            
             echo json_encode([
                 'success' => true,
                 'count' => count($products),
@@ -336,29 +361,279 @@ try {
                 echo json_encode(['success' => false, 'error' => 'يرجى تحديد الباركود.'], JSON_UNESCAPED_UNICODE);
                 break;
             }
-            $stmt = $pdo->prepare("SELECT id, name, price, cost, stock, barcode, local_code, all_barcodes, image, category_id, description, has_pack, pack_name, pack_barcode, pack_price, pack_qty FROM products WHERE barcode = ? OR local_code = ? OR pack_barcode = ? OR all_barcodes LIKE ? LIMIT 1");
-            $stmt->execute([$barcode, $barcode, $barcode, '%' . $barcode . '%']);
+            $stmt = $pdo->prepare("SELECT id, name, category, sub_category, price, old_price, cost, stock, barcode, barcode2, barcode3, local_code, all_barcodes, image_url, image_url AS image, category AS category_name, description, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty FROM products WHERE barcode = ? OR barcode2 = ? OR barcode3 = ? OR local_code = ? OR pack_barcode = ? OR all_barcodes LIKE ? OR id = ? LIMIT 1");
+            $stmt->execute([$barcode, $barcode, $barcode, $barcode, $barcode, '%' . $barcode . '%', is_numeric($barcode) ? (int)$barcode : 0]);
             $prod = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($prod) {
                 $prod['id'] = (int)$prod['id'];
                 $prod['price'] = (float)$prod['price'];
+                $prod['old_price'] = ($prod['old_price'] !== null && $prod['old_price'] !== '') ? (float)$prod['old_price'] : null;
                 $prod['cost'] = (float)($prod['cost'] ?? 0);
                 $prod['stock'] = (float)($prod['stock'] ?? 0);
+                $prod['description'] = $prod['description'] ?? '';
+                $prod['image_url'] = resolveProductDisplayImage($pdo, $prod);
+                $prod['image'] = $prod['image_url'];
+                $prod['has_real_image'] = ($prod['image_url'] !== '');
+                $prod['gallery'] = [];
+                try {
+                    $gs = $pdo->prepare("SELECT id, image_path, is_main FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
+                    $gs->execute([$prod['id']]);
+                    foreach ($gs->fetchAll(PDO::FETCH_ASSOC) as $gr) {
+                        if (isRealProductImage($gr['image_path'] ?? '')) {
+                            $prod['gallery'][] = $gr;
+                        }
+                    }
+                } catch (Exception $e) {}
                 $prod['has_pack'] = !empty($prod['has_pack']) ? 1 : 0;
                 $prod['pack_price'] = (float)($prod['pack_price'] ?? 0);
                 $prod['pack_qty'] = (float)($prod['pack_qty'] ?? 1);
                 $is_pack_match = (!empty($prod['pack_barcode']) && $prod['pack_barcode'] === $barcode);
                 echo json_encode([
-                    'success' => true, 
-                    'found' => true, 
+                    'success' => true,
+                    'found' => true,
                     'product' => $prod,
                     'is_pack_match' => $is_pack_match
                 ], JSON_UNESCAPED_UNICODE);
             } else {
-                echo json_encode(['success' => true, 'found' => false, 'message' => 'المنتج غير موجود'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['success' => true, 'found' => false, 'message' => 'المنتج غير مسجل'], JSON_UNESCAPED_UNICODE);
             }
             break;
 
+        // ============================================================
+        // 1.2 البحث المتعدد عن المنتجات بالاسم أو الباركود
+        // ============================================================
+        case 'search_products':
+            $q = trim((string)($_GET['q'] ?? $_GET['query'] ?? $json_payload['q'] ?? $json_payload['query'] ?? ''));
+            $filter = trim((string)($_GET['filter'] ?? $json_payload['filter'] ?? 'all'));
+            $limit = max(1, min(100, (int)($_GET['limit'] ?? $json_payload['limit'] ?? 30)));
+            $vis_sql = storefrontVisibleProductSql();
+
+            $where = ["1=1"];
+            $params = [];
+            if ($filter === 'with_image') {
+                $where[] = $vis_sql;
+            } elseif ($filter === 'without_image') {
+                $where[] = "NOT ({$vis_sql})";
+            }
+            if ($q !== '') {
+                $like = '%' . $q . '%';
+                $q_id = is_numeric($q) ? (int)$q : 0;
+                $where[] = "(barcode = ? OR barcode2 = ? OR barcode3 = ? OR pack_barcode = ? OR local_code = ? OR id = ? OR name LIKE ? OR all_barcodes LIKE ? OR category LIKE ?)";
+                array_push($params, $q, $q, $q, $q, $q, $q_id, $like, $like, $like);
+            }
+
+            $order = $q !== ''
+                ? "ORDER BY (CASE WHEN barcode = ? OR barcode2 = ? OR barcode3 = ? OR pack_barcode = ? OR local_code = ? THEN 0 WHEN name LIKE ? THEN 1 ELSE 2 END), id DESC"
+                : "ORDER BY id DESC";
+            $sql = "SELECT id, name, category, sub_category, price, old_price, cost, stock, barcode, barcode2, barcode3, local_code, all_barcodes, image_url, description, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty FROM products WHERE " . implode(' AND ', $where) . " {$order} LIMIT {$limit}";
+            $stmt = $pdo->prepare($sql);
+            if ($q !== '') {
+                $stmt->execute(array_merge($params, [$q, $q, $q, $q, $q, $q . '%']));
+            } else {
+                $stmt->execute($params);
+            }
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $ids = array_column($rows, 'id');
+            $gal_by_prod = [];
+            if (!empty($ids)) {
+                try {
+                    $ph = implode(',', array_fill(0, count($ids), '?'));
+                    $gs = $pdo->prepare("SELECT product_id, id, image_path, is_main FROM product_images WHERE product_id IN ({$ph}) ORDER BY is_main DESC, id ASC");
+                    $gs->execute($ids);
+                    foreach ($gs->fetchAll(PDO::FETCH_ASSOC) as $gr) {
+                        if (isRealProductImage($gr['image_path'] ?? '')) {
+                            $gal_by_prod[(int)$gr['product_id']][] = $gr;
+                        }
+                    }
+                } catch (Exception $e) {}
+            }
+
+            foreach ($rows as &$r) {
+                $rid = (int)$r['id'];
+                $r['id'] = $rid;
+                $r['price'] = (float)$r['price'];
+                $r['old_price'] = ($r['old_price'] !== null && $r['old_price'] !== '') ? (float)$r['old_price'] : null;
+                $r['cost'] = (float)($r['cost'] ?? 0);
+                $r['stock'] = (float)($r['stock'] ?? 0);
+                $r['description'] = $r['description'] ?? '';
+                $r['gallery'] = $gal_by_prod[$rid] ?? [];
+                $img = isRealProductImage($r['image_url'] ?? '')
+                    ? trim((string)$r['image_url'])
+                    : (!empty($r['gallery']) ? trim((string)$r['gallery'][0]['image_path']) : '');
+                $r['image_url'] = $img;
+                $r['image'] = $img;
+                $r['has_real_image'] = ($img !== '');
+                $r['has_pack'] = !empty($r['has_pack']) ? 1 : 0;
+                $r['pack_price'] = (float)($r['pack_price'] ?? 0);
+                $r['pack_qty'] = (float)($r['pack_qty'] ?? 1);
+            }
+            unset($r);
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($rows),
+                'products' => $rows,
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 1.3 رفع صورة حقيقية لمنتج من تطبيق الكاشير أو الواجهة البرمجية
+        // ============================================================
+        case 'upload_product_image':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $product_id = (int)($data['product_id'] ?? $data['id'] ?? 0);
+            $barcode_lookup = trim((string)($data['barcode'] ?? $data['local_code'] ?? ''));
+            $set_main = !isset($data['set_main']) || (bool)$data['set_main'];
+
+            if ($product_id <= 0 && $barcode_lookup !== '') {
+                $st = $pdo->prepare("SELECT id FROM products WHERE barcode = ? OR local_code = ? OR pack_barcode = ? LIMIT 1");
+                $st->execute([$barcode_lookup, $barcode_lookup, $barcode_lookup]);
+                $product_id = (int)($st->fetchColumn() ?: 0);
+            }
+            if ($product_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'يرجى حفظ المنتج أو تحديد رقم الصنف أولاً قبل رفع الصورة.'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $chk_p = $pdo->prepare("SELECT id, name, image_url FROM products WHERE id = ? LIMIT 1");
+            $chk_p->execute([$product_id]);
+            $prod_row = $chk_p->fetch(PDO::FETCH_ASSOC);
+            if (!$prod_row) {
+                echo json_encode(['success' => false, 'error' => 'المنتج غير موجود.'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $saved_rel_path = '';
+            $uploads_dir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
+            if (!is_dir($uploads_dir)) {
+                @mkdir($uploads_dir, 0755, true);
+            }
+
+            if (!empty($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $res_up = uploadImage($_FILES['image']);
+                if ($res_up && isRealProductImage($res_up)) {
+                    $saved_rel_path = $res_up;
+                }
+            } elseif (!empty($data['image_base64'])) {
+                $b64_raw = trim((string)$data['image_base64']);
+                $ext = 'jpg';
+                if (preg_match('/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i', $b64_raw, $m)) {
+                    $ext = strtolower($m[1]) === 'jpeg' ? 'jpg' : strtolower($m[1]);
+                    $b64_raw = substr($b64_raw, strpos($b64_raw, ',') + 1);
+                }
+                $bin = base64_decode($b64_raw, true);
+                if ($bin !== false && strlen($bin) > 64 && strlen($bin) <= 8 * 1024 * 1024) {
+                    $fname = 'pos_prod_' . $product_id . '_' . uniqid() . '.' . $ext;
+                    $dest = $uploads_dir . DIRECTORY_SEPARATOR . $fname;
+                    if (file_put_contents($dest, $bin) !== false) {
+                        $saved_rel_path = 'uploads/' . $fname;
+                    }
+                }
+            }
+
+            if ($saved_rel_path === '') {
+                echo json_encode(['success' => false, 'error' => 'لم يتم استلام ملف صورة صالح.'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $pdo->prepare("DELETE FROM product_images WHERE product_id = ? AND (LOWER(image_path) LIKE '%placeholder.php%' OR TRIM(COALESCE(image_path,'')) = '')")->execute([$product_id]);
+            $has_real_main = (int)$pdo->query("SELECT COUNT(*) FROM product_images WHERE product_id = {$product_id} AND is_main = 1")->fetchColumn();
+            $make_main = ($set_main || $has_real_main === 0) ? 1 : 0;
+            if ($make_main === 1) {
+                $pdo->prepare("UPDATE product_images SET is_main = 0 WHERE product_id = ?")->execute([$product_id]);
+            }
+            $pdo->prepare("INSERT INTO product_images (product_id, image_path, is_main) VALUES (?, ?, ?)")->execute([$product_id, $saved_rel_path, $make_main]);
+            $new_img_id = (int)$pdo->lastInsertId();
+
+            if ($make_main === 1 || !isRealProductImage($prod_row['image_url'] ?? '')) {
+                $pdo->prepare("UPDATE products SET image_url = ? WHERE id = ?")->execute([$saved_rel_path, $product_id]);
+            }
+            $final_main = syncProductPrimaryImage($pdo, $product_id);
+            $gal_list = $pdo->prepare("SELECT id, image_path, is_main FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
+            $gal_list->execute([$product_id]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => '✅ تم رفع صورة المنتج بنجاح وتفعيل ظهوره على المتجر الإلكتروني.',
+                'product_id' => $product_id,
+                'image_id' => $new_img_id,
+                'image_url' => $final_main ?: $saved_rel_path,
+                'uploaded_path' => $saved_rel_path,
+                'has_real_image' => true,
+                'gallery' => $gal_list->fetchAll(PDO::FETCH_ASSOC),
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 1.4 حذف صورة منتج (وإخفاؤه من المتجر إذا لم تبقَ صور)
+        // ============================================================
+        case 'delete_product_image':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $product_id = (int)($data['product_id'] ?? $data['id'] ?? 0);
+            $image_id = (int)($data['image_id'] ?? 0);
+
+            if ($product_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'معرف المنتج مطلوب.'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            if ($image_id > 0) {
+                $st = $pdo->prepare("SELECT image_path FROM product_images WHERE id = ? AND product_id = ?");
+                $st->execute([$image_id, $product_id]);
+                $path = $st->fetchColumn();
+                if ($path) {
+                    safeUnlinkProductImageFile((string)$path, __DIR__);
+                    $pdo->prepare("DELETE FROM product_images WHERE id = ?")->execute([$image_id]);
+                }
+                $pdo->prepare("UPDATE products SET image_url = '' WHERE id = ? AND image_url = ?")->execute([$product_id, (string)$path]);
+            } else {
+                $st = $pdo->prepare("SELECT image_path FROM product_images WHERE product_id = ?");
+                $st->execute([$product_id]);
+                foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gp) {
+                    safeUnlinkProductImageFile((string)$gp, __DIR__);
+                }
+                $cur_p = $pdo->prepare("SELECT image_url FROM products WHERE id = ?");
+                $cur_p->execute([$product_id]);
+                $cur_img = (string)($cur_p->fetchColumn() ?: '');
+                if (isRealProductImage($cur_img)) {
+                    safeUnlinkProductImageFile($cur_img, __DIR__);
+                }
+                $pdo->prepare("DELETE FROM product_images WHERE product_id = ?")->execute([$product_id]);
+                $pdo->prepare("UPDATE products SET image_url = '' WHERE id = ?")->execute([$product_id]);
+            }
+
+            $remaining_main = syncProductPrimaryImage($pdo, $product_id);
+            $gal_list = $pdo->prepare("SELECT id, image_path, is_main FROM product_images WHERE product_id = ? ORDER BY is_main DESC, id ASC");
+            $gal_list->execute([$product_id]);
+
+            echo json_encode([
+                'success' => true,
+                'product_id' => $product_id,
+                'image_url' => $remaining_main,
+                'has_real_image' => ($remaining_main !== ''),
+                'gallery' => $gal_list->fetchAll(PDO::FETCH_ASSOC),
+                'message' => $remaining_main === '' ? 'تم حذف الصورة وإخفاء المنتج من المتجر الإلكتروني لحين رفع صورة جديدة.' : 'تم حذف الصورة بنجاح.',
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 1.5 سجل تسويات الجرد وحركة تعديل الكميات
+        // ============================================================
+        case 'get_inventory_adjustments':
+            ensureInventoryAdjustmentsSchema($pdo);
+            $limit = max(1, min(100, (int)($_GET['limit'] ?? 30)));
+            $rows = $pdo->query("SELECT * FROM inventory_adjustments ORDER BY id DESC LIMIT {$limit}")->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode([
+                'success' => true,
+                'count' => count($rows),
+                'adjustments' => $rows,
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2. مزامنة / ترحيل المبيعات
+        // ============================================================
         // ============================================================
         // 2. استقبال فواتير ومبيعات الكاشير وخصم المخزون مركزياً
         // ============================================================
@@ -2272,7 +2547,16 @@ try {
             $all_barcodes = trim($data['all_barcodes'] ?? $barcode);
             $local_code = trim($data['local_code'] ?? '');
             $description = trim($data['description'] ?? '');
+            $has_desc_key = array_key_exists('description', $data);
+            $has_old_price_key = array_key_exists('old_price', $data);
+            $old_price = ($has_old_price_key && $data['old_price'] !== '' && $data['old_price'] !== null) ? (float)$data['old_price'] : null;
+            $has_image_key = array_key_exists('image_url', $data);
             $image_url = trim($data['image_url'] ?? '');
+            $track_adjustment = !empty($data['track_adjustment']) || !empty($data['apply_stock_adjustment']);
+            $adjustment_reason = trim((string)($data['adjustment_reason'] ?? $data['reason_code'] ?? ''));
+            $adjustment_cash_amount = $data['adjustment_cash_amount'] ?? ($data['cash_amount'] ?? null);
+            $adjustment_note = trim((string)($data['adjustment_note'] ?? $data['note'] ?? 'تعديل رصيد من شاشة الجرد بالكاشير'));
+            $cashier_name = trim((string)($data['cashier_name'] ?? 'كاشير الجرد'));
             $is_weight_based = (!empty($data['is_weight_based']) || ($data['unit_type'] ?? '') === 'weight' || ($data['unit_type'] ?? '') === 'وزن') ? 1 : 0;
             $unit_type = trim($data['unit_type'] ?? ($is_weight_based ? 'وزن' : 'قطعة'));
             $has_pack = !empty($data['has_pack']) ? 1 : 0;
@@ -2341,23 +2625,59 @@ try {
             try { $pdo->exec("ALTER TABLE products ADD COLUMN pack_price DECIMAL(10,2) DEFAULT 0.00"); } catch (Exception $e) {}
             try { $pdo->exec("ALTER TABLE products ADD COLUMN pack_qty DECIMAL(10,3) DEFAULT 1.000"); } catch (Exception $e) {}
 
+            $adj_result = null;
             if ($existing_id) {
-                $upd = $pdo->prepare("UPDATE products SET name = ?, category = ?, sub_category = ?, price = ?, cost = ?, stock = ?, barcode = ?, barcode2 = ?, barcode3 = ?, all_barcodes = ?, local_code = ?, is_weight_based = ?, unit_type = ?, has_pack = ?, pack_name = ?, pack_barcode = ?, pack_price = ?, pack_qty = ? WHERE id = ?");
-                $upd->execute([$name, $category, $sub_category, $price, $cost, $stock, $barcode, $barcode2, $barcode3, $all_barcodes, $local_code, $is_weight_based, $unit_type, $has_pack, $pack_name, $pack_barcode, $pack_price, $pack_qty, $existing_id]);
+                $old_stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? LIMIT 1");
+                $old_stmt->execute([$existing_id]);
+                $old_prod_row = $old_stmt->fetch(PDO::FETCH_ASSOC);
+
+                $final_old_price = $has_old_price_key ? $old_price : ($old_prod_row['old_price'] ?? null);
+                $final_desc = $has_desc_key ? $description : ($old_prod_row['description'] ?? '');
+                $final_img = ($has_image_key && isRealProductImage($image_url)) ? $image_url : ($old_prod_row['image_url'] ?? '');
+
+                $upd = $pdo->prepare("UPDATE products SET name = ?, category = ?, sub_category = ?, price = ?, old_price = ?, cost = ?, stock = ?, barcode = ?, barcode2 = ?, barcode3 = ?, all_barcodes = ?, local_code = ?, description = ?, image_url = ?, is_weight_based = ?, unit_type = ?, has_pack = ?, pack_name = ?, pack_barcode = ?, pack_price = ?, pack_qty = ? WHERE id = ?");
+                $upd->execute([$name, $category, $sub_category, $price, $final_old_price, $cost, $stock, $barcode, $barcode2, $barcode3, $all_barcodes, $local_code, $final_desc, $final_img, $is_weight_based, $unit_type, $has_pack, $pack_name, $pack_barcode, $pack_price, $pack_qty, $existing_id]);
                 $final_id = $existing_id;
                 $action_done = 'updated';
+
+                $old_stock_val = (float)($old_prod_row['stock'] ?? 0);
+                if ($old_prod_row && abs($stock - $old_stock_val) >= 0.0005 && ($track_adjustment || $adjustment_reason !== '')) {
+                    $adj_result = applyInventoryAdjustment($pdo, $old_prod_row, $stock, [
+                        'old_stock' => $old_stock_val,
+                        'cost' => $cost,
+                        'price' => $price,
+                        'reason_code' => $adjustment_reason,
+                        'cash_amount' => $adjustment_cash_amount,
+                        'note' => $adjustment_note,
+                        'cashier_name' => $cashier_name,
+                        'update_product_stock' => false,
+                    ]);
+                }
             } else {
-                $ins = $pdo->prepare("INSERT INTO products (name, category, sub_category, price, cost, stock, barcode, barcode2, barcode3, all_barcodes, local_code, description, image_url, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $ins->execute([$name, $category, $sub_category, $price, $cost, $stock, $barcode, $barcode2, $barcode3, $all_barcodes, $local_code, $description, $image_url, $is_weight_based, $unit_type, $has_pack, $pack_name, $pack_barcode, $pack_price, $pack_qty]);
+                $clean_insert_img = isRealProductImage($image_url) ? $image_url : '';
+                $ins = $pdo->prepare("INSERT INTO products (name, category, sub_category, price, old_price, cost, stock, barcode, barcode2, barcode3, all_barcodes, local_code, description, image_url, is_weight_based, unit_type, has_pack, pack_name, pack_barcode, pack_price, pack_qty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $ins->execute([$name, $category, $sub_category, $price, $old_price, $cost, $stock, $barcode, $barcode2, $barcode3, $all_barcodes, $local_code, $description, $clean_insert_img, $is_weight_based, $unit_type, $has_pack, $pack_name, $pack_barcode, $pack_price, $pack_qty]);
                 $final_id = $pdo->lastInsertId();
                 $action_done = 'inserted';
             }
-            
+
+            $fresh_stmt = $pdo->prepare("SELECT id, name, category, sub_category, price, old_price, cost, stock, barcode, local_code, all_barcodes, image_url, description, has_pack, pack_name, pack_barcode, pack_price, pack_qty, is_weight_based, unit_type FROM products WHERE id = ? LIMIT 1");
+            $fresh_stmt->execute([$final_id]);
+            $fresh_prod = $fresh_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            if (!empty($fresh_prod)) {
+                $fresh_prod['image_url'] = resolveProductDisplayImage($pdo, $fresh_prod);
+                $fresh_prod['has_real_image'] = ($fresh_prod['image_url'] !== '');
+            }
+
             echo json_encode([
                 'success' => true,
                 'action' => $action_done,
                 'product_id' => (int)$final_id,
-                'message' => "✅ تمت مزامنة المنتج ({$name}) على المتجر الإلكتروني بنجاح."
+                'product' => $fresh_prod,
+                'image_url' => $fresh_prod['image_url'] ?? '',
+                'has_real_image' => !empty($fresh_prod['has_real_image']),
+                'adjustment' => $adj_result,
+                'message' => "✅ تم حفظ بيانات الصنف ({$name}) بنجاح" . ($adj_result && !empty($adj_result['adjusted']) ? " وتسوية الجرد ({$adj_result['reason_label']})." : ".")
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -2999,85 +3319,180 @@ try {
         // 8. تقارير الكاشير والشيفت المالي اللحظي (POS Reports & Shift Summary)
         // ============================================================
         case 'get_pos_reports':
+            ensureInventoryAdjustmentsSchema($pdo);
             $today = date('Y-m-d');
-            
-            // إجمالي المبيعات اليوم
-            $sales_stmt = $pdo->prepare("SELECT total_price, payment_method, discount_amount, shipping_cost, cashier_name, created_at FROM orders WHERE created_at >= ? AND status != 'ملغي'");
-            $sales_stmt->execute(["{$today} 00:00:00"]);
+            $period = trim((string)($json_payload['period'] ?? $_GET['period'] ?? $_POST['period'] ?? 'today'));
+            $from_date = trim((string)($json_payload['from_date'] ?? $_GET['from_date'] ?? $_POST['from_date'] ?? ''));
+            $to_date = trim((string)($json_payload['to_date'] ?? $_GET['to_date'] ?? $_POST['to_date'] ?? ''));
+
+            if ($period === 'custom' && $from_date !== '' && $to_date !== '') {
+                $start_dt = $from_date . ' 00:00:00';
+                $end_dt = $to_date . ' 23:59:59';
+            } elseif ($period === 'week') {
+                $start_dt = date('Y-m-d', strtotime('-6 days')) . ' 00:00:00';
+                $end_dt = $today . ' 23:59:59';
+            } elseif ($period === 'month') {
+                $start_dt = date('Y-m-01') . ' 00:00:00';
+                $end_dt = $today . ' 23:59:59';
+            } else {
+                $start_dt = $today . ' 00:00:00';
+                $end_dt = $today . ' 23:59:59';
+            }
+            $start_day = substr($start_dt, 0, 10);
+            $end_day = substr($end_dt, 0, 10);
+
+            // جلب المبيعات المكتملة غير الملغاة
+            $sales_stmt = $pdo->prepare("SELECT id, total_price, payment_method, discount_amount, shipping_cost, cashier_name, created_at, items_json, source FROM orders WHERE created_at >= ? AND created_at <= ? AND status NOT IN ('ملغي', 'canceled')");
+            $sales_stmt->execute([$start_dt, $end_dt]);
             $sales_today = $sales_stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $total_sales_amount = 0;
+
+            // تجهيز جدول تكاليف الأصناف كاحتياطي لحساب التكلفة
+            $cost_map = [];
+            try {
+                foreach ($pdo->query("SELECT id, cost FROM products")->fetchAll(PDO::FETCH_ASSOC) as $pr) {
+                    $cost_map[(int)$pr['id']] = (float)$pr['cost'];
+                }
+            } catch (Exception $e) {}
+
+            $total_sales_amount = 0.0;
+            $total_cogs = 0.0;
+            $total_items_sold = 0.0;
             $sales_by_method = [
-                'كاش' => 0,
-                'فودافون كاش' => 0,
-                'انستا باي' => 0,
-                'فيزا' => 0,
-                'آجل' => 0
+                'كاش' => 0.0,
+                'فودافون كاش' => 0.0,
+                'تحويل بنكي' => 0.0,
+                'فيزا' => 0.0,
+                'آجل' => 0.0,
             ];
-            
+
             foreach ($sales_today as $s) {
                 $amt = (float)$s['total_price'];
                 $total_sales_amount += $amt;
                 $pm = $s['payment_method'] ?? 'كاش';
-                
-                if (mb_strpos($pm, 'فودافون') !== false || mb_strpos($pm, 'محفظة') !== false) {
+
+                if (mb_strpos($pm, 'فودافون') !== false || mb_strpos($pm, 'محفظ') !== false) {
                     $sales_by_method['فودافون كاش'] += $amt;
-                } elseif (mb_strpos($pm, 'انستا') !== false) {
-                    $sales_by_method['انستا باي'] += $amt;
-                } elseif (mb_strpos($pm, 'فيزا') !== false || mb_strpos($pm, 'كارت') !== false || mb_strpos($pm, 'بطاقة') !== false) {
+                } elseif (mb_strpos($pm, 'تحويل') !== false || mb_strpos($pm, 'بنك') !== false || mb_strpos($pm, 'انستا') !== false) {
+                    $sales_by_method['تحويل بنكي'] += $amt;
+                } elseif (mb_strpos($pm, 'فيزا') !== false || mb_strpos($pm, 'ماستر') !== false || mb_strpos($pm, 'بطاق') !== false) {
                     $sales_by_method['فيزا'] += $amt;
-                } elseif (mb_strpos($pm, 'آجل') !== false || mb_strpos($pm, 'حساب') !== false) {
+                } elseif (mb_strpos($pm, 'آجل') !== false || mb_strpos($pm, 'اجل') !== false) {
                     $sales_by_method['آجل'] += $amt;
                 } else {
                     $sales_by_method['كاش'] += $amt;
                 }
+
+                $items = !empty($s['items_json']) ? json_decode((string)$s['items_json'], true) : null;
+                if (is_array($items)) {
+                    foreach ($items as $it) {
+                        $q_item = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                        $pid_item = (int)($it['id'] ?? $it['product_id'] ?? 0);
+                        $c_item = isset($it['cost']) && (float)$it['cost'] > 0
+                            ? (float)$it['cost']
+                            : ($cost_map[$pid_item] ?? 0.0);
+                        $total_items_sold += abs($q_item);
+                        $total_cogs += ($q_item * $c_item);
+                    }
+                }
             }
-            
-            // المصروفات اليومية
-            $exp_stmt = $pdo->prepare("SELECT id, category, amount, note, date, partner_name, payment_method FROM expenses WHERE date >= ? OR created_at >= ?");
-            $exp_stmt->execute(["{$today} 00:00:00", "{$today} 00:00:00"]);
+
+            // جلب المصروفات والمدفوعات والتسويات غير النقدية
+            $exp_stmt = $pdo->prepare("SELECT id, category, amount, note, date, created_at, partner_name, payment_method FROM expenses WHERE (date >= ? AND date <= ?) OR (created_at >= ? AND created_at <= ?) ORDER BY id DESC");
+            $exp_stmt->execute([$start_day, $end_day, $start_dt, $end_dt]);
             $expenses_today = $exp_stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $total_general_expenses = 0;
-            $total_supplier_payouts = 0;
-            $total_partner_withdrawals = 0;
-            $cash_outflows = 0;
-            
+
+            $total_general_expenses = 0.0;
+            $total_supplier_payouts = 0.0;
+            $total_partner_withdrawals = 0.0;
+            $inventory_shrinkage_loss = 0.0;
+            $cash_outflows = 0.0;
+            $expenses_by_category = [];
+            $expenses_by_date = [];
+
             foreach ($expenses_today as $exp) {
                 $amt = (float)$exp['amount'];
-                $cat = $exp['category'] ?? '';
-                $is_cash = empty($exp['payment_method']) || $exp['payment_method'] === 'كاش';
-                
+                $cat = $exp['category'] ?? 'نثريات';
+                $pm_exp = trim((string)($exp['payment_method'] ?? ''));
+                $is_non_cash_adj = (mb_strpos($pm_exp, 'غير نقدي') !== false);
+                $is_cash = !$is_non_cash_adj && ($pm_exp === '' || $pm_exp === 'كاش');
+
                 if ($cat === 'سداد موردين') {
                     $total_supplier_payouts += $amt;
-                } elseif ($cat === 'مسحوبات الإدارة') {
+                } elseif ($cat === 'مسحوبات شخصية') {
                     $total_partner_withdrawals += $amt;
                 } else {
                     $total_general_expenses += $amt;
                 }
-                
+                if ($is_non_cash_adj) {
+                    $inventory_shrinkage_loss += $amt;
+                }
                 if ($is_cash) {
                     $cash_outflows += $amt;
                 }
+
+                $expenses_by_category[$cat] = ($expenses_by_category[$cat] ?? 0.0) + $amt;
+                $exp_day = !empty($exp['date']) ? substr((string)$exp['date'], 0, 10) : substr((string)($exp['created_at'] ?? $today), 0, 10);
+                $expenses_by_date[$exp_day] = ($expenses_by_date[$exp_day] ?? 0.0) + $amt;
             }
-            
-            // السيولة النقدية الفعلية في الدرج (Cash in Drawer)
+
+            $total_all_expenses = ($total_general_expenses + $total_supplier_payouts + $total_partner_withdrawals);
+            // صافي الكاش بالدرج (الصندوق لا يتأثر بخسائر التالف/الجرد غير النقدية)
             $net_cash_in_drawer = max(0, $sales_by_method['كاش'] - $cash_outflows);
-            
+            $gross_profit = $total_sales_amount - $total_cogs;
+            $gross_margin = $total_sales_amount > 0 ? round(($gross_profit / $total_sales_amount) * 100, 1) : 0;
+            $net_profit = $gross_profit - $total_all_expenses;
+            $net_margin = $total_sales_amount > 0 ? round(($net_profit / $total_sales_amount) * 100, 1) : 0;
+
+            $adj_rows = [];
+            try {
+                $adj_st = $pdo->prepare("SELECT * FROM inventory_adjustments WHERE created_at >= ? AND created_at <= ? ORDER BY id DESC LIMIT 50");
+                $adj_st->execute([$start_dt, $end_dt]);
+                $adj_rows = $adj_st->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
+            $summary_payload = [
+                'total_sales' => round($total_sales_amount, 2),
+                'total_cogs' => round($total_cogs, 2),
+                'gross_profit' => round($gross_profit, 2),
+                'gross_margin' => $gross_margin,
+                'total_all_expenses' => round($total_all_expenses, 2),
+                'inventory_shrinkage_loss' => round($inventory_shrinkage_loss, 2),
+                'cash_outflows' => round($cash_outflows, 2),
+                'net_profit' => round($net_profit, 2),
+                'net_margin' => $net_margin,
+                'net_cash_in_drawer' => round($net_cash_in_drawer, 2),
+                'orders_count' => count($sales_today),
+                'total_items_sold' => round($total_items_sold, 2),
+                'sales_by_method' => $sales_by_method,
+            ];
+
+            $expenses_report_payload = [
+                'filtered_expenses' => $expenses_today,
+                'total_amount' => round($total_all_expenses, 2),
+                'expenses_by_category' => $expenses_by_category,
+                'expenses_by_date' => $expenses_by_date,
+            ];
+
             echo json_encode([
                 'success' => true,
                 'server_time' => date('Y-m-d H:i:s'),
                 'today_date' => $today,
+                'period' => $period,
                 'orders_count' => count($sales_today),
-                'total_sales' => $total_sales_amount,
+                'total_sales' => round($total_sales_amount, 2),
                 'sales_by_method' => $sales_by_method,
-                'total_general_expenses' => $total_general_expenses,
-                'total_supplier_payouts' => $total_supplier_payouts,
-                'total_partner_withdrawals' => $total_partner_withdrawals,
-                'total_all_expenses' => ($total_general_expenses + $total_supplier_payouts + $total_partner_withdrawals),
-                'net_cash_in_drawer' => $net_cash_in_drawer,
+                'total_general_expenses' => round($total_general_expenses, 2),
+                'total_supplier_payouts' => round($total_supplier_payouts, 2),
+                'total_partner_withdrawals' => round($total_partner_withdrawals, 2),
+                'total_all_expenses' => round($total_all_expenses, 2),
+                'cash_outflows' => round($cash_outflows, 2),
+                'inventory_shrinkage_loss' => round($inventory_shrinkage_loss, 2),
+                'net_cash_in_drawer' => round($net_cash_in_drawer, 2),
                 'recent_sales' => array_slice(array_reverse($sales_today), 0, 8),
-                'recent_expenses' => array_slice(array_reverse($expenses_today), 0, 8)
+                'recent_expenses' => array_slice($expenses_today, 0, 8),
+                'summary' => $summary_payload,
+                'expenses_report' => $expenses_report_payload,
+                'inventory_adjustments' => $adj_rows,
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -3525,42 +3940,54 @@ try {
         // ============================================================
         case 'update_inventory_stock':
             $data = !empty($json_payload) ? $json_payload : $_POST;
-            $product_id = (int)($data['product_id'] ?? 0);
-            $barcode = trim($data['barcode'] ?? '');
-            $new_stock = isset($data['new_stock']) ? (float)$data['new_stock'] : null;
-            $note = trim($data['note'] ?? 'تعديل جرد يدوي');
+            $product_id = (int)($data['product_id'] ?? $data['id'] ?? 0);
+            $barcode = trim((string)($data['barcode'] ?? ''));
+            $new_stock = isset($data['new_stock']) ? (float)$data['new_stock'] : (isset($data['stock']) ? (float)$data['stock'] : null);
+            $note = trim((string)($data['note'] ?? 'تعديل رصيد الجرد'));
+            $reason_code = trim((string)($data['adjustment_reason'] ?? $data['reason_code'] ?? ''));
+            $cash_amount = $data['adjustment_cash_amount'] ?? ($data['cash_amount'] ?? null);
+            $cashier_name = trim((string)($data['cashier_name'] ?? 'كاشير الجرد'));
 
             if ($new_stock === null || ($product_id <= 0 && empty($barcode))) {
-                echo json_encode(['success' => false, 'error' => 'يرجى تحديد المنتج والكمية الجديدة بالجرد']);
+                echo json_encode(['success' => false, 'error' => 'بيانات المنتج والكمية الجديدة مطلوبة'], JSON_UNESCAPED_UNICODE);
                 break;
             }
 
             if ($product_id > 0) {
-                $stmt = $pdo->prepare("SELECT id, name, stock, cost, price FROM products WHERE id = ?");
+                $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? LIMIT 1");
                 $stmt->execute([$product_id]);
             } else {
-                $stmt = $pdo->prepare("SELECT id, name, stock, cost, price FROM products WHERE barcode = ? OR local_code = ?");
-                $stmt->execute([$barcode, $barcode]);
+                $stmt = $pdo->prepare("SELECT * FROM products WHERE barcode = ? OR barcode2 = ? OR barcode3 = ? OR pack_barcode = ? OR local_code = ? LIMIT 1");
+                $stmt->execute([$barcode, $barcode, $barcode, $barcode, $barcode]);
             }
             $prod = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$prod) {
-                echo json_encode(['success' => false, 'error' => 'المنتج غير موجود في قاعدة البيانات']);
+                echo json_encode(['success' => false, 'error' => 'المنتج غير موجود بقاعدة البيانات'], JSON_UNESCAPED_UNICODE);
                 break;
             }
 
             $old_stock = (float)$prod['stock'];
-            $upd = $pdo->prepare("UPDATE products SET stock = ? WHERE id = ?");
-            $upd->execute([$new_stock, $prod['id']]);
+            $adj = applyInventoryAdjustment($pdo, $prod, $new_stock, [
+                'old_stock' => $old_stock,
+                'reason_code' => $reason_code,
+                'cash_amount' => $cash_amount,
+                'note' => $note,
+                'cashier_name' => $cashier_name,
+                'update_product_stock' => true,
+            ]);
 
             echo json_encode([
                 'success' => true,
-                'message' => "تم تحديث رصيد ({$prod['name']}) من {$old_stock} إلى {$new_stock} بنجاح ✓",
+                'message' => !empty($adj['adjusted'])
+                    ? "✅ تم تعديل رصيد ({$prod['name']}) من {$old_stock} إلى {$new_stock} ({$adj['reason_label']})"
+                    : "ℹ️ الرصيد لم يتغير ({$new_stock})",
                 'product_id' => (int)$prod['id'],
                 'name' => $prod['name'],
                 'old_stock' => $old_stock,
                 'new_stock' => $new_stock,
-                'diff' => ($new_stock - $old_stock)
+                'diff' => ($new_stock - $old_stock),
+                'adjustment' => $adj,
             ], JSON_UNESCAPED_UNICODE);
             break;
 

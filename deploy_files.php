@@ -50,6 +50,36 @@ function copyFolder($src, $dst, &$copied, &$errors) {
     closedir($dir);
 }
 
+$rootPhpFiles = [
+    'storefront_helpers.php',
+    'index.php',
+    'shop.php',
+    'product.php',
+    'wishlist.php',
+    'ajax_wishlist.php',
+    'ajax_chat.php',
+    'admin_products.php',
+    'admin_edit_product.php',
+    'api_barcode.php',
+];
+foreach ($rootPhpFiles as $rootFile) {
+    $srcPath = $sourceDir . '/' . $rootFile;
+    $dstPath = $targetRoot . '/' . $rootFile;
+    if (file_exists($srcPath)) {
+        if (copy($srcPath, $dstPath)) {
+            if (function_exists('opcache_invalidate')) {
+                @opcache_invalidate($dstPath, true);
+            }
+            $copied[] = $rootFile;
+        } else {
+            $errors[] = 'Failed to copy ' . $rootFile;
+        }
+    }
+}
+if (file_exists($apiSyncDst) && function_exists('opcache_invalidate')) {
+    @opcache_invalidate($apiSyncDst, true);
+}
+
 $posSrc = $sourceDir . '/pos';
 $posDst = $targetRoot . '/pos';
 if (is_dir($posSrc)) {

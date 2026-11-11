@@ -470,6 +470,26 @@ class SyrianHomeAPI {
    *  - wipe_sales_and_operations
    *  - factory_reset_all
    */
+  async searchProducts(query, limit = 30, filter = 'all') {
+    return this.get('search_products', { q: query, limit, filter });
+  }
+
+  async uploadProductImage(payload) {
+    return this.post('upload_product_image', payload);
+  }
+
+  async deleteProductImage(productId, imageId = 0) {
+    return this.post('delete_product_image', { product_id: productId, image_id: imageId });
+  }
+
+  async updateInventoryStock(payload) {
+    return this.post('update_inventory_stock', payload);
+  }
+
+  async getInventoryAdjustments(limit = 30) {
+    return this.get('get_inventory_adjustments', { limit });
+  }
+
   async systemReset(mode, wipeProducts = 0) {
     const payload = {
       action: 'system_reset',

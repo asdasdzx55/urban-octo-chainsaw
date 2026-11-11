@@ -1098,6 +1098,8 @@
         </div>
 
         <!-- Product Edit Form (Hidden until product selected or Add New clicked) -->
+        <div id="inv-search-results" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-2"></div>
+
         <div id="inv-product-edit-form" class="hidden p-5 sm:p-6 bg-gray-50 dark:bg-gray-900/70 rounded-3xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4 animate-slide-up shadow-sm">
           
           <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
@@ -1202,6 +1204,69 @@
             </div>
           </div>
 
+          <!-- Section 2B: Stock Adjustment Reason & Cash Drawer Impact Card -->
+          <div id="inv-adjustment-card" class="hidden bg-amber-50/90 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-300 dark:border-amber-800 space-y-3 shadow-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2 text-xs font-extrabold text-amber-900 dark:text-amber-200">
+                <span class="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center">⚖️</span>
+                <span>تسوية الجرد وحفظ توازن الصندوق</span>
+              </div>
+              <span id="inv-adj-diff-badge" class="px-2.5 py-1 rounded-full text-[11px] font-black font-mono bg-white dark:bg-gray-800 text-amber-800 border border-amber-200"></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">سبب تعديل الكمية بالجرد</label>
+                <select id="inv-adj-reason" onchange="window.inventoryController.onStockInputChanged()" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 dark:text-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">مبلغ نقدي بالصندوق (اختياري — اتركه للحساب التلقائي)</label>
+                <input type="number" step="0.01" min="0" id="inv-adj-cash-amount" oninput="window.inventoryController.onStockInputChanged()" placeholder="تلقائي حسب التكلفة / سعر البيع" class="w-full bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-xs font-bold font-mono">
+              </div>
+            </div>
+            <div>
+              <input type="text" id="inv-adj-note" placeholder="ملاحظة التسوية (مثال: تالف رطوبة / مبيعات لم تسجل / شراء نقدي طارئ)..." class="w-full bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-xs">
+            </div>
+            <div id="inv-stock-impact-preview" class="p-3 rounded-xl bg-white/90 dark:bg-gray-800/90 border border-amber-200 dark:border-amber-800 text-xs flex flex-wrap items-center justify-between gap-2"></div>
+          </div>
+
+          <!-- Section 2C: Storefront Photo, Visibility & Details Card -->
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3 shadow-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 pb-2.5">
+              <div class="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                <span>🖼️ صورة المنتج والظهور على المتجر الإلكتروني</span>
+              </div>
+              <span id="inv-store-visibility-badge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">مخفي عن المتجر (بدون صورة)</span>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+              <div class="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center overflow-hidden shrink-0 relative">
+                <img id="inv-prod-image-preview" src="" alt="" class="hidden w-full h-full object-cover">
+                <span id="inv-prod-image-empty" class="text-[11px] text-gray-400 text-center px-2 font-bold">لا توجد صورة</span>
+              </div>
+              <div class="flex-1 w-full space-y-2.5">
+                <input type="file" id="inv-prod-image-file" accept="image/*" capture="environment" class="hidden" onchange="window.inventoryController.handleImageFileSelected(this)">
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" onclick="document.getElementById('inv-prod-image-file').click()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5">
+                    <span>📷 رفع / التقاط صورة ونشر بالمتجر</span>
+                  </button>
+                  <button type="button" id="inv-btn-remove-image" onclick="window.inventoryController.removeSelectedProductImage()" class="hidden px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition">
+                    <span>🗑️ حذف الصورة وإخفاء</span>
+                  </button>
+                </div>
+                <div id="inv-prod-gallery-list" class="flex flex-wrap gap-2"></div>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-500 mb-1">السعر القديم قبل الخصم (اختياري)</label>
+                <input type="number" step="0.01" id="inv-prod-old-price" placeholder="مثال: 150" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-mono">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-bold text-gray-500 mb-1">وصف المنتج بالمتجر الإلكتروني (اختياري)</label>
+                <input type="text" id="inv-prod-description" placeholder="وصف مختصر يظهر للعملاء في المتجر..." class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs">
+              </div>
+            </div>
+          </div>
+
           <!-- Section 3: Barcodes Card -->
           <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
             <h4 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5 pb-2 border-b border-gray-100 dark:border-gray-700">
@@ -4760,13 +4825,13 @@
 
   <!-- Application Scripts -->
   <script src="js/barcode-parser.js?v=2.7.5"></script>
-  <script src="js/api.js?v=2.8.0"></script>
+  <script src="js/api.js?v=2.9.0"></script>
   <script src="js/sync-manager.js?v=2.7.5"></script>
   <script src="js/pos-scanner.js?v=2.7.5"></script>
   <script src="js/settings.js?v=2.7.5"></script>
   <script src="js/cart.js?v=2.8.1"></script>
   <script src="js/categories.js?v=2.7.5"></script>
-  <script src="js/inventory.js?v=2.7.5"></script>
+  <script src="js/inventory.js?v=2.9.0"></script>
   <script src="js/purchases.js?v=2.8.1"></script>
   <script src="js/expenses.js?v=2.7.6"></script>
   <script src="js/orders.js?v=2.8.0"></script>

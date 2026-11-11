@@ -328,11 +328,13 @@ try {
         // ============================================================
         case 'get_products':
             $since = $_GET['since'] ?? '';
+            $include_archived = !empty($_GET['include_archived']);
+            $vis_where = $include_archived ? "1=1" : "COALESCE(is_pos_visible, 1) = 1";
             if (!empty($since)) {
-                $stmt = $pdo->prepare("SELECT * FROM products WHERE created_at >= ? ORDER BY id ASC");
+                $stmt = $pdo->prepare("SELECT * FROM products WHERE {$vis_where} AND created_at >= ? ORDER BY id ASC");
                 $stmt->execute([$since]);
             } else {
-                $stmt = $pdo->query("SELECT * FROM products ORDER BY id ASC");
+                $stmt = $pdo->query("SELECT * FROM products WHERE {$vis_where} ORDER BY id ASC");
             }
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1293,10 +1295,10 @@ try {
                 if ($existing_prod_id) {
                     // تحديث المخزون + سعر التكلفة وسعر البيع إذا كان أكبر من 0
                     if ($p_price > 0) {
-                        $upd = $pdo->prepare("UPDATE products SET stock = stock + ?, cost = ?, price = ? WHERE id = ?");
+                        $upd = $pdo->prepare("UPDATE products SET stock = stock + ?, cost = ?, price = ?, is_pos_visible = 1 WHERE id = ?");
                         $upd->execute([$p_qty, $p_cost, $p_price, $existing_prod_id]);
                     } else {
-                        $upd = $pdo->prepare("UPDATE products SET stock = stock + ?, cost = ? WHERE id = ?");
+                        $upd = $pdo->prepare("UPDATE products SET stock = stock + ?, cost = ?, is_pos_visible = 1 WHERE id = ?");
                         $upd->execute([$p_qty, $p_cost, $existing_prod_id]);
                     }
                     $final_pid = $existing_prod_id;

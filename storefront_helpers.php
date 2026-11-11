@@ -42,25 +42,28 @@ function storefrontVisibleProductSql(string $alias = ''): string
 {
     $p = $alias !== '' ? rtrim($alias, '.') . '.' : '';
     return "(
-        (
-            {$p}image_url IS NOT NULL
-            AND TRIM({$p}image_url) <> ''
-            AND LOWER(TRIM({$p}image_url)) NOT LIKE '%placeholder.php%'
-            AND LOWER(TRIM({$p}image_url)) NOT LIKE '%/placeholder%'
-            AND LOWER(TRIM({$p}image_url)) <> 'placeholder.png'
-            AND LOWER(TRIM({$p}image_url)) <> 'placeholder.jpg'
-            AND LOWER(TRIM({$p}image_url)) NOT LIKE '%no-image%'
-            AND LOWER(TRIM({$p}image_url)) NOT LIKE '%no_image%'
-        )
-        OR EXISTS (
-            SELECT 1 FROM product_images pi_vis
-            WHERE pi_vis.product_id = {$p}id
-              AND pi_vis.image_path IS NOT NULL
-              AND TRIM(pi_vis.image_path) <> ''
-              AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%placeholder.php%'
-              AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%/placeholder%'
-              AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%no-image%'
-              AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%no_image%'
+        COALESCE({$p}is_pos_visible, 1) = 1
+        AND (
+            (
+                {$p}image_url IS NOT NULL
+                AND TRIM({$p}image_url) <> ''
+                AND LOWER(TRIM({$p}image_url)) NOT LIKE '%placeholder.php%'
+                AND LOWER(TRIM({$p}image_url)) NOT LIKE '%/placeholder%'
+                AND LOWER(TRIM({$p}image_url)) <> 'placeholder.png'
+                AND LOWER(TRIM({$p}image_url)) <> 'placeholder.jpg'
+                AND LOWER(TRIM({$p}image_url)) NOT LIKE '%no-image%'
+                AND LOWER(TRIM({$p}image_url)) NOT LIKE '%no_image%'
+            )
+            OR EXISTS (
+                SELECT 1 FROM product_images pi_vis
+                WHERE pi_vis.product_id = {$p}id
+                  AND pi_vis.image_path IS NOT NULL
+                  AND TRIM(pi_vis.image_path) <> ''
+                  AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%placeholder.php%'
+                  AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%/placeholder%'
+                  AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%no-image%'
+                  AND LOWER(TRIM(pi_vis.image_path)) NOT LIKE '%no_image%'
+            )
         )
     )";
 }
@@ -487,4 +490,104 @@ function applyInventoryAdjustment(PDO $pdo, array $product, float $new_stock, ar
         'order_id' => $order_id,
         'queued_for_dreamsoft' => ($sync_flag === 0),
     ];
+}
+
+/**
+ * Ensures the product visibility flag and cleanup sync queue schema exist.
+ */
+function ensureProductCleanupQueueSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM products LIKE 'is_pos_visible'");
+        if ($colCheck && !$colCheck->fetch()) {
+            $pdo->exec("ALTER TABLE products ADD COLUMN is_pos_visible TINYINT(1) NOT NULL DEFAULT 1");
+            try {
+                $pdo->exec("ALTER TABLE products ADD INDEX idx_products_pos_visible (is_pos_visible)");
+            } catch (Throwable $e) {
+                // Ignore if index creation races or already exists.
+            }
+        }
+    } catch (Throwable $e) {
+        // Non-fatal if schema already initialized concurrently.
+    }
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS product_cleanup_queue (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id INT NOT NULL,
+                local_code VARCHAR(64) DEFAULT NULL,
+                barcode VARCHAR(100) DEFAULT NULL,
+                product_name VARCHAR(255) NOT NULL DEFAULT '',
+                action_type VARCHAR(20) NOT NULL,
+                reason VARCHAR(255) DEFAULT '',
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                result_note VARCHAR(500) DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                processed_at TIMESTAMP NULL DEFAULT NULL,
+                KEY idx_pcq_status_id (status, id),
+                KEY idx_pcq_product_id (product_id),
+                KEY idx_pcq_local_code (local_code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    } catch (Throwable $e) {
+        // Non-fatal if table creation races.
+    }
+}
+
+/**
+ * Updates immediate POS/storefront visibility and queues DreamSoft sync cleanup action.
+ */
+function queueProductCleanupAction(PDO $pdo, array $product, string $action_type, string $reason = ''): bool
+{
+    ensureProductCleanupQueueSchema($pdo);
+
+    $action_type = strtolower(trim($action_type));
+    if (!in_array($action_type, ['archive', 'delete', 'restore'], true)) {
+        return false;
+    }
+
+    $product_id = (int)($product['id'] ?? 0);
+    if ($product_id <= 0) {
+        return false;
+    }
+
+    $local_code = trim((string)($product['local_code'] ?? ''));
+    $barcode = trim((string)($product['barcode'] ?? ''));
+    $product_name = trim((string)($product['name'] ?? ''));
+
+    $new_visibility = ($action_type === 'restore') ? 1 : 0;
+    $upd = $pdo->prepare("UPDATE products SET is_pos_visible = ? WHERE id = ?");
+    $upd->execute([$new_visibility, $product_id]);
+
+    // Supersede older pending cleanup commands for the same product so latest intent wins.
+    $sup = $pdo->prepare("
+        UPDATE product_cleanup_queue
+        SET status = 'superseded',
+            result_note = 'تم استبدال الطلب بأحدث إجراء',
+            processed_at = NOW()
+        WHERE product_id = ? AND status = 'pending'
+    ");
+    $sup->execute([$product_id]);
+
+    $ins = $pdo->prepare("
+        INSERT INTO product_cleanup_queue (product_id, local_code, barcode, product_name, action_type, reason, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending')
+    ");
+    $ins->execute([
+        $product_id,
+        ($local_code !== '' ? $local_code : null),
+        ($barcode !== '' ? $barcode : null),
+        mb_substr($product_name, 0, 255),
+        $action_type,
+        mb_substr(trim($reason), 0, 255),
+    ]);
+
+    return true;
 }

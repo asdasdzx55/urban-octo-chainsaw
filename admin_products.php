@@ -101,11 +101,11 @@ $per_page = 50;
 $page = max(1, (int)($_GET['page'] ?? 1));
 
 $vis_sql = storefrontVisibleProductSql();
-$total_all = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+$total_all = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE COALESCE(is_pos_visible, 1) = 1")->fetchColumn();
 $total_with_img = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE {$vis_sql}")->fetchColumn();
 $total_without_img = max(0, $total_all - $total_with_img);
 
-$where_parts = ["1=1"];
+$where_parts = ["COALESCE(is_pos_visible, 1) = 1"];
 $params = [];
 
 if ($filter === 'with_image') {
@@ -169,6 +169,9 @@ include 'admin_nav.php';
             <p class="text-xs text-gray-500 mt-1">ابحث بالاسم أو امسح الباركود لإضافة صورة ونشر المنتج على المتجر الإلكتروني فوراً (المنتجات بدون صورة تبقى مخفية عن العملاء).</p>
         </div>
         <div class="flex flex-wrap gap-2">
+            <a href="admin_dormant_products.php" class="bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-600 hover:text-white font-bold py-2.5 px-4 text-xs transition rounded-xl shadow-xs flex items-center gap-2">
+                <i class="fa-solid fa-broom"></i> الأصناف الراكدة والأرشيف
+            </a>
             <a href="admin_edit_product.php" class="bg-royal-charcoal text-royal-gold hover:bg-royal-gold hover:text-royal-charcoal font-bold py-2.5 px-5 text-xs uppercase tracking-wider transition rounded-xl shadow-sm flex items-center gap-2">
                 <i class="fa-solid fa-plus"></i> إضافة منتج جديد
             </a>

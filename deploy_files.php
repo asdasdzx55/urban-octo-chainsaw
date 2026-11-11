@@ -59,7 +59,9 @@ $rootPhpFiles = [
     'ajax_wishlist.php',
     'ajax_chat.php',
     'admin_products.php',
+    'admin_dormant_products.php',
     'admin_edit_product.php',
+    'admin_nav.php',
     'api_barcode.php',
 ];
 foreach ($rootPhpFiles as $rootFile) {

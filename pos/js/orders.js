@@ -132,8 +132,6 @@ class WebOrdersController {
     let advancedCount = 0;
     if (this.salesSourceFilter && this.salesSourceFilter !== 'all') advancedCount++;
     if (this.salesCashierFilter) advancedCount++;
-    if (this.salesMinTotal !== '') advancedCount++;
-    if (this.salesMaxTotal !== '') advancedCount++;
     if (this.salesStatusFilter) advancedCount++;
     if (this.salesSortBy && this.salesSortBy !== 'newest') advancedCount++;
 
@@ -492,16 +490,70 @@ class WebOrdersController {
     this.salesPage += 1;
     this.loadSalesInvoices(false);
   }
+  normalizeInvoiceForReceipt(inv) {
+    if (!inv) return null;
+    let items = Array.isArray(inv.items) ? inv.items : [];
+    if (typeof inv.items === 'string') {
+      try { items = JSON.parse(inv.items) || []; } catch (e) { items = []; }
+    }
+    if (items.length === 0 && inv.details) {
+      const lines = String(inv.details).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      items = lines.map(line => {
+        const m = line.match(/^(.+?)\s*[×xX*]\s*([\d.]+)\s*=\s*([\d.]+)/);
+        if (m) {
+          const qty = parseFloat(m[2]) || 1;
+          const total = parseFloat(m[3]) || 0;
+          return {
+            name: m[1].trim(),
+            qty,
+            price: qty > 0 ? (total / qty) : total,
+            total
+          };
+        }
+        return { name: line, qty: 1, price: 0, total: 0 };
+      });
+    }
+    const netTotal = parseFloat(inv.total ?? inv.total_price ?? 0) || 0;
+    const paid = parseFloat(inv.paid_amount ?? netTotal) || netTotal;
+    return {
+      ...inv,
+      order_id: inv.order_id || inv.invoice_barcode || inv.id,
+      invoice_barcode: inv.invoice_barcode || inv.order_id || ('INV-' + inv.id),
+      address: inv.address || inv.customer_address || '',
+      items,
+      total: netTotal,
+      paid_amount: paid,
+      change: Math.max(0, paid - netTotal)
+    };
+  }
+
   async viewInvoiceReceipt(invoiceId) {
     try {
-      window.app?.showLoading(true, 'جاري تحميل الفاتورة...');
-      const res = await window.api.getOrderDetails(invoiceId);
-      window.app?.showLoading(false);
+      const targetKey = String(invoiceId);
+      const cached = Array.isArray(this.salesInvoices)
+        ? this.salesInvoices.find(x => String(x.order_id) === targetKey || String(x.invoice_barcode) === targetKey || String(x.id) === targetKey)
+        : null;
 
-      if (res && res.success && res.order) {
-        window.cartController?.showReceiptModal(res.order);
-      } else {
+      let orderData = cached || null;
+      if (!orderData || ((!orderData.items || orderData.items.length === 0) && !orderData.details)) {
+        window.app?.showLoading(true, 'جاري تحميل الفاتورة...');
+        const res = await window.api.getOrderDetails(invoiceId);
+        window.app?.showLoading(false);
+        if (res && res.success && res.order) {
+          orderData = orderData ? { ...orderData, ...res.order } : res.order;
+        }
+      }
+
+      if (!orderData) {
         window.app?.showToast('تعذر العثور على بيانات الفاتورة', 'error');
+        return;
+      }
+
+      const normalized = this.normalizeInvoiceForReceipt(orderData);
+      if (window.cart && typeof window.cart.showReceiptModal === 'function') {
+        window.cart.showReceiptModal(normalized);
+      } else {
+        window.app?.showToast('شاشة عرض الفاتورة غير جاهزة', 'error');
       }
     } catch (err) {
       window.app?.showLoading(false);

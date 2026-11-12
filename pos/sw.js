@@ -3,7 +3,7 @@
  * Enables PWA installation, offline shell caching, and instant code updates.
  */
 
-const CACHE_NAME = 'syrian-pos-cache-v2.9.3';
+const CACHE_NAME = 'syrian-pos-cache-v2.9.4';
 const SHELL_ASSETS = [
   './',
   './index.html',

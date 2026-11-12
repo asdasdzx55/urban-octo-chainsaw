@@ -43,6 +43,18 @@ function storefrontVisibleProductSql(string $alias = ''): string
     $p = $alias !== '' ? rtrim($alias, '.') . '.' : '';
     return "(
         COALESCE({$p}is_pos_visible, 1) = 1
+        AND NOT (
+            COALESCE({$p}stock, 0) <= 0
+            AND (
+                {$p}name LIKE '%كيس%' 
+                OR {$p}name LIKE '%أكياس%' 
+                OR {$p}name LIKE '%اكياس%' 
+                OR {$p}name LIKE '%شنط%'
+                OR {$p}name LIKE '%شنطة%'
+                OR {$p}name LIKE '%كرتونة%'
+                OR {$p}name LIKE '%سلوفان%'
+            )
+        )
         AND (
             (
                 {$p}image_url IS NOT NULL

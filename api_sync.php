@@ -1025,13 +1025,13 @@ try {
 
             if ($status === 'all') {
                 // No status restriction when explicitly requesting all statuses
-            } elseif ($status === 'cancelled' || $status === '????') {
-                $where[] = "status = '????'";
+            } elseif ($status === 'cancelled' || $status === 'ملغي') {
+                $where[] = "status = 'ملغي'";
             } elseif ($status !== '') {
                 $where[] = "status = ?";
                 $params[] = $status;
             } else {
-                $where[] = "(status != '????' OR status IS NULL)";
+                $where[] = "(status != 'ملغي' OR status IS NULL)";
             }
 
             if ($search !== '') {
@@ -1045,22 +1045,22 @@ try {
                     "customer_address LIKE ?",
                     "cashier_name LIKE ?",
                     "delivery_person LIKE ?",
-                    "order_details LIKE ?",
-                    "items_json LIKE ?"
+                    "LOCATE(?, order_details) > 0",
+                    "LOCATE(?, items_json) > 0"
                 ];
-                $params = array_merge($params, array_fill(0, 8, $search_like));
+                $params = array_merge($params, array_fill(0, 6, $search_like), [$search_term, $search_term]);
 
-                // Also match Unicode-escaped JSON strings (\uXXXX) in case items_json was encoded without JSON_UNESCAPED_UNICODE
+                // Match Unicode-escaped JSON (\uXXXX) as well via LOCATE (avoids LIKE backslash escaping rules)
                 $encoded = json_encode($search_term);
                 if (is_string($encoded) && strlen($encoded) > 2) {
                     $inner = substr($encoded, 1, -1);
                     if ($inner !== $search_term) {
-                        $or_parts[] = "items_json LIKE ?";
-                        $params[] = '%' . str_replace('\\', '\\\\', $inner) . '%';
+                        $or_parts[] = "LOCATE(?, items_json) > 0";
+                        $params[] = $inner;
                     }
                 }
 
-                // Exact invoice ID / INV-number lookup when the query is an invoice number or phone/barcode digits
+                // Exact invoice ID / INV-number lookup when the query looks like a number or INV-number
                 if (preg_match('/^(?:#|inv[-_\s]*)?\d+$/i', $search)) {
                     $num_clean = preg_replace('/[^0-9]/', '', $search);
                     if ($num_clean !== '') {
@@ -1085,10 +1085,10 @@ try {
 
             if ($payment_type !== '' && $payment_type !== 'all') {
                 $payment_map = [
-                    'cash'     => "(payment_method IN ('????', '???', 'cash') OR payment_method LIKE '%????%' OR payment_method LIKE '%???%' OR payment_method IS NULL OR payment_method = '')",
-                    'credit'   => "(payment_method LIKE '%???%' OR payment_method LIKE '%???%' OR payment_method LIKE '%???%' OR payment_method LIKE '%???? ????%' OR LOWER(payment_method) LIKE '%credit%' OR LOWER(payment_method) LIKE '%deferred%')",
-                    'instapay' => "(payment_method LIKE '%????????%' OR payment_method LIKE '%????????%' OR LOWER(payment_method) LIKE '%instapay%' OR payment_method LIKE '%????? ????%')",
-                    'card'     => "(payment_method LIKE '%????%' OR payment_method LIKE '%?????%' OR payment_method LIKE '%????%' OR LOWER(payment_method) LIKE '%card%' OR LOWER(payment_method) LIKE '%visa%')"
+                    'cash'     => "(payment_method IN ('نقدي', 'كاش', 'cash') OR payment_method LIKE '%نقدي%' OR payment_method LIKE '%كاش%' OR payment_method IS NULL OR payment_method = '')",
+                    'credit'   => "(payment_method LIKE '%آجل%' OR payment_method LIKE '%اجل%' OR payment_method LIKE '%دين%' OR payment_method LIKE '%حساب عميل%' OR LOWER(payment_method) LIKE '%credit%' OR LOWER(payment_method) LIKE '%deferred%')",
+                    'instapay' => "(payment_method LIKE '%إنستاباي%' OR payment_method LIKE '%انستاباي%' OR LOWER(payment_method) LIKE '%instapay%' OR payment_method LIKE '%مدفوع مسبق%')",
+                    'card'     => "(payment_method LIKE '%فيزا%' OR payment_method LIKE '%بطاقة%' OR payment_method LIKE '%شبكة%' OR LOWER(payment_method) LIKE '%card%' OR LOWER(payment_method) LIKE '%visa%')"
                 ];
                 if (isset($payment_map[$payment_type])) {
                     $where[] = $payment_map[$payment_type];

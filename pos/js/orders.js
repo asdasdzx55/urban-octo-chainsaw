@@ -168,8 +168,8 @@ class WebOrdersController {
     const btnMore = document.getElementById('btn-load-more-sales');
 
     if (reset) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">???? ????? ??? ?????? ????????...</td></tr>`;
-      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">???? ????? ?????? ????????...</div>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">جاري تحميل سجل فواتير المبيعات...</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">جاري تحميل فواتير المبيعات...</div>`;
     }
 
     const params = {
@@ -215,11 +215,11 @@ class WebOrdersController {
         const countEl = document.getElementById('sales-kpi-count');
         const avgEl = document.getElementById('sales-kpi-avg');
 
-        if (totalAmountEl) totalAmountEl.textContent = `${(res.total_sales || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ?.?`;
-        if (countEl) countEl.textContent = `${(res.total_count || 0).toLocaleString()} ??????`;
+        if (totalAmountEl) totalAmountEl.textContent = `${(res.total_sales || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م`;
+        if (countEl) countEl.textContent = `${(res.total_count || 0).toLocaleString()} فاتورة`;
         if (avgEl) {
           const avg = res.total_count > 0 ? (res.total_sales || 0) / res.total_count : 0;
-          avgEl.textContent = `${avg.toFixed(2)} ?.?`;
+          avgEl.textContent = `${avg.toFixed(2)} ج.م`;
         }
         const infoEl = document.getElementById('sales-pagination-info');
         if (infoEl) infoEl.textContent = `عرض ${this.salesInvoices.length} من إجمالي ${this.totalSalesCount} فاتورة`;

@@ -784,34 +784,198 @@
         </div>
 
         <!-- Filter & Search Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-          <!-- Search Input -->
-          <div class="relative w-full sm:w-80">
-            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2"></i>
-            <input 
-              type="text" 
-              id="sales-search-input" 
-              placeholder="ابحث برقم الفاتورة (مثال: #12050) أو العميل أو الهاتف..." 
-              oninput="window.ordersController.onSalesSearchInput(this.value)"
-              class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-3 py-2 text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-            >
-          </div>
-
-          <!-- Date Filters -->
-          <div class="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
-            <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-xs font-bold">
-              <button type="button" onclick="window.ordersController.filterSalesPeriod('all')" class="sales-period-btn px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer" data-period="all">الكل</button>
-              <button type="button" onclick="window.ordersController.filterSalesPeriod('today')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="today">اليوم</button>
-              <button type="button" onclick="window.ordersController.filterSalesPeriod('week')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="week">الأسبوع</button>
-              <button type="button" onclick="window.ordersController.filterSalesPeriod('month')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="month">هذا الشهر</button>
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-200 dark:border-gray-700 shadow-xs space-y-3">
+          <!-- Row 1: Search + Quick Period Presets + Actions -->
+          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            <!-- Search Input -->
+            <div class="relative flex-1 min-w-0">
+              <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2"></i>
+              <input
+                type="text"
+                id="sales-search-input"
+                placeholder="???? ???? ???????? (#12050) ?? ?????? ?? ?????? ?? ??? ????? ?? ????????..."
+                oninput="window.ordersController.onSalesSearchInput(this.value)"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl ps-9 pe-8 py-2 text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+              <button
+                type="button"
+                id="sales-search-clear-btn"
+                onclick="window.ordersController.clearSalesSearch()"
+                class="hidden absolute end-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 cursor-pointer"
+                title="??? ?????"
+              >
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
             </div>
 
-            <button type="button" onclick="window.ordersController.loadSalesInvoices(true)" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="تحديث الفواتير">
-              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            </button>
+            <!-- Quick Period Filters + Actions -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-between sm:justify-end">
+              <div class="flex items-center bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl text-[11px] font-bold flex-wrap gap-0.5">
+                <button type="button" onclick="window.ordersController.filterSalesPeriod('all')" class="sales-period-btn px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer" data-period="all">????</button>
+                <button type="button" onclick="window.ordersController.filterSalesPeriod('today')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="today">?????</button>
+                <button type="button" onclick="window.ordersController.filterSalesPeriod('yesterday')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="yesterday">???</button>
+                <button type="button" onclick="window.ordersController.filterSalesPeriod('week')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="week">7 ????</button>
+                <button type="button" onclick="window.ordersController.filterSalesPeriod('month')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="month">??? ?????</button>
+                <button type="button" onclick="window.ordersController.filterSalesPeriod('last_month')" class="sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer" data-period="last_month">????? ??????</button>
+              </div>
+
+              <button
+                type="button"
+                id="btn-toggle-advanced-sales-filters"
+                onclick="window.ordersController.toggleAdvancedSalesFilters()"
+                class="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 text-[11px] font-bold transition cursor-pointer"
+                title="????? ?????? (??????? ???????? ??????? ???????)"
+              >
+                <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                <span>????? ??????</span>
+                <span id="sales-active-filter-badge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-indigo-600 text-white leading-none">0</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-reset-sales-filters"
+                onclick="window.ordersController.resetSalesFilters()"
+                class="hidden inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 text-[11px] font-bold transition cursor-pointer"
+                title="????? ???? ???????"
+              >
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>????? ???????</span>
+              </button>
+
+              <button type="button" onclick="window.ordersController.loadSalesInvoices(true)" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition cursor-pointer" title="????? ????????">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 2: Always-visible Core Filters (Custom Dates + Payment + Order Type) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-700/70">
+            <div>
+              <label for="sales-filter-from-date" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">?? ?????</label>
+              <input
+                type="date"
+                id="sales-filter-from-date"
+                onchange="window.ordersController.onSalesDateRangeChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+            </div>
+            <div>
+              <label for="sales-filter-to-date" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">??? ?????</label>
+              <input
+                type="date"
+                id="sales-filter-to-date"
+                onchange="window.ordersController.onSalesDateRangeChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+            </div>
+            <div>
+              <label for="sales-filter-payment" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">????? ?????</label>
+              <select
+                id="sales-filter-payment"
+                onchange="window.ordersController.onSalesFilterChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">?? ??? ?????</option>
+                <option value="cash">???? / ???</option>
+                <option value="credit">??? / ???? ????</option>
+                <option value="instapay">???????? / ????? ??????</option>
+                <option value="card">???? / ?????</option>
+              </select>
+            </div>
+            <div>
+              <label for="sales-filter-type" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">??? ?????</label>
+              <select
+                id="sales-filter-type"
+                onchange="window.ordersController.onSalesFilterChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">?? ???????</option>
+                <option value="hall">?????? ????? (?????)</option>
+                <option value="delivery">?????? / ?????</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Row 3: Collapsible Advanced Filters (Amount range, Source, Cashier, Status, Sort) -->
+          <div id="sales-advanced-filters" class="hidden pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <div>
+              <label for="sales-filter-min-total" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">??? ???? (?.?)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                id="sales-filter-min-total"
+                placeholder="????: 100"
+                oninput="window.ordersController.onSalesFilterChange(true)"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+            </div>
+            <div>
+              <label for="sales-filter-max-total" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">???? ???? (?.?)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                id="sales-filter-max-total"
+                placeholder="????: 1000"
+                oninput="window.ordersController.onSalesFilterChange(true)"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+            </div>
+            <div>
+              <label for="sales-filter-cashier" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">???????</label>
+              <input
+                type="text"
+                id="sales-filter-cashier"
+                placeholder="??? ???????..."
+                oninput="window.ordersController.onSalesFilterChange(true)"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+            </div>
+            <div>
+              <label for="sales-filter-source" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">???? ????????</label>
+              <select
+                id="sales-filter-source"
+                onchange="window.ordersController.onSalesFilterChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">?? ???????</option>
+                <option value="dreamsoft">???? ????</option>
+                <option value="desktop_pos">????? ?????????</option>
+                <option value="phone_pos">????? ????????</option>
+                <option value="web">??????? / ???</option>
+              </select>
+            </div>
+            <div>
+              <label for="sales-filter-status" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">??????</label>
+              <select
+                id="sales-filter-status"
+                onchange="window.ordersController.onSalesFilterChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">?????? (???? ???????)</option>
+                <option value="completed">????? ???</option>
+                <option value="all">???? (????? ???????)</option>
+                <option value="cancelled">??????? ???</option>
+              </select>
+            </div>
+            <div>
+              <label for="sales-filter-sort" class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">???????</label>
+              <select
+                id="sales-filter-sort"
+                onchange="window.ordersController.onSalesFilterChange()"
+                class="w-full bg-gray-50 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="newest">?????? ?????</option>
+                <option value="oldest">?????? ?????</option>
+                <option value="highest">?????? ??????</option>
+                <option value="lowest">????? ??????</option>
+              </select>
+            </div>
+            </div>
           </div>
         </div>
-
         <!-- Invoices List Container -->
         <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xs flex flex-col">
           <!-- Desktop Table -->
@@ -4834,7 +4998,7 @@
   <script src="js/inventory.js?v=2.9.2"></script>
   <script src="js/purchases.js?v=2.8.1"></script>
   <script src="js/expenses.js?v=2.7.6"></script>
-  <script src="js/orders.js?v=2.8.0"></script>
+  <script src="js/orders.js?v=2.9.3"></script>
   <script src="js/delivery-settlement.js?v=2.8.0"></script>
   <script src="js/returns.js?v=2.7.5"></script>
   <script src="js/reports.js?v=2.7.5"></script>

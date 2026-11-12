@@ -61,11 +61,102 @@ class WebOrdersController {
     this.salesLimit = 50;
     this.salesSearchQuery = '';
     this.salesPeriodFilter = 'all';
+    this.salesFromDate = '';
+    this.salesToDate = '';
+    this.salesPaymentFilter = 'all';
+    this.salesOrderTypeFilter = 'all';
+    this.salesSourceFilter = 'all';
+    this.salesCashierFilter = '';
+    this.salesMinTotal = '';
+    this.salesMaxTotal = '';
+    this.salesStatusFilter = '';
+    this.salesSortBy = 'newest';
     this.totalSalesCount = 0;
+    this._salesRequestSeq = 0;
+  }
+
+  getPeriodDateRange(period) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const todayStr = fmt(now);
+
+    if (period === 'today') {
+      return { fromDate: todayStr, toDate: todayStr };
+    }
+    if (period === 'yesterday') {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = fmt(y);
+      return { fromDate: yStr, toDate: yStr };
+    }
+    if (period === 'week') {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 7);
+      return { fromDate: fmt(w), toDate: todayStr };
+    }
+    if (period === 'month') {
+      return { fromDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, toDate: todayStr };
+    }
+    if (period === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { fromDate: fmt(start), toDate: fmt(end) };
+    }
+    return { fromDate: '', toDate: '' };
+  }
+
+  updateSalesPeriodButtons(period) {
+    document.querySelectorAll('.sales-period-btn').forEach(btn => {
+      if (btn.getAttribute('data-period') === period) {
+        btn.className = 'sales-period-btn px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer';
+      } else {
+        btn.className = 'sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer';
+      }
+    });
+  }
+
+  updateSalesFilterBadge() {
+    let activeCount = 0;
+    if (this.salesSearchQuery) activeCount++;
+    if (this.salesFromDate || this.salesToDate) activeCount++;
+    if (this.salesPaymentFilter && this.salesPaymentFilter !== 'all') activeCount++;
+    if (this.salesOrderTypeFilter && this.salesOrderTypeFilter !== 'all') activeCount++;
+    if (this.salesSourceFilter && this.salesSourceFilter !== 'all') activeCount++;
+    if (this.salesCashierFilter) activeCount++;
+    if (this.salesMinTotal !== '') activeCount++;
+    if (this.salesMaxTotal !== '') activeCount++;
+    if (this.salesStatusFilter) activeCount++;
+    if (this.salesSortBy && this.salesSortBy !== 'newest') activeCount++;
+
+    let advancedCount = 0;
+    if (this.salesSourceFilter && this.salesSourceFilter !== 'all') advancedCount++;
+    if (this.salesCashierFilter) advancedCount++;
+    if (this.salesMinTotal !== '') advancedCount++;
+    if (this.salesMaxTotal !== '') advancedCount++;
+    if (this.salesStatusFilter) advancedCount++;
+    if (this.salesSortBy && this.salesSortBy !== 'newest') advancedCount++;
+
+    const badgeEl = document.getElementById('sales-active-filter-badge');
+    if (badgeEl) {
+      badgeEl.textContent = String(advancedCount);
+      badgeEl.classList.toggle('hidden', advancedCount === 0);
+    }
+
+    const resetBtn = document.getElementById('btn-reset-sales-filters');
+    if (resetBtn) {
+      resetBtn.classList.toggle('hidden', activeCount === 0);
+    }
+
+    const clearSearchBtn = document.getElementById('sales-search-clear-btn');
+    if (clearSearchBtn) {
+      clearSearchBtn.classList.toggle('hidden', !this.salesSearchQuery);
+    }
   }
 
   async loadSalesInvoices(reset = true) {
     if (!this.salesInvoices) this.initSalesLog();
+    this.updateSalesFilterBadge();
 
     if (reset) {
       this.salesPage = 1;
@@ -77,8 +168,8 @@ class WebOrdersController {
     const btnMore = document.getElementById('btn-load-more-sales');
 
     if (reset) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">جاري تحميل سجل فواتير المبيعات...</td></tr>`;
-      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">جاري تحميل فواتير المبيعات...</div>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 font-bold">???? ????? ??? ?????? ????????...</td></tr>`;
+      if (mobileCards) mobileCards.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">???? ????? ?????? ????????...</div>`;
     }
 
     const params = {
@@ -87,24 +178,29 @@ class WebOrdersController {
     };
     if (this.salesSearchQuery) params.search = this.salesSearchQuery;
 
-    // Period dates
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const todayStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-
-    if (this.salesPeriodFilter === 'today') {
-      params.from_date = todayStr;
-      params.to_date = todayStr;
-    } else if (this.salesPeriodFilter === 'week') {
-      const d = new Date();
-      d.setDate(d.getDate() - 7);
-      params.from_date = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    } else if (this.salesPeriodFilter === 'month') {
-      params.from_date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
+    if (this.salesPeriodFilter !== 'custom' && this.salesPeriodFilter !== 'all') {
+      const range = this.getPeriodDateRange(this.salesPeriodFilter);
+      if (range.fromDate) params.from_date = range.fromDate;
+      if (range.toDate) params.to_date = range.toDate;
+    } else {
+      if (this.salesFromDate) params.from_date = this.salesFromDate;
+      if (this.salesToDate) params.to_date = this.salesToDate;
     }
+
+    if (this.salesPaymentFilter && this.salesPaymentFilter !== 'all') params.payment_type = this.salesPaymentFilter;
+    if (this.salesOrderTypeFilter && this.salesOrderTypeFilter !== 'all') params.order_type = this.salesOrderTypeFilter;
+    if (this.salesSourceFilter && this.salesSourceFilter !== 'all') params.source = this.salesSourceFilter;
+    if (this.salesCashierFilter) params.cashier = this.salesCashierFilter;
+    if (this.salesMinTotal !== '') params.min_total = this.salesMinTotal;
+    if (this.salesMaxTotal !== '') params.max_total = this.salesMaxTotal;
+    if (this.salesStatusFilter) params.status = this.salesStatusFilter;
+    if (this.salesSortBy && this.salesSortBy !== 'newest') params.sort_by = this.salesSortBy;
+
+    const reqSeq = ++this._salesRequestSeq;
 
     try {
       const res = await window.api.get('get_completed_orders', params);
+      if (reqSeq !== this._salesRequestSeq) return;
 
       if (res && res.success && Array.isArray(res.orders)) {
         if (reset) {
@@ -119,13 +215,12 @@ class WebOrdersController {
         const countEl = document.getElementById('sales-kpi-count');
         const avgEl = document.getElementById('sales-kpi-avg');
 
-        if (totalAmountEl) totalAmountEl.textContent = `${(res.total_sales || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م`;
-        if (countEl) countEl.textContent = `${(res.total_count || 0).toLocaleString()} فاتورة`;
-        if (avgEl && res.total_count > 0) {
-          const avg = (res.total_sales || 0) / res.total_count;
-          avgEl.textContent = `${avg.toFixed(2)} ج.م`;
+        if (totalAmountEl) totalAmountEl.textContent = `${(res.total_sales || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ?.?`;
+        if (countEl) countEl.textContent = `${(res.total_count || 0).toLocaleString()} ??????`;
+        if (avgEl) {
+          const avg = res.total_count > 0 ? (res.total_sales || 0) / res.total_count : 0;
+          avgEl.textContent = `${avg.toFixed(2)} ?.?`;
         }
-
         const infoEl = document.getElementById('sales-pagination-info');
         if (infoEl) infoEl.textContent = `عرض ${this.salesInvoices.length} من إجمالي ${this.totalSalesCount} فاتورة`;
 
@@ -288,22 +383,108 @@ class WebOrdersController {
   }
 
   onSalesSearchInput(val) {
+    if (!this.salesInvoices) this.initSalesLog();
     this.salesSearchQuery = val.trim();
+    this.updateSalesFilterBadge();
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
       this.loadSalesInvoices(true);
-    }, 300);
+    }, 350);
+  }
+
+  clearSalesSearch() {
+    const input = document.getElementById('sales-search-input');
+    if (input) input.value = '';
+    this.salesSearchQuery = '';
+    this.updateSalesFilterBadge();
+    this.loadSalesInvoices(true);
   }
 
   filterSalesPeriod(period) {
+    if (!this.salesInvoices) this.initSalesLog();
     this.salesPeriodFilter = period;
-    document.querySelectorAll('.sales-period-btn').forEach(btn => {
-      if (btn.getAttribute('data-period') === period) {
-        btn.className = 'sales-period-btn px-2.5 py-1 rounded-lg bg-white dark:bg-gray-600 text-indigo-600 shadow-2xs transition cursor-pointer';
-      } else {
-        btn.className = 'sales-period-btn px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-300 transition cursor-pointer';
-      }
-    });
+    const range = this.getPeriodDateRange(period);
+    this.salesFromDate = range.fromDate;
+    this.salesToDate = range.toDate;
+
+    const fromEl = document.getElementById('sales-filter-from-date');
+    const toEl = document.getElementById('sales-filter-to-date');
+    if (fromEl) fromEl.value = range.fromDate;
+    if (toEl) toEl.value = range.toDate;
+
+    this.updateSalesPeriodButtons(period);
+    this.loadSalesInvoices(true);
+  }
+
+  onSalesDateRangeChange() {
+    if (!this.salesInvoices) this.initSalesLog();
+    const fromEl = document.getElementById('sales-filter-from-date');
+    const toEl = document.getElementById('sales-filter-to-date');
+    this.salesFromDate = fromEl ? fromEl.value : '';
+    this.salesToDate = toEl ? toEl.value : '';
+    this.salesPeriodFilter = (this.salesFromDate || this.salesToDate) ? 'custom' : 'all';
+    this.updateSalesPeriodButtons(this.salesPeriodFilter);
+    this.loadSalesInvoices(true);
+  }
+
+  onSalesFilterChange(debounced = false) {
+    if (!this.salesInvoices) this.initSalesLog();
+    const val = id => {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    };
+    this.salesPaymentFilter = val('sales-filter-payment') || 'all';
+    this.salesOrderTypeFilter = val('sales-filter-type') || 'all';
+    this.salesSourceFilter = val('sales-filter-source') || 'all';
+    this.salesCashierFilter = val('sales-filter-cashier').trim();
+    this.salesMinTotal = val('sales-filter-min-total').trim();
+    this.salesMaxTotal = val('sales-filter-max-total').trim();
+    this.salesStatusFilter = val('sales-filter-status');
+    this.salesSortBy = val('sales-filter-sort') || 'newest';
+
+    clearTimeout(this._filterTimer);
+    if (debounced) {
+      this.updateSalesFilterBadge();
+      this._filterTimer = setTimeout(() => {
+        this.loadSalesInvoices(true);
+      }, 350);
+    } else {
+      this.loadSalesInvoices(true);
+    }
+  }
+
+  toggleAdvancedSalesFilters() {
+    const panel = document.getElementById('sales-advanced-filters');
+    const btn = document.getElementById('btn-toggle-advanced-sales-filters');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !isHidden);
+    if (btn) {
+      btn.classList.toggle('bg-indigo-600', isHidden);
+      btn.classList.toggle('text-white', isHidden);
+      btn.classList.toggle('bg-indigo-50', !isHidden);
+      btn.classList.toggle('text-indigo-700', !isHidden);
+    }
+  }
+
+  resetSalesFilters() {
+    this.initSalesLog();
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = v;
+    };
+    setVal('sales-search-input', '');
+    setVal('sales-filter-from-date', '');
+    setVal('sales-filter-to-date', '');
+    setVal('sales-filter-payment', 'all');
+    setVal('sales-filter-type', 'all');
+    setVal('sales-filter-source', 'all');
+    setVal('sales-filter-cashier', '');
+    setVal('sales-filter-min-total', '');
+    setVal('sales-filter-max-total', '');
+    setVal('sales-filter-status', '');
+    setVal('sales-filter-sort', 'newest');
+    this.updateSalesPeriodButtons('all');
     this.loadSalesInvoices(true);
   }
 
@@ -311,7 +492,6 @@ class WebOrdersController {
     this.salesPage += 1;
     this.loadSalesInvoices(false);
   }
-
   async viewInvoiceReceipt(invoiceId) {
     try {
       window.app?.showLoading(true, 'جاري تحميل الفاتورة...');

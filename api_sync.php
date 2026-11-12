@@ -998,44 +998,143 @@ try {
             $limit = min(200, max(1, (int)($_GET['limit'] ?? $_POST['limit'] ?? 50)));
             $page = max(1, (int)($_GET['page'] ?? $_POST['page'] ?? 1));
             $offset = ($page - 1) * $limit;
-            $search = trim($_GET['search'] ?? $_GET['q'] ?? $_POST['search'] ?? $_POST['q'] ?? '');
-            $from_date = trim($_GET['from_date'] ?? $_POST['from_date'] ?? '');
-            $to_date = trim($_GET['to_date'] ?? $_POST['to_date'] ?? '');
-            $status = trim($_GET['status'] ?? $_POST['status'] ?? '');
+            $search = trim((string)($_GET['search'] ?? $_GET['q'] ?? $_POST['search'] ?? $_POST['q'] ?? ''));
+            $from_date = trim((string)($_GET['from_date'] ?? $_POST['from_date'] ?? ''));
+            $to_date = trim((string)($_GET['to_date'] ?? $_POST['to_date'] ?? ''));
+            $status = trim((string)($_GET['status'] ?? $_POST['status'] ?? ''));
+            $payment_type = trim((string)($_GET['payment_type'] ?? $_POST['payment_type'] ?? ''));
+            $payment_method = trim((string)($_GET['payment_method'] ?? $_POST['payment_method'] ?? ''));
+            $order_type = trim((string)($_GET['order_type'] ?? $_POST['order_type'] ?? ''));
+            $source = trim((string)($_GET['source'] ?? $_POST['source'] ?? ''));
+            $cashier = trim((string)($_GET['cashier'] ?? $_POST['cashier'] ?? ''));
+            $min_total = trim((string)($_GET['min_total'] ?? $_POST['min_total'] ?? ''));
+            $max_total = trim((string)($_GET['max_total'] ?? $_POST['max_total'] ?? ''));
+            $sort_by = trim((string)($_GET['sort_by'] ?? $_POST['sort_by'] ?? 'newest'));
 
-            $where = ["(status != 'ملغي' OR status IS NULL)"];
-            $params = [];
-
-            if (!empty($search)) {
-                $num_clean = preg_replace('/[^0-9]/', '', $search);
-                if (!empty($num_clean)) {
-                    $where[] = "(invoice_barcode LIKE ? OR id = ? OR customer_name LIKE ? OR customer_phone LIKE ?)";
-                    $params[] = "%{$num_clean}%";
-                    $params[] = (int)$num_clean;
-                    $params[] = "%{$search}%";
-                    $params[] = "%{$search}%";
-                } else {
-                    $where[] = "(customer_name LIKE ? OR customer_phone LIKE ? OR cashier_name LIKE ?)";
-                    $params[] = "%{$search}%";
-                    $params[] = "%{$search}%";
-                    $params[] = "%{$search}%";
-                }
+            $valid_date = static function (string $d): string {
+                return preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) ? $d : '';
+            };
+            $from_date = $valid_date($from_date);
+            $to_date = $valid_date($to_date);
+            if ($from_date !== '' && $to_date !== '' && $from_date > $to_date) {
+                [$from_date, $to_date] = [$to_date, $from_date];
             }
 
-            if (!empty($from_date)) {
+            $where = [];
+            $params = [];
+
+            if ($status === 'all') {
+                // No status restriction when explicitly requesting all statuses
+            } elseif ($status === 'cancelled' || $status === '????') {
+                $where[] = "status = '????'";
+            } elseif ($status !== '') {
+                $where[] = "status = ?";
+                $params[] = $status;
+            } else {
+                $where[] = "(status != '????' OR status IS NULL)";
+            }
+
+            if ($search !== '') {
+                $search_clean = ltrim($search, '# ');
+                $search_term = $search_clean !== '' ? $search_clean : $search;
+                $search_like = '%' . $search_term . '%';
+                $or_parts = [
+                    "invoice_barcode LIKE ?",
+                    "customer_name LIKE ?",
+                    "customer_phone LIKE ?",
+                    "customer_address LIKE ?",
+                    "cashier_name LIKE ?",
+                    "delivery_person LIKE ?",
+                    "order_details LIKE ?",
+                    "items_json LIKE ?"
+                ];
+                $params = array_merge($params, array_fill(0, 8, $search_like));
+
+                // Also match Unicode-escaped JSON strings (\uXXXX) in case items_json was encoded without JSON_UNESCAPED_UNICODE
+                $encoded = json_encode($search_term);
+                if (is_string($encoded) && strlen($encoded) > 2) {
+                    $inner = substr($encoded, 1, -1);
+                    if ($inner !== $search_term) {
+                        $or_parts[] = "items_json LIKE ?";
+                        $params[] = '%' . str_replace('\\', '\\\\', $inner) . '%';
+                    }
+                }
+
+                // Exact invoice ID / INV-number lookup when the query is an invoice number or phone/barcode digits
+                if (preg_match('/^(?:#|inv[-_\s]*)?\d+$/i', $search)) {
+                    $num_clean = preg_replace('/[^0-9]/', '', $search);
+                    if ($num_clean !== '') {
+                        $or_parts[] = "invoice_barcode LIKE ?";
+                        $params[] = "%{$num_clean}%";
+                        $or_parts[] = "id = ?";
+                        $params[] = (int)$num_clean;
+                    }
+                }
+
+                $where[] = '(' . implode(' OR ', $or_parts) . ')';
+            }
+
+            if ($from_date !== '') {
                 $where[] = "created_at >= ?";
                 $params[] = $from_date . " 00:00:00";
             }
-            if (!empty($to_date)) {
+            if ($to_date !== '') {
                 $where[] = "created_at <= ?";
                 $params[] = $to_date . " 23:59:59";
             }
-            if (!empty($status)) {
-                $where[] = "status = ?";
-                $params[] = $status;
+
+            if ($payment_type !== '' && $payment_type !== 'all') {
+                $payment_map = [
+                    'cash'     => "(payment_method IN ('????', '???', 'cash') OR payment_method LIKE '%????%' OR payment_method LIKE '%???%' OR payment_method IS NULL OR payment_method = '')",
+                    'credit'   => "(payment_method LIKE '%???%' OR payment_method LIKE '%???%' OR payment_method LIKE '%???%' OR payment_method LIKE '%???? ????%' OR LOWER(payment_method) LIKE '%credit%' OR LOWER(payment_method) LIKE '%deferred%')",
+                    'instapay' => "(payment_method LIKE '%????????%' OR payment_method LIKE '%????????%' OR LOWER(payment_method) LIKE '%instapay%' OR payment_method LIKE '%????? ????%')",
+                    'card'     => "(payment_method LIKE '%????%' OR payment_method LIKE '%?????%' OR payment_method LIKE '%????%' OR LOWER(payment_method) LIKE '%card%' OR LOWER(payment_method) LIKE '%visa%')"
+                ];
+                if (isset($payment_map[$payment_type])) {
+                    $where[] = $payment_map[$payment_type];
+                }
+            } elseif ($payment_method !== '' && $payment_method !== 'all') {
+                $where[] = "payment_method LIKE ?";
+                $params[] = "%{$payment_method}%";
             }
 
-            $where_sql = implode(' AND ', $where);
+            if ($order_type === 'hall') {
+                $where[] = "(order_type = 'hall' OR order_type IS NULL OR order_type = '')";
+            } elseif ($order_type === 'delivery') {
+                $where[] = "(order_type = 'delivery' OR COALESCE(delivery_fee, 0) > 0)";
+            } elseif ($order_type !== '' && $order_type !== 'all') {
+                $where[] = "order_type = ?";
+                $params[] = $order_type;
+            }
+
+            if ($source !== '' && $source !== 'all') {
+                $where[] = "source = ?";
+                $params[] = $source;
+            }
+
+            if ($cashier !== '' && $cashier !== 'all') {
+                $where[] = "cashier_name LIKE ?";
+                $params[] = "%{$cashier}%";
+            }
+
+            if ($min_total !== '' && is_numeric($min_total)) {
+                $where[] = "total_price >= ?";
+                $params[] = (float)$min_total;
+            }
+            if ($max_total !== '' && is_numeric($max_total)) {
+                $where[] = "total_price <= ?";
+                $params[] = (float)$max_total;
+            }
+
+            $sort_map = [
+                'newest'  => 'created_at DESC, id DESC',
+                'oldest'  => 'created_at ASC, id ASC',
+                'highest' => 'total_price DESC, created_at DESC, id DESC',
+                'lowest'  => 'total_price ASC, created_at DESC, id DESC'
+            ];
+            $order_by = $sort_map[$sort_by] ?? $sort_map['newest'];
+
+            $where_sql = !empty($where) ? implode(' AND ', $where) : '1=1';
 
             $cnt_stmt = $pdo->prepare("SELECT COUNT(*) FROM orders WHERE {$where_sql}");
             $cnt_stmt->execute($params);
@@ -1045,7 +1144,7 @@ try {
             $sum_stmt->execute($params);
             $total_sum = (float)$sum_stmt->fetchColumn();
 
-            $sql = "SELECT id, invoice_barcode, customer_name, customer_phone, customer_address, total_price, discount_amount, payment_method, payment_status, status, cashier_name, delivery_person, delivery_fee, created_at, order_type, source, items_json, order_details FROM orders WHERE {$where_sql} ORDER BY created_at DESC, id DESC LIMIT {$offset}, {$limit}";
+            $sql = "SELECT id, invoice_barcode, customer_name, customer_phone, customer_address, total_price, discount_amount, payment_method, payment_status, status, cashier_name, delivery_person, delivery_fee, created_at, order_type, source, items_json, order_details FROM orders WHERE {$where_sql} ORDER BY {$order_by} LIMIT {$offset}, {$limit}";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

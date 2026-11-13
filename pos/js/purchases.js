@@ -389,7 +389,7 @@ class PurchasesController {
       const stock = parseFloat(p.stock || 0);
       const isWeight = p.unit_type === 'weight' || p.unit === 'كجم' || p.is_weight;
 
-      return '<div onclick="window.purchasesController.addProductToPurchaseCart(' + p.id + ')" class="p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer flex flex-col justify-between gap-2 select-none group transition">' +
+      return '<div onclick="window.purchasesController.openProductEntryModal(' + p.id + ')" class="p-3.5 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer flex flex-col justify-between gap-2.5 select-none active:scale-98 transition group">' +
         '<div class="flex items-center justify-between gap-1 text-[10px]">' +
           (isWeight 
             ? '<span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800">⚖️ ميزان</span>'
@@ -401,17 +401,18 @@ class PurchasesController {
         '</div>' +
 
         '<div class="my-0.5">' +
-          '<h4 class="text-xs font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 min-h-[2rem]">' + p.name + '</h4>' +
+          '<h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 min-h-[2.2rem]">' + p.name + '</h4>' +
           (p.barcode ? '<p class="text-[10px] text-gray-400 font-mono mt-0.5 truncate">' + p.barcode + '</p>' : '') +
         '</div>' +
 
         '<div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 mt-auto">' +
           '<div class="flex flex-col">' +
-            '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold font-mono">تكلفة: ' + cost.toFixed(2) + ' ج.م</span>' +
+            '<span class="text-[11px] text-amber-600 dark:text-amber-400 font-black font-mono">تكلفة: ' + cost.toFixed(2) + ' ج.م</span>' +
             '<span class="text-[9px] text-gray-400">بيع: ' + price.toFixed(2) + ' ج.م</span>' +
           '</div>' +
-          '<div class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs group-hover:bg-emerald-700 transition">' +
-            '+' +
+          '<div class="h-8 px-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-black text-xs flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800 group-hover:bg-indigo-600 group-hover:text-white transition">' +
+            '<i data-lucide="plus" class="w-3.5 h-3.5"></i>' +
+            '<span>توريد</span>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -458,11 +459,179 @@ class PurchasesController {
     );
 
     if (prod) {
-      this.addProductToPurchaseCart(prod.id);
-      window.app?.showToast('تمت إضافة الصنف للفاتورة: ' + prod.name, 'info');
+      this.openProductEntryModal(prod.id);
     } else {
-      this.openNewCustomProductModal(clean);
+      this.openProductEntryModal(null, clean);
     }
+  }
+
+  /* ==================== UNIFIED PRODUCT ENTRY MODAL (سلس وسريع للهاتف) ==================== */
+  openProductEntryModal(productId = null, prefilledBarcode = '') {
+    const modal = document.getElementById('purch-item-entry-modal');
+    if (!modal) return;
+
+    this.activeModalProduct = null;
+    const titleEl = document.getElementById('purch-modal-title');
+    const subEl = document.getElementById('purch-modal-subtitle');
+    const customFields = document.getElementById('purch-modal-custom-fields');
+    const customName = document.getElementById('purch-modal-custom-name');
+    const customBc = document.getElementById('purch-modal-custom-barcode');
+    const customUnit = document.getElementById('purch-modal-custom-unit-type');
+    const qtyInp = document.getElementById('purch-modal-qty');
+    const costInp = document.getElementById('purch-modal-cost');
+    const priceInp = document.getElementById('purch-modal-price');
+    const unitLabel = document.getElementById('purch-modal-unit-label');
+
+    if (productId) {
+      const prod = window.app?.products?.find(p => p.id === productId);
+      if (!prod) return;
+      this.activeModalProduct = prod;
+
+      const isWeight = prod.unit_type === 'weight' || prod.unit === 'كجم' || prod.is_weight;
+      if (titleEl) titleEl.textContent = prod.name;
+      if (subEl) subEl.textContent = 'مخزون: ' + (prod.stock || 0) + ' ' + (prod.unit || 'قطعة') + (prod.barcode ? ' • باركود: ' + prod.barcode : '');
+      if (unitLabel) unitLabel.textContent = isWeight ? '⚖️ كجم (وزن)' : '📦 قطعة';
+      if (customFields) customFields.classList.add('hidden');
+
+      if (qtyInp) {
+        qtyInp.value = isWeight ? '1.0' : '1';
+        qtyInp.step = isWeight ? '0.25' : '1';
+      }
+      if (costInp) costInp.value = parseFloat(prod.cost || 0).toFixed(2);
+      if (priceInp) priceInp.value = parseFloat(prod.price || 0).toFixed(2);
+    } else {
+      // Custom Product Mode
+      this.activeModalProduct = null;
+      if (titleEl) titleEl.textContent = 'إضافة صنف جديد غير مسجل';
+      if (subEl) subEl.textContent = 'تسجيل صنف مخصص للفاتورة مباشرة';
+      if (unitLabel) unitLabel.textContent = '📦 قطعة';
+      if (customFields) customFields.classList.remove('hidden');
+
+      if (customName) {
+        customName.value = '';
+        setTimeout(() => customName.focus(), 150);
+      }
+      if (customBc) customBc.value = prefilledBarcode || '';
+      if (qtyInp) {
+        qtyInp.value = '1';
+        qtyInp.step = '1';
+      }
+      if (costInp) costInp.value = '0.00';
+      if (priceInp) priceInp.value = '0.00';
+    }
+
+    this.onModalCalcChange();
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    if (productId && qtyInp) {
+      setTimeout(() => qtyInp.select(), 150);
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeItemEntryModal() {
+    const modal = document.getElementById('purch-item-entry-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+      this.activeModalProduct = null;
+    }
+  }
+
+  modalChangeQty(delta) {
+    const qtyInp = document.getElementById('purch-modal-qty');
+    if (!qtyInp) return;
+    const isWeight = this.activeModalProduct?.unit_type === 'weight' || this.activeModalProduct?.unit === 'كجم';
+    const step = isWeight ? 0.25 : 1;
+    let val = parseFloat(qtyInp.value || 0) + (delta * step);
+    if (val <= 0) val = step;
+    qtyInp.value = isWeight ? val.toFixed(2) : String(Math.round(val));
+    this.onModalCalcChange();
+  }
+
+  modalSetQty(val) {
+    const qtyInp = document.getElementById('purch-modal-qty');
+    if (!qtyInp) return;
+    qtyInp.value = String(val);
+    this.onModalCalcChange();
+  }
+
+  onModalCalcChange() {
+    const qty = parseFloat(document.getElementById('purch-modal-qty')?.value || 0);
+    const cost = parseFloat(document.getElementById('purch-modal-cost')?.value || 0);
+    const total = qty * cost;
+
+    const formulaEl = document.getElementById('purch-modal-formula');
+    const subtotalEl = document.getElementById('purch-modal-subtotal');
+    const btnText = document.getElementById('purch-modal-confirm-btn-text');
+
+    if (formulaEl) formulaEl.textContent = qty + ' × ' + cost.toFixed(2) + ' ج.م';
+    if (subtotalEl) subtotalEl.textContent = total.toFixed(2) + ' ج.م';
+    if (btnText) btnText.textContent = 'إضافة للفاتورة (' + total.toFixed(2) + ' ج.م) 📦';
+  }
+
+  confirmModalItemToCart() {
+    const qty = parseFloat(document.getElementById('purch-modal-qty')?.value || 0);
+    const cost = parseFloat(document.getElementById('purch-modal-cost')?.value || 0);
+    const price = parseFloat(document.getElementById('purch-modal-price')?.value || 0);
+
+    if (qty <= 0) {
+      window.app?.showToast('يرجى كتابة كمية صحيحة أكبر من صفر!', 'error');
+      return;
+    }
+
+    let name = '';
+    let barcode = '';
+    let unitType = 'piece';
+    let unit = 'قطعة';
+
+    if (this.activeModalProduct) {
+      name = this.activeModalProduct.name;
+      barcode = this.activeModalProduct.barcode || '';
+      unitType = this.activeModalProduct.unit_type || (this.activeModalProduct.unit === 'كجم' ? 'weight' : 'piece');
+      unit = this.activeModalProduct.unit || (unitType === 'weight' ? 'كجم' : 'قطعة');
+    } else {
+      name = (document.getElementById('purch-modal-custom-name')?.value || '').trim();
+      barcode = (document.getElementById('purch-modal-custom-barcode')?.value || '').trim();
+      unitType = document.getElementById('purch-modal-custom-unit-type')?.value || 'piece';
+      unit = unitType === 'weight' ? 'كجم' : 'قطعة';
+
+      if (!name) {
+        window.app?.showToast('يرجى كتابة اسم الصنف!', 'error');
+        return;
+      }
+    }
+
+    // ALWAYS ADD AS A SEPARATE INDEPENDENT LINE ITEM (دون أي دمج نهائياً)
+    this.items.push({
+      product_id: this.activeModalProduct ? this.activeModalProduct.id : null,
+      name: name,
+      barcode: barcode,
+      category: this.activeModalProduct?.category || 'عام',
+      unit_type: unitType,
+      unit: unit,
+      cost_price: cost,
+      selling_price: price,
+      qty: qty,
+      total: qty * cost
+    });
+
+    this.closeItemEntryModal();
+    window.posScanner?.playSuccessBeep();
+    window.app?.showToast('تمت إضافة: ' + name + ' (' + qty + ' × ' + cost.toFixed(2) + ' = ' + (qty * cost).toFixed(2) + ' ج.م)', 'success');
+    this.renderCart();
+  }
+
+  openNewCustomProductModal(prefilledBarcode = '') {
+    this.openProductEntryModal(null, prefilledBarcode);
+  }
+
+  closeNewCustomProductModal() {
+    this.closeItemEntryModal();
+  }
+
+  saveNewCustomProductToCart() {
+    this.confirmModalItemToCart();
   }
 
   changeItemQty(index, delta) {
@@ -631,57 +800,66 @@ class PurchasesController {
       const isWeight = item.unit_type === 'weight';
       const step = isWeight ? '0.25' : '1';
 
-      return '<div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200/80 dark:border-gray-600/60 flex flex-col gap-2 shadow-2xs">' +
+      return '<div class="p-3.5 sm:p-4 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs flex flex-col gap-3 transition">' +
         
+        '<!-- Header: Item Number, Name, Delete -->' +
         '<div class="flex items-start justify-between gap-2">' +
-          '<div class="flex-1 min-w-0">' +
-            '<h4 class="text-xs font-bold text-gray-900 dark:text-white leading-tight truncate flex items-center">' +
-              '<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-bold me-1.5 shrink-0">#' + (idx + 1) + '</span>' +
-              '<span class="truncate">' + item.name + '</span>' +
-            '</h4>' +
-            '<div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400 font-mono">' +
-              (isWeight ? '<span class="text-amber-500 font-sans">⚖️ وزن</span>' : '<span class="text-indigo-500 font-sans">📦 قطعة</span>') +
-              (item.barcode ? '<span>• ' + item.barcode + '</span>' : '') +
+          '<div class="flex items-center gap-2 min-w-0">' +
+            '<span class="w-7 h-7 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-mono text-xs font-black flex items-center justify-center shrink-0">#' + (idx + 1) + '</span>' +
+            '<div class="min-w-0">' +
+              '<h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">' + item.name + '</h4>' +
+              '<div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400 font-mono">' +
+                (isWeight ? '<span class="text-amber-500 font-sans font-bold">⚖️ وزن</span>' : '<span class="text-indigo-500 font-sans font-bold">📦 قطعة</span>') +
+                (item.barcode ? '<span>• ' + item.barcode + '</span>' : '') +
+              '</div>' +
             '</div>' +
           '</div>' +
           
-          '<button onclick="window.purchasesController.removeItem(' + idx + ')" class="p-1 text-gray-400 hover:text-rose-500 rounded-lg transition" title="حذف من الفاتورة">' +
+          '<button type="button" onclick="window.purchasesController.removeItem(' + idx + ')" class="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 flex items-center justify-center transition active:scale-95" title="حذف من الفاتورة">' +
             '<i data-lucide="trash-2" class="w-4 h-4"></i>' +
           '</button>' +
         '</div>' +
 
-        '<div class="grid grid-cols-3 gap-2 pt-1 border-t border-gray-200/60 dark:border-gray-600/40 text-center items-end">' +
+        '<!-- Controls: Qty, Cost Price, Selling Price with Big Touch Targets -->' +
+        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-700/60">' +
           
-          '<!-- Qty Controls -->' +
-          '<div class="flex flex-col gap-0.5 text-right">' +
-            '<label class="text-[9px] font-bold text-gray-500">الكمية:</label>' +
-            '<div class="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-0.5">' +
-              '<button type="button" onclick="window.purchasesController.changeItemQty(' + idx + ', -1)" class="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold text-xs flex items-center justify-center hover:bg-gray-200">-</button>' +
-              '<input type="number" step="' + step + '" value="' + item.qty + '" oninput="window.purchasesController.updateItemQty(' + idx + ', this.value)" class="w-10 text-center text-xs font-bold font-mono bg-transparent border-0 p-0 focus:ring-0">' +
-              '<button type="button" onclick="window.purchasesController.changeItemQty(' + idx + ', 1)" class="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold text-xs flex items-center justify-center hover:bg-gray-200">+</button>' +
+          '<!-- Qty Controls with touch buttons -->' +
+          '<div class="flex flex-col gap-1">' +
+            '<label class="text-[10px] font-bold text-gray-600 dark:text-gray-300">الكمية:</label>' +
+            '<div class="flex items-center bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-2xl p-1">' +
+              '<button type="button" onclick="window.purchasesController.changeItemQty(' + idx + ', -1)" class="w-9 h-9 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-white font-black text-base flex items-center justify-center shadow-xs active:scale-95 select-none">−</button>' +
+              '<input type="number" step="' + step + '" value="' + item.qty + '" oninput="window.purchasesController.updateItemQty(' + idx + ', this.value)" class="flex-1 text-center text-sm font-black font-mono bg-transparent border-0 p-0 focus:ring-0 text-gray-900 dark:text-white">' +
+              '<button type="button" onclick="window.purchasesController.changeItemQty(' + idx + ', 1)" class="w-9 h-9 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-white font-black text-base flex items-center justify-center shadow-xs active:scale-95 select-none">+</button>' +
             '</div>' +
           '</div>' +
 
-          '<!-- Unit Cost (Editable) -->' +
-          '<div class="flex flex-col gap-0.5 text-right">' +
-            '<label class="text-[9px] font-bold text-amber-600 dark:text-amber-400">سعر الشراء:</label>' +
-            '<input type="number" step="0.5" value="' + item.cost_price + '" oninput="window.purchasesController.updateItemCost(' + idx + ', this.value)" class="w-full bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-xl px-2 py-1 text-xs font-bold font-mono text-center text-amber-700 dark:text-amber-300">' +
+          '<!-- Unit Cost -->' +
+          '<div class="flex flex-col gap-1">' +
+            '<label class="text-[10px] font-bold text-amber-600 dark:text-amber-400">سعر الشراء:</label>' +
+            '<div class="relative">' +
+              '<input type="number" step="0.5" value="' + item.cost_price + '" oninput="window.purchasesController.updateItemCost(' + idx + ', this.value)" class="w-full h-11 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-2xl px-3 pe-8 text-xs sm:text-sm font-black font-mono text-center text-amber-800 dark:text-amber-300">' +
+              '<span class="absolute end-2.5 top-1/2 -translate-y-1/2 text-[9px] text-amber-600 font-bold pointer-events-none">ج.م</span>' +
+            '</div>' +
           '</div>' +
 
-          '<!-- Unit Selling Price (Editable) -->' +
-          '<div class="flex flex-col gap-0.5 text-right">' +
-            '<label class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">سعر البيع:</label>' +
-            '<input type="number" step="0.5" value="' + item.selling_price + '" oninput="window.purchasesController.updateItemSellingPrice(' + idx + ', this.value)" class="w-full bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 rounded-xl px-2 py-1 text-xs font-bold font-mono text-center text-emerald-600 dark:text-emerald-300">' +
+          '<!-- Unit Selling Price -->' +
+          '<div class="flex flex-col gap-1">' +
+            '<label class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">سعر البيع:</label>' +
+            '<div class="relative">' +
+              '<input type="number" step="0.5" value="' + item.selling_price + '" oninput="window.purchasesController.updateItemSellingPrice(' + idx + ', this.value)" class="w-full h-11 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-2xl px-3 pe-8 text-xs sm:text-sm font-black font-mono text-center text-emerald-800 dark:text-emerald-300">' +
+              '<span class="absolute end-2.5 top-1/2 -translate-y-1/2 text-[9px] text-emerald-600 font-bold pointer-events-none">ج.م</span>' +
+            '</div>' +
           '</div>' +
 
         '</div>' +
 
-        '<div class="flex items-center justify-between bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200/70 dark:border-emerald-800/60 mt-1 font-bold">' +
-          '<span class="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1.5">' +
+        '<!-- Prominent Line Total Banner -->' +
+        '<div class="flex items-center justify-between bg-emerald-50/90 dark:bg-emerald-950/60 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 font-bold shadow-2xs">' +
+          '<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">' +
             '<span>مجموع الصنف:</span>' +
-            '<span id="purch-item-calc-' + idx + '" class="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">(' + item.qty + ' × ' + item.cost_price.toFixed(2) + ')</span>' +
-          '</span>' +
-          '<span id="purch-item-subtotal-' + idx + '" class="font-mono text-emerald-700 dark:text-emerald-300 text-sm font-black">' + (item.qty * item.cost_price).toFixed(2) + ' ج.م</span>' +
+            '<span id="purch-item-calc-' + idx + '" class="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-bold">(' + item.qty + ' × ' + item.cost_price.toFixed(2) + ')</span>' +
+          '</div>' +
+          '<span id="purch-item-subtotal-' + idx + '" class="font-mono text-emerald-700 dark:text-emerald-300 text-sm sm:text-base font-black">' + (item.qty * item.cost_price).toFixed(2) + ' ج.م</span>' +
         '</div>' +
 
       '</div>';
@@ -691,70 +869,17 @@ class PurchasesController {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  /* ==================== CUSTOM PRODUCT MODAL ==================== */
+  /* ==================== CUSTOM PRODUCT MODAL (LEGACY ALIASES) ==================== */
   openNewCustomProductModal(prefilledBarcode = '') {
-    const modal = document.getElementById('new-purchase-product-modal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-      const bcodeInp = document.getElementById('new-purch-item-barcode');
-      if (bcodeInp && prefilledBarcode) bcodeInp.value = prefilledBarcode;
-      this.updateModalProductSubtotal();
-      document.getElementById('new-purch-item-name')?.focus();
-      if (window.lucide) window.lucide.createIcons();
-    }
+    this.openProductEntryModal(null, prefilledBarcode);
   }
 
   closeNewCustomProductModal() {
-    const modal = document.getElementById('new-purchase-product-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-      this.isScanningForNewProductModal = false;
-      const nameInp = document.getElementById('new-purch-item-name');
-      const bcodeInp = document.getElementById('new-purch-item-barcode');
-      const costInp = document.getElementById('new-purch-item-cost');
-      const priceInp = document.getElementById('new-purch-item-price');
-      const qtyInp = document.getElementById('new-purch-item-qty');
-      if (nameInp) nameInp.value = '';
-      if (bcodeInp) bcodeInp.value = '';
-      if (costInp) costInp.value = '0.00';
-      if (priceInp) priceInp.value = '0.00';
-      if (qtyInp) qtyInp.value = '1';
-      this.updateModalProductSubtotal();
-    }
+    this.closeItemEntryModal();
   }
 
   saveNewCustomProductToCart() {
-    const name = (document.getElementById('new-purch-item-name')?.value || '').trim();
-    const barcode = (document.getElementById('new-purch-item-barcode')?.value || '').trim();
-    const unitType = document.getElementById('new-purch-item-unit-type')?.value || 'piece';
-    const qty = parseFloat(document.getElementById('new-purch-item-qty')?.value || 1);
-    const cost = parseFloat(document.getElementById('new-purch-item-cost')?.value || 0);
-    const price = parseFloat(document.getElementById('new-purch-item-price')?.value || 0);
-
-    if (!name) {
-      window.app?.showToast('يرجى كتابة اسم الصنف!', 'error');
-      return;
-    }
-
-    this.items.push({
-      product_id: null,
-      name: name,
-      barcode: barcode,
-      category: 'عام',
-      unit_type: unitType,
-      unit: unitType === 'weight' ? 'كجم' : 'قطعة',
-      cost_price: cost,
-      selling_price: price,
-      qty: qty,
-      total: qty * cost
-    });
-
-    this.closeNewCustomProductModal();
-    this.renderCart();
-    window.posScanner?.playSuccessBeep();
-    window.app?.showToast('تمت إضافة الصنف للفاتورة: ' + name, 'success');
+    this.confirmModalItemToCart();
   }
 
   /* ==================== SUBMIT PURCHASE INVOICE ==================== */

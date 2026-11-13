@@ -169,7 +169,11 @@ include 'admin_nav.php';
             <p class="text-xs text-gray-500 mt-1">ابحث بالاسم أو امسح الباركود لإضافة صورة ونشر المنتج على المتجر الإلكتروني فوراً (المنتجات بدون صورة تبقى مخفية عن العملاء).</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="admin_dormant_products.php" class="bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-600 hover:text-white font-bold py-2.5 px-4 text-xs transition rounded-xl shadow-xs flex items-center gap-2">
+            <button type="button" onclick="openAiBatchModal()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2.5 px-4 text-xs transition rounded-xl shadow-xs flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>توليد الأوصاف بالذكاء الاصطناعي (AI)</span>
+            </button>
+            <a href="admin_dormant_products.php"  class="bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-600 hover:text-white font-bold py-2.5 px-4 text-xs transition rounded-xl shadow-xs flex items-center gap-2">
                 <i class="fa-solid fa-broom"></i> الأصناف الراكدة والأرشيف
             </a>
             <a href="admin_edit_product.php" class="bg-royal-charcoal text-royal-gold hover:bg-royal-gold hover:text-royal-charcoal font-bold py-2.5 px-5 text-xs uppercase tracking-wider transition rounded-xl shadow-sm flex items-center gap-2">

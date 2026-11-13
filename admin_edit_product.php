@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 require_once __DIR__ . '/storefront_helpers.php';
+require_once __DIR__ . '/ai_helpers.php';
 
 // التحقق من رتبة المدير
 if (!isAdmin()) {
@@ -119,6 +120,12 @@ if (isset($_POST['add_product'])) {
     $category = trim($_POST['category']);
     $sub_category = !empty($_POST['sub_category']) ? trim($_POST['sub_category']) : null;
     $description = trim($_POST['description']);
+    if ($description === '' && !empty($name)) {
+        $ai_gen = generateAiProductDescription($name, $category, $sub_category ?? '', $price, (bool)$is_weight_based);
+        if ($ai_gen['success'] && !empty($ai_gen['description'])) {
+            $description = $ai_gen['description'];
+        }
+    }
     $price = (float)$_POST['price'];
     $old_price = !empty($_POST['old_price']) ? (float)$_POST['old_price'] : null;
 
@@ -292,206 +299,21 @@ include 'admin_nav.php';
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-600">اسم المنتج *</label>
-                        <input type="text" name="name" value="<?php echo htmlspecialchars($product['name']); ?>" required class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-royal-cream/30 focus:bg-white transition rounded-xl text-sm font-semibold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-600">القسم الرئيسي (الفئة الأساسية) *</label>
-                        <select name="category" id="main-cat-select" required class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-royal-cream/30 focus:bg-white transition rounded-xl text-sm font-semibold">
-                            <option value="">-- اختر القسم الرئيسي --</option>
-                            <?php 
-                            $main_cats = $pdo->query("SELECT * FROM categories WHERE parent_id IS NULL ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-                            foreach($main_cats as $mc): 
-                            ?>
-                                <option value="<?php echo htmlspecialchars($mc['name']); ?>" <?php echo $product['category'] == $mc['name'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($mc['name']); ?></option>
-                            <?php endforeach; ?>
-                            <?php
-                            $cat_names_list = array_column($main_cats, 'name');
-                            if (!empty($product['category']) && !in_array($product['category'], $cat_names_list, true)):
-                            ?>
-                                <option value="<?php echo htmlspecialchars($product['category']); ?>" selected><?php echo htmlspecialchars($product['category']); ?></option>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-600">القسم الفرعي (الفئة الفرعية)</label>
-                        <select name="sub_category" id="sub-cat-select" class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-royal-cream/30 focus:bg-white transition rounded-xl text-sm font-semibold">
-                            <option value="">-- بدون قسم فرعي --</option>
-                            <?php 
-                            $sub_cats = $pdo->query("SELECT s.*, p.name as parent_name FROM categories s JOIN categories p ON s.parent_id = p.id WHERE s.parent_id IS NOT NULL ORDER BY s.name ASC")->fetchAll(PDO::FETCH_ASSOC);
-                            foreach($sub_cats as $sc): 
-                            ?>
-                                <option value="<?php echo htmlspecialchars($sc['name']); ?>" data-parent-name="<?php echo htmlspecialchars($sc['parent_name']); ?>" <?php echo ($product['sub_category'] ?? '') == $sc['name'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($sc['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-royal-sand/35 p-5 border border-royal-gold/10 rounded-2xl">
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-royal-darkgold">سعر البيع الحالي (للكيلو أو للقطعة) *</label>
-                        <input type="number" step="0.01" name="price" id="prod-price-input" value="<?php echo htmlspecialchars($product['price']); ?>" required class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-white transition rounded-xl font-serif font-bold text-sm" oninput="updateWeightPricesPreview()">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-500">السعر القديم (لإظهار شارة الخصم - اختياري)</label>
-                        <input type="number" step="0.01" name="old_price" value="<?php echo htmlspecialchars($product['old_price'] ?? ''); ?>" class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-white transition rounded-xl font-serif font-bold text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-600">سعر التكلفة (الشراء)</label>
-                        <input type="number" step="0.01" name="cost" value="<?php echo htmlspecialchars($product['cost'] ?? '0'); ?>" class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-white transition rounded-xl font-mono font-bold text-sm" dir="ltr">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-600">الباركود (Barcode)</label>
-                        <input type="text" name="barcode" id="prod-barcode-input" value="<?php echo htmlspecialchars($product['barcode'] ?? ''); ?>" placeholder="امسح أو اكتب الباركود..." class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-white transition rounded-xl font-mono font-bold text-sm" dir="ltr">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold mb-2 text-gray-600">كود السيستم / ERP (Local Code)</label>
-                        <input type="text" name="local_code" value="<?php echo htmlspecialchars($product['local_code'] ?? ''); ?>" class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-white transition rounded-xl font-mono font-bold text-sm" dir="ltr">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold mb-2 text-gray-600">رصيد المخزون الحالي (الكمية)</label>
-                        <input type="number" step="0.001" name="stock" id="prod-stock-input" data-orig-stock="<?php echo htmlspecialchars((string)($product['stock'] ?? 0)); ?>" value="<?php echo htmlspecialchars($product['stock'] ?? 0); ?>" class="w-full p-3 border border-gray-200 outline-none focus:border-royal-gold bg-white transition rounded-xl font-mono font-bold text-sm" dir="ltr" oninput="toggleAdminStockReasonBox()">
-                        <?php if ($is_edit): ?>
-                        <div id="admin-stock-reason-box" class="hidden mt-3 p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2.5">
-                            <p class="text-xs font-bold text-amber-900">تم تعديل الكمية — اختر سبب تسوية الجرد لحفظ توازن الصندوق والحسابات:</p>
-                            <select name="adjustment_reason" id="admin-stock-reason-select" class="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-800">
-                                <option value="shortage_loss">نقص: عجز / تالف جرد (خسائر غير نقدية - لا يمس الصندوق)</option>
-                                <option value="unrecorded_sale">نقص: مبيعات نقدية غير مسجلة (+ دخول كاش للصندوق)</option>
-                                <option value="shortage_cash_expense">نقص: خصم عجز نقدي من عهدة الصندوق (- صرف كاش)</option>
-                                <option value="surplus_gain">زيادة: فائض جرد طبيعي (زيادة رصيد - لا يمس الصندوق)</option>
-                                <option value="surplus_cash_purchase">زيادة: بضاعة مشتراة نقداً من الصندوق (- صرف كاش)</option>
-                                <option value="count_only">تصحيح رصيد دفتري / افتتاحي فقط</option>
-                            </select>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <input type="number" step="0.01" name="adjustment_cash_amount" placeholder="مبلغ نقدي مخصص بالصندوق (اتركه فارغاً للحساب التلقائي)" class="p-2 bg-white border border-amber-200 rounded-lg text-xs">
-                                <input type="text" name="adjustment_note" placeholder="ملاحظة التسوية (اختياري)..." class="p-2 bg-white border border-amber-200 rounded-lg text-xs">
-                            </div>
-                        </div>
-                        <script>
-                        function toggleAdminStockReasonBox() {
-                            const inp = document.getElementById('prod-stock-input');
-                            const box = document.getElementById('admin-stock-reason-box');
-                            const sel = document.getElementById('admin-stock-reason-select');
-                            if (!inp || !box || !sel) return;
-                            const orig = parseFloat(inp.getAttribute('data-orig-stock') || '0') || 0;
-                            const cur = parseFloat(inp.value || '0') || 0;
-                            const diff = cur - orig;
-                            if (Math.abs(diff) < 0.0005) { box.classList.add('hidden'); return; }
-                            box.classList.remove('hidden');
-                            if (diff < 0 && !['shortage_loss','unrecorded_sale','shortage_cash_expense','count_only'].includes(sel.value)) {
-                                sel.value = 'shortage_loss';
-                            } else if (diff > 0 && !['surplus_gain','surplus_cash_purchase','count_only'].includes(sel.value)) {
-                                sel.value = 'surplus_gain';
-                            }
-                        }
-                        </script>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <!-- قسم منتجات الوزن التفاعلي (Weight-Based Supermarket Selling) -->
-                <div class="bg-gradient-to-br from-amber-500/10 via-amber-100/30 to-royal-sand/40 p-6 border-2 border-dashed border-amber-500/30 rounded-2xl space-y-4 shadow-xs">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-300/40 pb-3.5">
-                        <div>
-                            <h4 class="text-sm font-bold text-royal-dark flex items-center gap-2">
-                                <span class="w-7 h-7 bg-amber-600 text-white rounded-lg flex items-center justify-center text-xs shadow-sm"><i class="fa-solid fa-scale-balanced"></i></span>
-                                نظام بيع المنتج بالوزن (أجبان، مخللات، بهارات، مكسرات، بن، لحوم...)
-                            </h4>
-                            <p class="text-[11px] text-gray-500 mt-1">عند التفعيل، سيظهر للزبائن في المتجر زر "⚖️ اختر الوزن" بدلاً من "اشتري الآن"، مع خيارات الأوزان (ربع، نصف، 3/4، كيلو) وحساب الأسعار تلقائياً.</p>
-                        </div>
-                        
-                        <!-- Toggle Switch -->
-                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
-                            <input type="checkbox" name="is_weight_based" id="toggle-weight-based" value="1" <?php echo !empty($product['is_weight_based']) ? 'checked' : ''; ?> class="sr-only peer" onchange="toggleWeightSection(this.checked)">
-                            <div class="w-13 h-7 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-600 shadow-inner"></div>
-                            <span class="ms-3 text-xs font-bold text-royal-dark">تفعيل البيع بالوزن</span>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-gray-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-align-right text-royal-gold"></i>
+                            <span>وصف المنتج (التفاصيل والمذاق الشامي)</span>
                         </label>
+                        <button type="button" id="btn-generate-ai-desc" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-[11px] font-bold shadow-xs transition cursor-pointer">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                            <span>توليد الوصف بالذكاء الاصطناعي (Gemini)</span>
+                        </button>
                     </div>
-
-                    <!-- إعدادات الأوزان وتخصيص الخيارات -->
-                    <div id="weight-settings-container" class="<?php echo empty($product['is_weight_based']) ? 'hidden' : ''; ?> space-y-4 pt-1">
-                        <div class="bg-white/90 p-4 rounded-xl border border-amber-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                            <div>
-                                <span class="text-xs font-bold text-gray-800 block">سعر الكيلو المدخل: <span id="weight-base-price-disp" class="text-amber-700 font-bold font-serif text-sm"><?php echo htmlspecialchars($product['price'] ?: '0'); ?></span> <?php echo htmlspecialchars($settings['store_currency'] ?? 'ج.م'); ?></span>
-                                <span class="text-[10px] text-gray-400">يتم حساب أسعار الكسور (ربع، نصف، إلخ) آلياً كنسبة من سعر الكيلو.</span>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                <button type="button" onclick="loadDefaultSupermarketWeights()" class="bg-amber-100 text-amber-900 hover:bg-amber-200 text-[10px] font-bold px-3 py-1.5 rounded-lg transition border border-amber-300 shadow-2xs">
-                                    <i class="fa-solid fa-rotate-left mr-1"></i> الأوزان القياسية (ربع/نصف/3-4/كيلو)
-                                </button>
-                                <button type="button" onclick="addWeightOptionRow(0.125, 'ثمن كيلو (125 غرام)')" class="bg-white hover:bg-amber-50 text-gray-700 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition border border-gray-200">+ ثمن كيلو</button>
-                                <button type="button" onclick="addWeightOptionRow(1.5, 'كيلو ونصف (1500 غرام)')" class="bg-white hover:bg-amber-50 text-gray-700 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition border border-gray-200">+ 1.5 كجم</button>
-                                <button type="button" onclick="addWeightOptionRow(2.0, '2 كيلو (2000 غرام)')" class="bg-white hover:bg-amber-50 text-gray-700 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition border border-gray-200">+ 2 كجم</button>
-                                <button type="button" onclick="addWeightOptionRow('', '')" class="bg-royal-charcoal text-white hover:bg-amber-600 text-[10px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1">
-                                    <i class="fa-solid fa-plus"></i> وزن مخصص
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- جدول خيارات الأوزان -->
-                        <div class="overflow-x-auto bg-white rounded-xl border border-amber-200 shadow-xs">
-                            <table class="w-full text-right text-xs">
-                                <thead class="bg-amber-500/10 text-gray-700 text-[10px] border-b border-amber-200">
-                                    <tr>
-                                        <th class="p-3 font-bold w-1/4">قيمة الوزن (بالكيلوغرام)</th>
-                                        <th class="p-3 font-bold w-2/5">اسم الخيار الظاهر للعميل في المتجر</th>
-                                        <th class="p-3 font-bold w-1/4 text-center">السعر المحسوب للعميل</th>
-                                        <th class="p-3 font-bold w-12 text-center">حذف</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="weight-options-tbody" class="divide-y divide-amber-100">
-                                    <!-- سيتم توليد الصفوف عبر JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <textarea id="product-description-field" name="description" rows="4" class="w-full p-4 border border-gray-200 outline-none focus:border-royal-gold bg-royal-cream/30 focus:bg-white transition rounded-xl text-sm leading-relaxed" placeholder="أدخل تفاصيل ومكونات وطريقة استخدام المنتج ومذاقه الشامي الأصيل..."><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
+                    <div id="ai-desc-status" class="hidden text-xs text-amber-700 dark:text-amber-400 font-bold mt-2 flex items-center gap-2 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                        <i class="fa-solid fa-spinner fa-spin text-amber-600"></i>
+                        <span>جاري صياغة وصف شامي تسويقي جذاب بالذكاء الاصطناعي...</span>
                     </div>
-                </div>
-
-                <!-- خيارات ومواصفات المنتج المتعددة (الألوان، المقاسات، السعات) -->
-                <div class="bg-gradient-to-br from-royal-sand/40 to-royal-cream/60 p-6 border border-royal-gold/20 rounded-2xl space-y-4">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-royal-gold/15 pb-3">
-                        <div>
-                            <h4 class="text-xs font-bold text-royal-dark flex items-center gap-2">
-                                <i class="fa-solid fa-layer-group text-royal-darkgold"></i> خيارات ومواصفات المنتج (Product Variants)
-                            </h4>
-                            <p class="text-[10px] text-gray-500 mt-0.5">أضف خيارات المقاسات أو الألوان أو السعات مع تحديد السعر والمخزون لكل خيار.</p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-1.5">
-                            <button type="button" onclick="addVariantPreset('sizes')" class="bg-white border border-gray-200 hover:border-royal-gold text-[10px] font-bold text-gray-700 px-2.5 py-1 rounded-lg transition shadow-sm">+ مقاسات ملابس</button>
-                            <button type="button" onclick="addVariantPreset('storage')" class="bg-white border border-gray-200 hover:border-royal-gold text-[10px] font-bold text-gray-700 px-2.5 py-1 rounded-lg transition shadow-sm">+ سعات تخزين</button>
-                            <button type="button" onclick="addVariantPreset('colors')" class="bg-white border border-gray-200 hover:border-royal-gold text-[10px] font-bold text-gray-700 px-2.5 py-1 rounded-lg transition shadow-sm">+ ألوان</button>
-                            <button type="button" onclick="addVariantRow('', '', 0, 100)" class="bg-royal-charcoal text-white hover:bg-royal-gold hover:text-royal-charcoal text-[10px] font-bold px-3 py-1 rounded-lg transition shadow-sm flex items-center gap-1">
-                                <i class="fa-solid fa-plus"></i> إضافة خيار
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- جدول الخيارات التفاعلي -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right text-xs">
-                            <thead class="text-gray-500 text-[10px] border-b border-royal-gold/10">
-                                <tr>
-                                    <th class="pb-2 font-bold w-1/5">نوع الخيار</th>
-                                    <th class="pb-2 font-bold w-1/4">اسم الخيار / القيمة</th>
-                                    <th class="pb-2 font-bold w-1/4 text-center">كود / درجة اللون (Color Swatch)</th>
-                                    <th class="pb-2 font-bold w-1/5">فرق السعر (+ الإضافي)</th>
-                                    <th class="pb-2 font-bold w-16 text-center">المخزون</th>
-                                    <th class="pb-2 font-bold w-10 text-center">حذف</th>
-                                </tr>
-                            </thead>
-                            <tbody id="variants-tbody" class="divide-y divide-royal-gold/10">
-                                <!-- سيتم تعبئة الصفوف ديناميكياً بواسطة JavaScript -->
-                            </tbody>
-                        </table>
-                        <div id="no-variants-msg" class="hidden text-center py-6 text-gray-400 text-xs">
-                            لا توجد خيارات مضافة بعد لهذا المنتج (سيُباع بالخيارات والمواصفات القياسية الافتراضية).
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold mb-2 text-gray-600">وصف وتفاصيل المنتج (اختياري)</label>
-                    <textarea name="description" rows="4" class="w-full p-4 border border-gray-200 outline-none focus:border-royal-gold bg-royal-cream/30 focus:bg-white transition rounded-xl text-sm leading-relaxed" placeholder="اكتب مواصفات المنتج، الألوان والمقاسات، والخامات أو المزايا بالتفصيل..."><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
                 </div>
 
                 <div>

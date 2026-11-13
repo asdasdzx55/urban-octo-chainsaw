@@ -486,60 +486,6 @@ include 'header.php';
                 });
                 </script>
 
-                    function updateCalculatedPrice() {
-                        let totalMod = 0;
-                        radios.forEach(r => {
-                            if (r.checked) {
-                                const mod = parseFloat(r.getAttribute('data-price-mod')) || 0;
-                                totalMod += mod;
-
-                                const vType = r.getAttribute('data-type');
-                                const vName = r.getAttribute('data-name');
-                                const lbl = document.querySelector(`.selected-variant-label[data-for-type="${vType}"]`);
-                                if (lbl) lbl.textContent = vName;
-
-                                // 1. تحديث أزرار الألوان (Color Swatches)
-                                const colorSwatch = r.closest('.variant-color-swatch');
-                                if (colorSwatch) {
-                                    const allSwatches = colorSwatch.parentElement.querySelectorAll('.variant-color-swatch');
-                                    allSwatches.forEach(sw => {
-                                        const circle = sw.querySelector('.swatch-circle');
-                                        const check = sw.querySelector('.swatch-check');
-                                        if (circle) circle.classList.remove('ring-2', 'ring-royal-gold', 'ring-offset-2', 'scale-110', 'shadow-md');
-                                        if (check) check.classList.add('opacity-0');
-                                    });
-                                    const activeCircle = colorSwatch.querySelector('.swatch-circle');
-                                    const activeCheck = colorSwatch.querySelector('.swatch-check');
-                                    if (activeCircle) activeCircle.classList.add('ring-2', 'ring-royal-gold', 'ring-offset-2', 'scale-110', 'shadow-md');
-                                    if (activeCheck) activeCheck.classList.remove('opacity-0');
-                                }
-
-                                // 2. تحديث أزرار المقاسات والخيارات الأخرى (Pills)
-                                const parentLabel = r.closest('.variant-pill-label');
-                                if (parentLabel) {
-                                    const siblings = parentLabel.parentElement.querySelectorAll('.variant-pill-label');
-                                    siblings.forEach(s => {
-                                        s.className = 'variant-pill-label relative cursor-pointer border border-gray-200 bg-white text-gray-600 hover:border-gray-300 py-2 px-4 rounded-xl text-xs font-bold transition-all select-none flex items-center gap-2';
-                                    });
-                                    parentLabel.className = 'variant-pill-label relative cursor-pointer border border-royal-gold bg-royal-sand/40 text-royal-dark ring-1 ring-royal-gold py-2 px-4 rounded-xl text-xs font-bold transition-all select-none flex items-center gap-2 shadow-sm';
-                                }
-                            }
-                        });
-
-                        if (priceDisplay) {
-                            const newTotal = (basePrice + totalMod).toFixed(2);
-                            priceDisplay.textContent = parseFloat(newTotal);
-                        }
-                    }
-
-                    radios.forEach(r => {
-                        r.addEventListener('change', updateCalculatedPrice);
-                    });
-
-                    updateCalculatedPrice();
-                });
-                </script>
-
             <!-- مشاركة المنتج -->
             <?php
             $prod_protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");

@@ -85,6 +85,12 @@ if (file_exists($apiSyncDst) && function_exists('opcache_invalidate')) {
     @opcache_invalidate($apiSyncDst, true);
 }
 
+$imgCategoriesSrc = $sourceDir . '/images/categories';
+$imgCategoriesDst = $targetRoot . '/images/categories';
+if (is_dir($imgCategoriesSrc)) {
+    copyFolder($imgCategoriesSrc, $imgCategoriesDst, $copied, $errors);
+}
+
 $posSrc = $sourceDir . '/pos';
 $posDst = $targetRoot . '/pos';
 if (is_dir($posSrc)) {

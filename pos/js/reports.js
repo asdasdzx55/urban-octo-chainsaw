@@ -263,20 +263,24 @@ class ReportsController {
     const totalCogs = parseFloat(s.total_cogs || 0);
     const grossProfit = parseFloat(s.gross_profit || 0);
     const grossMargin = parseFloat(s.gross_margin || 0);
-    const totalExpenses = parseFloat(s.total_all_expenses || 0);
-    const netProfit = parseFloat(s.net_profit || 0);
-    const netMargin = parseFloat(s.net_margin || 0);
+    const totalExpenses = parseFloat(s.total_operating_expenses !== undefined ? s.total_operating_expenses : (s.total_all_expenses || 0));
+    const netProfit = parseFloat(s.net_operating_profit !== undefined ? s.net_operating_profit : (s.net_profit || 0));
+    const netMargin = parseFloat(s.net_operating_margin !== undefined ? s.net_operating_margin : (s.net_margin || 0));
     const netCashInDrawer = parseFloat(s.net_cash_in_drawer || 0);
     const ordersCount = parseInt(s.orders_count || 0, 10);
     const totalItems = parseFloat(s.total_items_sold || 0);
+    const avgBasket = parseFloat(s.average_basket_size || (ordersCount > 0 ? (totalSales / ordersCount) : 0));
+    const expRatio = parseFloat(s.expense_ratio !== undefined ? s.expense_ratio : (totalSales > 0 ? (totalExpenses / totalSales * 100) : 0));
+    const expStatus = s.expense_status || (expRatio <= 10 ? 'ممتاز' : expRatio <= 20 ? 'معتدل' : 'مرتفع');
 
     // KPI Cards
     this.setText('rep-total-sales', `${totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`);
-    this.setText('rep-orders-count-sub', `${ordersCount} فاتورة • ${totalItems.toLocaleString('en-US', { maximumFractionDigits: 2 })} صنف/وزن`);
+    this.setText('rep-orders-count-sub', `${ordersCount} فاتورة • متوسط السلة: ${avgBasket.toFixed(2)} ج.م`);
     this.setText('rep-total-cogs', `${totalCogs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`);
     this.setText('rep-gross-profit', `${grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`);
     this.setText('rep-gross-margin', `هامش الربح التجاري: ${grossMargin.toFixed(1)}%`);
     this.setText('rep-total-expenses', `${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`);
+    this.setText('rep-expense-ratio-sub', `معدل الإنفاق: ${expRatio.toFixed(1)}% (${expStatus})`);
 
     // Net profit styling (Green if profit, Red if deficit)
     const netProfitEl = document.getElementById('rep-net-profit');
@@ -286,18 +290,18 @@ class ReportsController {
       if (netProfit >= 0) {
         netProfitEl.className = 'text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-300 mt-1 font-mono';
         if (netBadgeEl) {
-          netBadgeEl.textContent = 'صافي ربح';
+          netBadgeEl.textContent = 'أرباح تشغيل';
           netBadgeEl.className = 'px-1.5 py-0.2 rounded-md bg-emerald-600 text-white text-[9px] font-bold font-mono';
         }
       } else {
         netProfitEl.className = 'text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 mt-1 font-mono';
         if (netBadgeEl) {
-          netBadgeEl.textContent = 'عجز / خسارة';
+          netBadgeEl.textContent = 'عجز تشغيلي';
           netBadgeEl.className = 'px-1.5 py-0.2 rounded-md bg-rose-600 text-white text-[9px] font-bold font-mono';
         }
       }
     }
-    this.setText('rep-net-margin', `صافي هامش الربح: ${netMargin.toFixed(1)}%`);
+    this.setText('rep-net-margin', `صافي هامش التشغيل: ${netMargin.toFixed(1)}%`);
     this.setText('rep-cash-in-drawer', `${netCashInDrawer.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`);
 
     // Payment Method Pills
@@ -335,8 +339,8 @@ class ReportsController {
         labels: [
           'إجمالي المبيعات',
           'تكلفة البضاعة (COGS)',
-          'المصروفات والرواتب',
-          'صافي الأرباح'
+          'المصروفات التشغيلية',
+          'صافي أرباح التشغيل'
         ],
         datasets: [{
           label: 'المبلغ (ج.م)',

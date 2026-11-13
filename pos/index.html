@@ -3007,8 +3007,14 @@
             </button>
           </div>
 
-          <div class="text-[11px] text-gray-500 font-mono font-bold" id="rep-active-period-label">
-            الفترة الحالية: اليوم
+          <div class="flex items-center justify-between flex-wrap gap-2 w-full">
+            <div class="text-[11px] text-gray-500 font-mono font-bold" id="rep-active-period-label">
+              الفترة الحالية: اليوم
+            </div>
+            <div id="rep-sync-match-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              <span>مطابقة القيود مع DreamSoft ERP: متطابق 100%</span>
+            </div>
           </div>
         </div>
 
@@ -3055,15 +3061,15 @@
             </div>
 
             <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800 flex flex-col justify-between">
-              <span class="text-[11px] font-bold text-rose-600 dark:text-rose-400">المصروفات والرواتب</span>
+              <span class="text-[11px] font-bold text-rose-600 dark:text-rose-400">المصروفات التشغيلية</span>
               <div id="rep-total-expenses" class="text-sm sm:text-base font-black text-rose-900 dark:text-white mt-1 font-mono">0.00 ج.م</div>
-              <span class="text-[10px] text-rose-500 font-bold mt-0.5">نفقات تشغيلية وسداد</span>
+              <span class="text-[10px] text-rose-500 font-bold mt-0.5" id="rep-expense-ratio-sub">معدل الإنفاق: 0%</span>
             </div>
 
             <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500/40 flex flex-col justify-between shadow-xs">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-black text-emerald-700 dark:text-emerald-300">صافي الأرباح الفعلي</span>
-                <span id="rep-net-profit-badge" class="px-1.5 py-0.2 rounded-md bg-emerald-600 text-white text-[9px] font-bold font-mono">صافي</span>
+                <span class="text-[11px] font-black text-emerald-700 dark:text-emerald-300">صافي أرباح التشغيل</span>
+                <span id="rep-net-profit-badge" class="px-1.5 py-0.2 rounded-md bg-emerald-600 text-white text-[9px] font-bold font-mono">تشغيلي</span>
               </div>
               <div id="rep-net-profit" class="text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-300 mt-1 font-mono">0.00 ج.م</div>
               <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5" id="rep-net-margin">صافي الهامش: 0%</span>

@@ -3488,8 +3488,25 @@ try {
             $net_cash_in_drawer = max(0, $sales_by_method['كاش'] - $cash_outflows);
             $gross_profit = $total_sales_amount - $total_cogs;
             $gross_margin = $total_sales_amount > 0 ? round(($gross_profit / $total_sales_amount) * 100, 1) : 0;
-            $net_profit = $gross_profit - $total_all_expenses;
-            $net_margin = $total_sales_amount > 0 ? round(($net_profit / $total_sales_amount) * 100, 1) : 0;
+
+            // محاسبة ذكية دقيقة: صافي ربح النشاط التشغيلي الحقيقي (المصروفات التشغيلية فقط)
+            // دفعات الموردين تخصم من السيولة النقدية بالدرج ولا تضاعف خصم التكلفة في الأرباح لأن البضاعة محسوبة في COGS
+            $net_operating_profit = $gross_profit - $total_general_expenses;
+            $net_operating_margin = $total_sales_amount > 0 ? round(($net_operating_profit / $total_sales_amount) * 100, 1) : 0;
+
+            $net_profit = $net_operating_profit;
+            $net_margin = $net_operating_margin;
+
+            // مؤشرات الأداء الذكية (Smart KPIs)
+            $orders_count = count($sales_today);
+            $average_basket_size = $orders_count > 0 ? round($total_sales_amount / $orders_count, 2) : 0.0;
+            $expense_ratio = $total_sales_amount > 0 ? round(($total_general_expenses / $total_sales_amount) * 100, 1) : 0.0;
+            $expense_status = 'ممتاز (تشغيل عالي الكفاءة)';
+            if ($expense_ratio > 20.0) {
+                $expense_status = 'مرتفع يحتاج ترشيد';
+            } elseif ($expense_ratio > 10.0) {
+                $expense_status = 'معتدل وطبيعي';
+            }
 
             $adj_rows = [];
             try {
@@ -3503,13 +3520,21 @@ try {
                 'total_cogs' => round($total_cogs, 2),
                 'gross_profit' => round($gross_profit, 2),
                 'gross_margin' => $gross_margin,
+                'total_operating_expenses' => round($total_general_expenses, 2),
+                'total_supplier_payouts' => round($total_supplier_payouts, 2),
+                'total_partner_withdrawals' => round($total_partner_withdrawals, 2),
                 'total_all_expenses' => round($total_all_expenses, 2),
+                'net_operating_profit' => round($net_operating_profit, 2),
+                'net_operating_margin' => $net_operating_margin,
                 'inventory_shrinkage_loss' => round($inventory_shrinkage_loss, 2),
                 'cash_outflows' => round($cash_outflows, 2),
                 'net_profit' => round($net_profit, 2),
                 'net_margin' => $net_margin,
                 'net_cash_in_drawer' => round($net_cash_in_drawer, 2),
-                'orders_count' => count($sales_today),
+                'orders_count' => $orders_count,
+                'average_basket_size' => $average_basket_size,
+                'expense_ratio' => $expense_ratio,
+                'expense_status' => $expense_status,
                 'total_items_sold' => round($total_items_sold, 2),
                 'sales_by_method' => $sales_by_method,
             ];

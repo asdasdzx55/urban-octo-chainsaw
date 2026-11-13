@@ -16,6 +16,42 @@ if (!function_exists('getGeminiApiKey')) {
     }
 }
 
+if (!function_exists('callGeminiApiWithRetry')) {
+    function callGeminiApiWithRetry(string $url, array $payload, int $maxRetries = 2): array {
+        $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $encoded,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=utf-8'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 25,
+                CURLOPT_SSL_VERIFYPEER => true,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+
+            if ($httpCode === 429 && $attempt < $maxRetries) {
+                // Rate limit: back off and retry
+                sleep(6 * $attempt);
+                continue;
+            }
+
+            return [
+                'http_code' => $httpCode,
+                'response' => $response,
+                'error' => $curlErr
+            ];
+        }
+
+        return ['http_code' => 500, 'response' => null, 'error' => 'Max retries reached'];
+    }
+}
+
 if (!function_exists('generateAiProductDescription')) {
     /**
      * Generate an authentic, marketing-rich Arabic product description using Gemini API for a single product.
@@ -77,30 +113,17 @@ if (!function_exists('generateAiProductDescription')) {
             ]
         ];
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=utf-8'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 20,
-            CURLOPT_SSL_VERIFYPEER => true,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlErr) {
-            return ['success' => false, 'description' => '', 'error' => 'فشل الاتصال بـ Gemini API: ' . $curlErr];
+        $res = callGeminiApiWithRetry($url, $payload, 2);
+        if (!empty($res['error'])) {
+            return ['success' => false, 'description' => '', 'error' => 'فشل الاتصال بـ Gemini API: ' . $res['error']];
         }
 
-        if ($httpCode !== 200 || !$response) {
-            return ['success' => false, 'description' => '', 'error' => "خطأ من خادم Gemini (رمز {$httpCode})"];
+        if ($res['http_code'] !== 200 || empty($res['response'])) {
+            $msg = $res['http_code'] === 429 ? 'تم تجاوز حد الطلبات اللحظي، يرجى الانتظار ثوانٍ والمحاولة ثانية' : "خطأ من خادم Gemini (رمز {$res['http_code']})";
+            return ['success' => false, 'description' => '', 'error' => $msg];
         }
 
-        $data = json_decode($response, true);
+        $data = json_decode($res['response'], true);
         $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
         $text = trim($text);
         $text = trim($text, "\"'«»\n\r ");
@@ -175,30 +198,17 @@ if (!function_exists('generateAiProductDescriptionBatch')) {
             ]
         ];
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=utf-8'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYPEER => true,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlErr) {
-            return ['success' => false, 'results' => [], 'error' => 'فشل الاتصال بـ Gemini API: ' . $curlErr];
+        $res = callGeminiApiWithRetry($url, $payload, 2);
+        if (!empty($res['error'])) {
+            return ['success' => false, 'results' => [], 'error' => 'فشل الاتصال بـ Gemini API: ' . $res['error']];
         }
 
-        if ($httpCode !== 200 || !$response) {
-            return ['success' => false, 'results' => [], 'error' => "خطأ من خادم Gemini (رمز {$httpCode})"];
+        if ($res['http_code'] !== 200 || empty($res['response'])) {
+            $msg = $res['http_code'] === 429 ? 'تم تجاوز حد الطلبات اللحظي، يرجى الانتظار ثوانٍ والمحاولة ثانية' : "خطأ من خادم Gemini (رمز {$res['http_code']})";
+            return ['success' => false, 'results' => [], 'error' => $msg];
         }
 
-        $data = json_decode($response, true);
+        $data = json_decode($res['response'], true);
         $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
         $parsed = json_decode($rawText, true);
 

@@ -495,6 +495,7 @@ class PurchasesController {
     } else {
       item.qty = num;
       item.total = item.qty * item.cost_price;
+      this.updateRowSubtotalDisplay(index);
       this.updateTotalsDisplay();
     }
   }
@@ -505,13 +506,34 @@ class PurchasesController {
 
     item.cost_price = parseFloat(val || 0);
     item.total = item.qty * item.cost_price;
+    this.updateRowSubtotalDisplay(index);
     this.updateTotalsDisplay();
+  }
+
+  updateRowSubtotalDisplay(index) {
+    const item = this.items[index];
+    if (!item) return;
+    const total = (item.qty * item.cost_price).toFixed(2);
+    const subtotalEl = document.getElementById('purch-item-subtotal-' + index);
+    const calcEl = document.getElementById('purch-item-calc-' + index);
+    if (subtotalEl) subtotalEl.textContent = total + ' ج.م';
+    if (calcEl) calcEl.textContent = '(' + item.qty + ' × ' + item.cost_price.toFixed(2) + ')';
   }
 
   updateItemSellingPrice(index, val) {
     const item = this.items[index];
     if (!item) return;
     item.selling_price = parseFloat(val || 0);
+  }
+
+  updateModalProductSubtotal() {
+    const qty = parseFloat(document.getElementById('new-purch-item-qty')?.value || 0);
+    const cost = parseFloat(document.getElementById('new-purch-item-cost')?.value || 0);
+    const total = qty * cost;
+    const formulaEl = document.getElementById('new-purch-item-calc-formula');
+    const valEl = document.getElementById('new-purch-item-subtotal-val');
+    if (formulaEl) formulaEl.textContent = qty + ' × ' + cost.toFixed(2) + ' ج.م';
+    if (valEl) valEl.textContent = total.toFixed(2) + ' ج.م';
   }
 
   removeItem(index) {
@@ -655,9 +677,12 @@ class PurchasesController {
 
         '</div>' +
 
-        '<div class="flex items-center justify-between text-[11px] pt-1 border-t border-gray-200/40 dark:border-gray-600/20 font-bold">' +
-          '<span class="text-gray-500">إجمالي البند:</span>' +
-          '<span class="font-mono text-indigo-600 dark:text-indigo-400 font-black">' + (item.qty * item.cost_price).toFixed(2) + ' ج.م</span>' +
+        '<div class="flex items-center justify-between bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200/70 dark:border-emerald-800/60 mt-1 font-bold">' +
+          '<span class="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1.5">' +
+            '<span>مجموع الصنف:</span>' +
+            '<span id="purch-item-calc-' + idx + '" class="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">(' + item.qty + ' × ' + item.cost_price.toFixed(2) + ')</span>' +
+          '</span>' +
+          '<span id="purch-item-subtotal-' + idx + '" class="font-mono text-emerald-700 dark:text-emerald-300 text-sm font-black">' + (item.qty * item.cost_price).toFixed(2) + ' ج.م</span>' +
         '</div>' +
 
       '</div>';
@@ -675,6 +700,7 @@ class PurchasesController {
       modal.style.display = 'flex';
       const bcodeInp = document.getElementById('new-purch-item-barcode');
       if (bcodeInp && prefilledBarcode) bcodeInp.value = prefilledBarcode;
+      this.updateModalProductSubtotal();
       document.getElementById('new-purch-item-name')?.focus();
       if (window.lucide) window.lucide.createIcons();
     }
@@ -696,6 +722,7 @@ class PurchasesController {
       if (costInp) costInp.value = '0.00';
       if (priceInp) priceInp.value = '0.00';
       if (qtyInp) qtyInp.value = '1';
+      this.updateModalProductSubtotal();
     }
   }
 

@@ -4462,18 +4462,29 @@
           </div>
           <div class="flex flex-col gap-1">
             <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">الكمية الموردة:</label>
-            <input type="number" id="new-purch-item-qty" value="1" min="0.01" step="1" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center">
+            <input type="number" id="new-purch-item-qty" value="1" min="0.01" step="1" oninput="window.purchasesController.updateModalProductSubtotal()" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center">
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
           <div class="flex flex-col gap-1">
             <label class="text-xs font-bold text-amber-600 dark:text-amber-400">سعر الشراء / التكلفة:</label>
-            <input type="number" id="new-purch-item-cost" value="0.00" min="0" step="0.5" class="w-full bg-gray-50 dark:bg-gray-700 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-amber-700 dark:text-amber-400">
+            <input type="number" id="new-purch-item-cost" value="0.00" min="0" step="0.5" oninput="window.purchasesController.updateModalProductSubtotal()" class="w-full bg-gray-50 dark:bg-gray-700 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-amber-700 dark:text-amber-400">
           </div>
           <div class="flex flex-col gap-1">
             <label class="text-xs font-bold text-emerald-600 dark:text-emerald-400">سعر البيع للجمهور:</label>
             <input type="number" id="new-purch-item-price" value="0.00" min="0" step="0.5" class="w-full bg-gray-50 dark:bg-gray-700 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-xs font-bold font-mono text-center text-emerald-600 dark:text-emerald-400">
+          </div>
+        </div>
+
+        <!-- Live Item Subtotal Highlight Box -->
+        <div class="bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between shadow-2xs">
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-gray-700 dark:text-gray-200">مجموع هذا الصنف:</span>
+            <span id="new-purch-item-calc-formula" class="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-bold">1 × 0.00 ج.م</span>
+          </div>
+          <div class="text-left">
+            <span id="new-purch-item-subtotal-val" class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">0.00 ج.م</span>
           </div>
         </div>
       </div>

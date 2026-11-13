@@ -428,24 +428,20 @@ class PurchasesController {
     const isWeight = prod.unit_type === 'weight' || prod.unit === 'كجم' || prod.is_weight;
     const defaultQty = customQty !== null ? customQty : (isWeight ? 1.0 : 1);
 
-    const existingIdx = this.items.findIndex(i => i.product_id === prod.id || (prod.barcode && i.barcode === prod.barcode));
-    if (existingIdx > -1) {
-      this.items[existingIdx].qty += defaultQty;
-      this.items[existingIdx].total = this.items[existingIdx].qty * this.items[existingIdx].cost_price;
-    } else {
-      this.items.push({
-        product_id: prod.id,
-        name: prod.name,
-        barcode: prod.barcode || '',
-        category: prod.category || 'عام',
-        unit_type: isWeight ? 'weight' : 'piece',
-        unit: isWeight ? 'كجم' : 'قطعة',
-        cost_price: parseFloat(prod.cost || 0),
-        selling_price: parseFloat(prod.price || 0),
-        qty: defaultQty,
-        total: defaultQty * parseFloat(prod.cost || 0)
-      });
-    }
+    // في فواتير الشراء: إضافة المنتج دائماً كبند منفصل ومستقل (دون دمج)
+    // لإتاحة تسجيل أسعار شراء مختلفة أو دفعات/أنواع متعددة لنفس المنتج في نفس الفاتورة
+    this.items.push({
+      product_id: prod.id,
+      name: prod.name,
+      barcode: prod.barcode || '',
+      category: prod.category || 'عام',
+      unit_type: isWeight ? 'weight' : 'piece',
+      unit: isWeight ? 'كجم' : 'قطعة',
+      cost_price: parseFloat(prod.cost || 0),
+      selling_price: parseFloat(prod.price || 0),
+      qty: defaultQty,
+      total: defaultQty * parseFloat(prod.cost || 0)
+    });
 
     window.posScanner?.playSuccessBeep();
     this.renderCart();
@@ -639,7 +635,10 @@ class PurchasesController {
         
         '<div class="flex items-start justify-between gap-2">' +
           '<div class="flex-1 min-w-0">' +
-            '<h4 class="text-xs font-bold text-gray-900 dark:text-white leading-tight truncate">' + item.name + '</h4>' +
+            '<h4 class="text-xs font-bold text-gray-900 dark:text-white leading-tight truncate flex items-center">' +
+              '<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-bold me-1.5 shrink-0">#' + (idx + 1) + '</span>' +
+              '<span class="truncate">' + item.name + '</span>' +
+            '</h4>' +
             '<div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400 font-mono">' +
               (isWeight ? '<span class="text-amber-500 font-sans">⚖️ وزن</span>' : '<span class="text-indigo-500 font-sans">📦 قطعة</span>') +
               (item.barcode ? '<span>• ' + item.barcode + '</span>' : '') +

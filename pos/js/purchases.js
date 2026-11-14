@@ -27,6 +27,9 @@ class PurchasesController {
     this.isInitialized = false;
     this.mobileTab = 'catalog'; // 'catalog' or 'cart'
     this.isScanningForNewProductModal = false;
+    this.catalogLimit = 40;
+    this._searchTimer = null;
+    this._supFilterTimer = null;
   }
 
   async init() {
@@ -96,6 +99,9 @@ class PurchasesController {
   /* ==================== CAMERA SCANNER INTEGRATION ==================== */
   openCameraScanner() {
     this.isScanningForNewProductModal = false;
+    this.catalogLimit = 40;
+    this._searchTimer = null;
+    this._supFilterTimer = null;
     window.posScanner?.openCameraModal();
   }
 
@@ -107,6 +113,9 @@ class PurchasesController {
   handleCameraBarcodeScanned(barcode) {
     if (this.isScanningForNewProductModal) {
       this.isScanningForNewProductModal = false;
+    this.catalogLimit = 40;
+    this._searchTimer = null;
+    this._supFilterTimer = null;
       const inp = document.getElementById('new-purch-item-barcode');
       if (inp) inp.value = barcode;
       window.posScanner?.closeCameraModal();
@@ -154,23 +163,34 @@ class PurchasesController {
   }
 
   filterSupplierDropdown(term) {
+    clearTimeout(this._supFilterTimer);
+    this._supFilterTimer = setTimeout(() => {
+      this._doFastFilterSupplierDropdown(term);
+    }, 150);
+  }
+
+  _doFastFilterSupplierDropdown(term) {
     const select = document.getElementById('purch-supplier-select');
     if (!select || !this.suppliers) return;
 
     term = (term || '').trim();
     let list = [...this.suppliers];
-    if (term && window.expensesController?.matchSupplierScore) {
-      const scored = [];
-      list.forEach(s => {
-        const score = window.expensesController.matchSupplierScore(term, s.name, s.code || s.id, s.phone);
-        if (score > 0) scored.push({ s, score });
+    if (term) {
+      const qLower = term.toLowerCase();
+      // Fast path search: code, phone, name substring
+      list = list.filter(s => {
+        const nameMatch = (s.name || '').toLowerCase().includes(qLower);
+        const codeMatch = String(s.code || s.supplier_code || s.id || '').includes(term);
+        const phoneMatch = String(s.phone || '').includes(term);
+        return nameMatch || codeMatch || phoneMatch;
       });
-      scored.sort((a, b) => b.score - a.score);
-      list = scored.map(item => item.s);
     }
 
+    // Limit options to top 50 to maintain fast DOM rendering
+    const topList = list.slice(0, 50);
+
     let html = '<option value="">-- اختر المورد (' + list.length + ' نتائج مطابقة) --</option>';
-    list.forEach(s => {
+    topList.forEach(s => {
       const bal = parseFloat(s.balance || 0);
       const isSelected = this.selectedSupplierId == s.id ? 'selected' : '';
       html += '<option value="' + s.id + '" ' + isSelected + ' data-name="' + s.name + '" data-phone="' + (s.phone || '') + '" data-balance="' + bal + '">' + 
@@ -345,12 +365,22 @@ class PurchasesController {
 
   filterCategory(cat) {
     this.activeCategory = cat;
+    this.catalogLimit = 40;
     this.renderCategories();
     this.renderCatalogGrid();
   }
 
   onSearchInput(val) {
     this.searchQuery = (val || '').trim().toLowerCase();
+    this.catalogLimit = 40;
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => {
+      this.renderCatalogGrid();
+    }, 150);
+  }
+
+  loadMoreProducts() {
+    this.catalogLimit = (this.catalogLimit || 40) + 40;
     this.renderCatalogGrid();
   }
 
@@ -379,11 +409,14 @@ class PurchasesController {
           'إضافة كصنف جديد بالفاتورة' +
         '</button>' +
       '</div>';
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) window.lucide.createIcons({ root: grid });
       return;
     }
 
-    grid.innerHTML = filtered.map(p => {
+    const currentLimit = this.catalogLimit || 40;
+    const toRender = filtered.slice(0, currentLimit);
+
+    let html = toRender.map(p => {
       const cost = parseFloat(p.cost || 0);
       const price = parseFloat(p.price || 0);
       const stock = parseFloat(p.stock || 0);
@@ -418,7 +451,18 @@ class PurchasesController {
       '</div>';
     }).join('');
 
-    if (window.lucide) window.lucide.createIcons();
+    if (filtered.length > currentLimit) {
+      html += '<div class="col-span-full py-4 text-center">' +
+        '<button type="button" onclick="window.purchasesController.loadMoreProducts()" class="px-6 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-xs shadow-xs border border-indigo-200 dark:border-indigo-800 transition active:scale-95 cursor-pointer inline-flex items-center gap-2">' +
+          '<i data-lucide="plus-circle" class="w-4 h-4"></i>' +
+          '<span>عرض المزيد من الأصناف (+40 صنف) 📦</span>' +
+          '<span class="text-[10px] text-gray-400 font-mono">(' + toRender.length + ' من ' + filtered.length + ')</span>' +
+        '</button>' +
+      '</div>';
+    }
+
+    grid.innerHTML = html;
+    if (window.lucide) window.lucide.createIcons({ root: grid });
   }
 
   /* ==================== PURCHASE CART ACTIONS ==================== */

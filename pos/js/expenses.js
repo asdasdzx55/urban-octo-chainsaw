@@ -8,6 +8,9 @@ class ExpensesController {
     this.suppliers = [];
     this.expenseCategories = ['نثريات', 'إيجار', 'فواتير (كهرباء/مياه)', 'صيانة', 'رواتب عاملين', 'سلف عاملين', 'سداد موردين', 'مشتريات بضاعة', 'مسحوبات الإدارة', 'أخرى', 'تيست'];
     this.currentMode = 'purchase'; // 'purchase', 'expense', 'supplier', 'history'
+    this.suppliersReportLimit = 30;
+    this._supSearchTimer = null;
+    this._supSelectFilterTimer = null;
   }
 
   async init(targetMode = null) {
@@ -236,7 +239,13 @@ class ExpensesController {
     }
   }
 
+  loadMoreSuppliers() {
+    this.suppliersReportLimit = (this.suppliersReportLimit || 30) + 30;
+    this.renderSuppliersReportTable(this._currentFilteredSuppliers || this.allSuppliersData || []);
+  }
+
   renderSuppliersReportTable(suppliers) {
+    this._currentFilteredSuppliers = suppliers;
     const tbody = document.getElementById('suppliers-report-table-body');
     const mobileContainer = document.getElementById('suppliers-report-mobile-cards');
     if (!tbody) return;
@@ -249,8 +258,11 @@ class ExpensesController {
       return;
     }
 
+    const limit = this.suppliersReportLimit || 30;
+    const toRender = suppliers.slice(0, limit);
+
     // 1. Desktop Table
-    tbody.innerHTML = suppliers.map(s => {
+    let tableHtml = toRender.map(s => {
       const bal = parseFloat(s.balance || 0);
       const balColor = bal > 0 ? 'text-rose-600 dark:text-rose-400 font-black' : (bal < 0 ? 'text-blue-600 font-black' : 'text-emerald-600 font-bold');
       const phoneStr = s.phone ? `<span class="font-mono text-gray-400">${s.phone}</span>` : `<span class="text-gray-300">غير مسجل</span>`;
@@ -294,9 +306,24 @@ class ExpensesController {
       `;
     }).join('');
 
+    if (suppliers.length > limit) {
+      tableHtml += `
+        <tr>
+          <td colspan="7" class="py-4 text-center bg-gray-50/70 dark:bg-gray-800/70">
+            <button type="button" onclick="window.expensesController.loadMoreSuppliers()" class="px-6 py-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 transition active:scale-95 cursor-pointer shadow-2xs inline-flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>عرض المزيد من الموردين (+30 مورد)</span>
+              <span class="text-[10px] text-gray-400 font-mono">(${toRender.length} من ${suppliers.length})</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+    tbody.innerHTML = tableHtml;
+
     // 2. Mobile Responsive Cards
     if (mobileContainer) {
-      mobileContainer.innerHTML = suppliers.map(s => {
+      let mobileHtml = toRender.map(s => {
         const bal = parseFloat(s.balance || 0);
         let balBadge = '';
         if (bal > 0) {
@@ -312,7 +339,7 @@ class ExpensesController {
 
         return `
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5">
-            <!-- Supplier Header: Name & Code (Full Width, Never Crushed) -->
+            <!-- Supplier Header: Name & Code -->
             <div class="flex flex-col gap-2">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex-1 min-w-0">
@@ -328,7 +355,7 @@ class ExpensesController {
                 </div>
               </div>
 
-              <!-- Dedicated Balance Row (Clean, readable, full space) -->
+              <!-- Dedicated Balance Row -->
               <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/50">
                 <span class="text-xs text-gray-500 dark:text-gray-400 font-bold">الرصيد المالي:</span>
                 <div class="shrink-0">
@@ -367,11 +394,23 @@ class ExpensesController {
           </div>
         `;
       }).join('');
+
+      if (suppliers.length > limit) {
+        mobileHtml += `
+          <button type="button" onclick="window.expensesController.loadMoreSuppliers()" class="w-full py-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition active:scale-95 cursor-pointer text-center shadow-2xs inline-flex items-center justify-center gap-2">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>عرض المزيد من الموردين (+30 مورد)</span>
+            <span class="text-[10px] text-gray-400 font-mono">(${toRender.length} من ${suppliers.length})</span>
+          </button>
+        `;
+      }
+      mobileContainer.innerHTML = mobileHtml;
     }
 
+    // Scoped Lucide Icon Rendering (Fast & Non-Blocking)
     if (window.lucide) {
-      const container = document.getElementById('view-expenses') || document.body;
-      window.lucide.createIcons({ root: container });
+      window.lucide.createIcons({ root: tbody });
+      if (mobileContainer) window.lucide.createIcons({ root: mobileContainer });
     }
   }
 
@@ -457,6 +496,14 @@ class ExpensesController {
   }
 
   searchSuppliersReport(term) {
+    this.suppliersReportLimit = 30;
+    clearTimeout(this._supSearchTimer);
+    this._supSearchTimer = setTimeout(() => {
+      this._doFastSearchSuppliersReport(term);
+    }, 150);
+  }
+
+  _doFastSearchSuppliersReport(term) {
     term = (term || '').trim();
     if (!this.allSuppliersData) return;
 
@@ -468,14 +515,29 @@ class ExpensesController {
     }
 
     if (term) {
+      const qLower = term.toLowerCase();
       const scored = [];
       filtered.forEach(s => {
-        const score = this.matchSupplierScore(term, s.name, s.code || s.id, s.phone);
-        if (score > 0) {
-          scored.push({ supplier: s, score });
+        // Fast checks first
+        const codeStr = String(s.supplier_code || s.code || s.id || '');
+        const phoneStr = String(s.phone || '');
+        const nameStr = (s.name || '').toLowerCase();
+
+        if (codeStr === term) {
+          scored.push({ supplier: s, score: 100 });
+        } else if (codeStr.startsWith(term) && term.length >= 2) {
+          scored.push({ supplier: s, score: 85 });
+        } else if (phoneStr && phoneStr.includes(term)) {
+          scored.push({ supplier: s, score: 80 });
+        } else if (nameStr.includes(qLower)) {
+          scored.push({ supplier: s, score: 90 });
+        } else {
+          const score = this.matchSupplierScore(term, s.name, codeStr, phoneStr);
+          if (score > 0) {
+            scored.push({ supplier: s, score });
+          }
         }
       });
-      // ترتيب تنازلي: الأكثر تطابقاً وتشابهاً أولاً
       scored.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return parseFloat(b.supplier.balance || 0) - parseFloat(a.supplier.balance || 0);
@@ -487,24 +549,33 @@ class ExpensesController {
   }
 
   filterSupplierDropdown(term) {
+    clearTimeout(this._supSelectFilterTimer);
+    this._supSelectFilterTimer = setTimeout(() => {
+      this._doFastFilterSupplierDropdown(term);
+    }, 150);
+  }
+
+  _doFastFilterSupplierDropdown(term) {
     const select = document.getElementById('exp-supplier-select');
     if (!select || !this.suppliers) return;
 
     term = (term || '').trim();
     let list = [...this.suppliers];
     if (term) {
-      const scored = [];
-      list.forEach(s => {
-        const score = this.matchSupplierScore(term, s.name, s.code || s.id, s.phone);
-        if (score > 0) scored.push({ s, score });
+      const qLower = term.toLowerCase();
+      list = list.filter(s => {
+        const nameMatch = (s.name || '').toLowerCase().includes(qLower);
+        const codeMatch = String(s.code || s.supplier_code || s.id || '').includes(term);
+        const phoneMatch = String(s.phone || '').includes(term);
+        return nameMatch || codeMatch || phoneMatch;
       });
-      scored.sort((a, b) => b.score - a.score);
-      list = scored.map(item => item.s);
     }
+
+    const topList = list.slice(0, 40);
 
     select.innerHTML = `
       <option value="">-- اختر المورد (${list.length} نتائج مطابقة) --</option>
-      ${list.map(s => `
+      ${topList.map(s => `
         <option value="${s.id}" data-balance="${s.balance || 0}">${s.name} (كود #${s.code || s.id} - رصيد: ${parseFloat(s.balance || 0).toFixed(2)} ج.م)</option>
       `).join('')}
     `;
@@ -517,6 +588,7 @@ class ExpensesController {
 
   filterSuppliersReport(filterType) {
     this.currentSuppliersFilter = filterType;
+    this.suppliersReportLimit = 30;
     document.querySelectorAll('.sup-filter-btn').forEach(btn => {
       if (btn.getAttribute('data-filter') === filterType) {
         btn.className = 'sup-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs';

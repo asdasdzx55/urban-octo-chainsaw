@@ -2749,6 +2749,72 @@ try {
             break;
 
         // ============================================================
+        // 3.05 تعديل سريع لسعر بيع منتج من الكاشير أثناء البيع
+        // ============================================================
+        case 'update_product_price':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $productId = (int)($data['product_id'] ?? 0);
+            $localCode = trim((string)($data['local_code'] ?? ''));
+            $newPrice = (float)($data['price'] ?? 0);
+
+            if ($newPrice <= 0 || ($productId <= 0 && $localCode === '')) {
+                echo json_encode(['success' => false, 'error' => 'بيانات الصنف أو السعر غير صحيحة!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // العثور على الصنف بالمعرف أو الكود المحلي
+            if ($productId <= 0 && $localCode !== '') {
+                $pStmt = $pdo->prepare("SELECT id, local_code, price FROM products WHERE local_code = ? LIMIT 1");
+                $pStmt->execute([$localCode]);
+                $prod = $pStmt->fetch(PDO::FETCH_ASSOC);
+                if ($prod) {
+                    $productId = (int)$prod['id'];
+                }
+            } else if ($productId > 0 && $localCode === '') {
+                $pStmt = $pdo->prepare("SELECT id, local_code, price FROM products WHERE id = ? LIMIT 1");
+                $pStmt->execute([$productId]);
+                $prod = $pStmt->fetch(PDO::FETCH_ASSOC);
+                if ($prod) {
+                    $localCode = trim((string)($prod['local_code'] ?? ''));
+                }
+            }
+
+            if ($productId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'الصنف غير مسجل في النظام!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // تحديث السعر في قاعدة البيانات السحابية
+            $upStmt = $pdo->prepare("UPDATE products SET price = ? WHERE id = ?");
+            $upStmt->execute([$newPrice, $productId]);
+
+            // إدراج التعديل في طابور التزامن لنظام DreamSoft المحلي
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS price_changes_queue (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    product_id INT NOT NULL,
+                    local_code VARCHAR(50) DEFAULT '',
+                    new_price DECIMAL(10,2) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    synced_to_dreamsoft TINYINT(1) DEFAULT 0,
+                    INDEX idx_synced (synced_to_dreamsoft)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $qStmt = $pdo->prepare("INSERT INTO price_changes_queue (product_id, local_code, new_price) VALUES (?, ?, ?)");
+                $qStmt->execute([$productId, $localCode, $newPrice]);
+            } catch (Exception $e) {}
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'تم تحديث سعر البيع بنجاح وتثبيته في النظام',
+                'product_id' => $productId,
+                'local_code' => $localCode,
+                'price' => $newPrice
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+
+        // ============================================================
         // 3.1 حذف منتج من المتجر الإلكتروني
         // ============================================================
         case 'delete_product':

@@ -1413,7 +1413,10 @@ class POSCart {
           <div class="flex-1 min-w-0">
             <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate" title="${item.name}">${item.name}</h4>
             <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-              <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
+              <button type="button" onclick="window.cart.openEditPriceModal('${item.cart_key || item.product_id}')" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-mono font-black text-xs border border-indigo-200/80 dark:border-indigo-800 transition active:scale-95 cursor-pointer shadow-2xs" title="اضغط لتعديل سعر البيع لهذا الصنف">
+                <span>${item.price.toFixed(2)} ج.م${isWeight ? '/كجم' : ''}</span>
+                <i data-lucide="edit-3" class="w-2.5 h-2.5 opacity-70"></i>
+              </button>
               ${item.local_code ? `<span class="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-600 rounded text-[9px] font-mono font-bold">${item.local_code}</span>` : ''}
               ${isWeight ? `<span class="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold">⚖️ ${gramsVal} جم</span>` : ''}
               ${item.is_pack ? `<span class="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded text-[9px] font-bold">📦 كرتونة (خصم ${item.pack_multiplier || 1})</span>` : ''}
@@ -1571,6 +1574,130 @@ class POSCart {
     if (searchInput) searchInput.focus();
 
     window.app?.showToast('جاهز لفاتورة بيع جديدة ➕', 'success');
+  }
+
+  /* ==================== EDIT SELLING PRICE DURING SALE (تعديل سعر البيع أثناء البيع) ==================== */
+  openEditPriceModal(cartKey) {
+    const item = this.items.find(i => String(i.cart_key || i.product_id) === String(cartKey));
+    if (!item) return;
+
+    this.editingPriceItemKey = cartKey;
+    const modal = document.getElementById('cart-edit-price-modal');
+    const nameEl = document.getElementById('edit-price-prod-name');
+    const currentLabel = document.getElementById('edit-price-current-label');
+    const input = document.getElementById('cart-edit-price-input');
+    const permCheckbox = document.getElementById('edit-price-save-permanent');
+
+    if (nameEl) nameEl.textContent = item.name;
+    const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
+    if (currentLabel) {
+      currentLabel.textContent = `السعر الحالي: ${item.price.toFixed(2)} ج.م ${isWeight ? '(لكل كجم)' : ''}`;
+    }
+    if (input) {
+      input.value = item.price.toFixed(2);
+    }
+    if (permCheckbox) permCheckbox.checked = true;
+
+    this.onEditPriceChanged();
+
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    setTimeout(() => {
+      input?.focus();
+      input?.select();
+    }, 50);
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeEditPriceModal() {
+    const modal = document.getElementById('cart-edit-price-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    this.editingPriceItemKey = null;
+  }
+
+  onEditPriceChanged() {
+    const input = document.getElementById('cart-edit-price-input');
+    const formulaEl = document.getElementById('edit-price-calc-formula');
+    const totalEl = document.getElementById('edit-price-calc-total');
+
+    const item = this.items.find(i => String(i.cart_key || i.product_id) === String(this.editingPriceItemKey));
+    if (!item) return;
+
+    const newPrice = Math.max(0, parseFloat(input?.value || 0));
+    const qty = parseFloat(item.qty || 1);
+    const subtotal = qty * newPrice;
+
+    const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
+    const qtyStr = isWeight ? `${qty.toFixed(3)} كجم` : `${qty}`;
+
+    if (formulaEl) {
+      formulaEl.textContent = `${qtyStr} × ${newPrice.toFixed(2)} ج.م`;
+    }
+    if (totalEl) {
+      totalEl.textContent = `${subtotal.toFixed(2)} ج.م`;
+    }
+  }
+
+  applyPriceIncrement(increment) {
+    const input = document.getElementById('cart-edit-price-input');
+    if (!input) return;
+    const current = Math.max(0, parseFloat(input.value || 0));
+    input.value = (current + increment).toFixed(2);
+    this.onEditPriceChanged();
+  }
+
+  async confirmEditPrice() {
+    const input = document.getElementById('cart-edit-price-input');
+    const permCheckbox = document.getElementById('edit-price-save-permanent');
+    const newPrice = Math.max(0, parseFloat(input?.value || 0));
+
+    if (newPrice <= 0) {
+      window.app?.showToast('يرجى إدخال سعر بيع صحيح أكبر من 0', 'error');
+      return;
+    }
+
+    const item = this.items.find(i => String(i.cart_key || i.product_id) === String(this.editingPriceItemKey));
+    if (!item) {
+      this.closeEditPriceModal();
+      return;
+    }
+
+    item.price = newPrice;
+    this.saveToStorage();
+    this.render();
+
+    const savePermanent = permCheckbox ? permCheckbox.checked : true;
+    this.closeEditPriceModal();
+
+    if (savePermanent) {
+      try {
+        // 1. Update in local catalog memory immediately
+        if (window.app && Array.isArray(window.app.products)) {
+          const prod = window.app.products.find(p => p.id === item.product_id || (item.local_code && String(p.local_code) === String(item.local_code)));
+          if (prod) {
+            prod.price = newPrice;
+            window.app.renderProducts();
+          }
+        }
+
+        // 2. Call API to update database and queue for DreamSoft
+        const res = await window.api.updateProductPrice(item.product_id, newPrice, item.local_code || '');
+        if (res && res.success) {
+          window.app?.showToast(`✅ تم تعديل سعر ${item.name} إلى ${newPrice.toFixed(2)} ج.م وتثبيته في النظام`, 'success');
+        }
+      } catch (err) {
+        console.warn('Permanent price save warning:', err);
+        window.app?.showToast(`تم تعديل السعر في الفاتورة الحالية فقط (${newPrice.toFixed(2)} ج.م)`, 'info');
+      }
+    } else {
+      window.app?.showToast(`تم تعديل سعر ${item.name} لهذه الفاتورة (${newPrice.toFixed(2)} ج.م)`, 'info');
+    }
   }
 }
 

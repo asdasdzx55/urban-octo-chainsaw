@@ -4309,6 +4309,76 @@
     </div>
   </div>
 
+  <!-- ==================== CART ITEM EDIT SELLING PRICE MODAL (تعديل سعر البيع أثناء البيع) ==================== -->
+  <div id="cart-edit-price-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-4 animate-scale-in">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+            <i data-lucide="tag" class="w-5 h-5"></i>
+          </div>
+          <div class="min-w-0">
+            <h3 id="edit-price-prod-name" class="text-sm font-black text-gray-900 dark:text-white truncate">تعديل سعر البيع</h3>
+            <p id="edit-price-current-label" class="text-[11px] text-gray-500 font-bold mt-0.5">السعر الحالي: 0.00 ج.م</p>
+          </div>
+        </div>
+        <button onclick="window.cart.closeEditPriceModal()" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-900 dark:hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- New Selling Price Input -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-bold text-gray-700 dark:text-gray-300">سعر البيع الجديد:</label>
+        <div class="relative">
+          <input type="number" step="0.5" min="0" id="cart-edit-price-input" oninput="window.cart.onEditPriceChanged()" onkeypress="if(event.key === 'Enter') window.cart.confirmEditPrice()" class="w-full h-14 bg-gray-50 dark:bg-gray-700 border-2 border-indigo-500 rounded-2xl ps-4 pe-16 text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono text-center focus:ring-2 focus:ring-indigo-400" placeholder="0.00">
+          <span class="absolute end-4 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-800">ج.م</span>
+        </div>
+      </div>
+
+      <!-- Quick Add Increments Buttons (+5, +10, +20, +50) -->
+      <div class="flex flex-col gap-1">
+        <span class="text-[11px] font-bold text-gray-400">زيادات سريعة على السعر:</span>
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button" onclick="window.cart.applyPriceIncrement(5)" class="py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition font-mono active:scale-95 cursor-pointer">+5 ج.م</button>
+          <button type="button" onclick="window.cart.applyPriceIncrement(10)" class="py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition font-mono active:scale-95 cursor-pointer">+10 ج.م</button>
+          <button type="button" onclick="window.cart.applyPriceIncrement(20)" class="py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition font-mono active:scale-95 cursor-pointer">+20 ج.م</button>
+          <button type="button" onclick="window.cart.applyPriceIncrement(50)" class="py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition font-mono active:scale-95 cursor-pointer">+50 ج.م</button>
+        </div>
+      </div>
+
+      <!-- Live Calculated Subtotal for this Item in Cart -->
+      <div class="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/80 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-indigo-900 dark:text-indigo-200">إجمالي هذا الصنف بالسعر الجديد:</span>
+          <span id="edit-price-calc-formula" class="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">1 × 0.00 ج.م</span>
+        </div>
+        <span id="edit-price-calc-total" class="text-xl font-black text-indigo-600 dark:text-indigo-400 font-mono">0.00 ج.م</span>
+      </div>
+
+      <!-- Permanent Update Checkbox -->
+      <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 cursor-pointer">
+        <input type="checkbox" id="edit-price-save-permanent" checked class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-amber-900 dark:text-amber-200">تحديث وتثبيت السعر الجديد في السيستم دائماً</span>
+          <span class="text-[10px] text-amber-700 dark:text-amber-400">يحفظ السعر الجديد للصنف في الكاشير وقاعدة البيانات للمبيعات القادمة</span>
+        </div>
+      </label>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <button type="button" onclick="window.cart.closeEditPriceModal()" class="w-24 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition active:scale-95 cursor-pointer">إلغاء</button>
+        <button type="button" onclick="window.cart.confirmEditPrice()" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>حفظ وتطبيق السعر الجديد</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ==================== RECEIPT PREVIEW MODAL ==================== -->
   <div id="receipt-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-3xl p-4 sm:p-5 max-w-lg w-full flex flex-col gap-3.5 shadow-2xl max-h-[92vh] border border-gray-100 dark:border-gray-800 animate-scale-in">
@@ -5049,11 +5119,11 @@
 
   <!-- Application Scripts -->
   <script src="js/barcode-parser.js?v=2.9.2"></script>
-  <script src="js/api.js?v=2.9.2"></script>
+  <script src="js/api.js?v=3.2.1"></script>
   <script src="js/sync-manager.js?v=2.7.5"></script>
   <script src="js/pos-scanner.js?v=2.7.5"></script>
   <script src="js/settings.js?v=2.7.5"></script>
-  <script src="js/cart.js?v=2.9.2"></script>
+  <script src="js/cart.js?v=3.2.1"></script>
   <script src="js/categories.js?v=2.7.5"></script>
   <script src="js/inventory.js?v=2.9.2"></script>
   <script src="js/purchases.js?v=3.2.0"></script>
@@ -5063,9 +5133,9 @@
   <script src="js/returns.js?v=2.7.5"></script>
   <script src="js/reports.js?v=2.7.5"></script>
   <script src="js/employees.js?v=2.7.5"></script>
-  <script src="js/pwa.js?v=3.2.0"></script>
+  <script src="js/pwa.js?v=3.2.1"></script>
   <script src="js/auth.js?v=2.7.5"></script>
   <script src="js/customers.js?v=2.7.7"></script>
-  <script src="js/app.js?v=3.2.0"></script>
+  <script src="js/app.js?v=3.2.1"></script>
 </body>
 </html>

@@ -205,6 +205,17 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 10.1 Quick update product selling price (تعديل سعر البيع أثناء البيع)
+   */
+  async updateProductPrice(productId, newPrice, localCode = '') {
+    return await this.post('update_product_price', {
+      product_id: productId,
+      price: newPrice,
+      local_code: localCode
+    });
+  }
+
+  /**
    * 11. Record General Operating Expense
    */
   async recordExpense(expensePayload) {

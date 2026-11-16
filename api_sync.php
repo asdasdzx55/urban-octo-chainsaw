@@ -2720,6 +2720,12 @@ try {
                 $upd = $pdo->prepare("UPDATE products SET name = ?, category = ?, sub_category = ?, price = ?, old_price = ?, cost = ?, stock = ?, barcode = ?, barcode2 = ?, barcode3 = ?, all_barcodes = ?, local_code = ?, description = ?, image_url = ?, is_weight_based = ?, unit_type = ?, has_pack = ?, pack_name = ?, pack_barcode = ?, pack_price = ?, pack_qty = ? WHERE id = ?");
                 $upd->execute([$name, $category, $sub_category, $price, $final_old_price, $cost, $stock, $barcode, $barcode2, $barcode3, $all_barcodes, $local_code, $final_desc, $final_img, $is_weight_based, $unit_type, $has_pack, $pack_name, $pack_barcode, $pack_price, $pack_qty, $existing_id]);
                 $final_id = $existing_id;
+
+                // مزامنة تعديلات الصنف (السعر والاسم والتكلفة والباركود) مع كاشير دريم سوفت فورياً
+                try {
+                    $qStmt = $pdo->prepare("INSERT INTO price_changes_queue (product_id, local_code, new_price, new_name, new_cost, new_barcode, synced_to_dreamsoft) VALUES (?, ?, ?, ?, ?, ?, 0)");
+                    $qStmt->execute([$final_id, $local_code ?: '', $price, $name, $cost, $barcode]);
+                } catch (Exception $e) {}
                 $action_done = 'updated';
 
                 $old_stock_val = (float)($old_prod_row['stock'] ?? 0);

@@ -222,6 +222,12 @@ if (isset($_POST['edit_product'])) {
     }
     $pdo->prepare("UPDATE products SET name=?, category=?, sub_category=?, description=?, price=?, old_price=?, cost=?, stock=?, barcode=?, local_code=?, all_barcodes=?, is_weight_based=?, weight_unit=?, weight_options=? WHERE id=?")
         ->execute([$name, $category, $sub_category, $description, $price, $old_price, $new_cost, $new_stock, ($barcode !== '' ? $barcode : null), ($local_code !== '' ? $local_code : null), ($existing_all_bc !== '' ? $existing_all_bc : null), $is_weight_based, $weight_unit, $weight_options_json, $prod_id]);
+
+    // مزامنة تعديلات الصنف (السعر والاسم والتكلفة والباركود) مع كاشير دريم سوفت فورياً
+    try {
+        $qStmt = $pdo->prepare("INSERT INTO price_changes_queue (product_id, local_code, new_price, new_name, new_cost, new_barcode, synced_to_dreamsoft) VALUES (?, ?, ?, ?, ?, ?, 0)");
+        $qStmt->execute([$prod_id, $local_code ?: '', $price, $name, $new_cost, $barcode]);
+    } catch (Exception $e) {}
     if (abs($new_stock - $old_stock_val) >= 0.0005) {
         applyInventoryAdjustment($pdo, $product, $new_stock, [
             'old_stock' => $old_stock_val,

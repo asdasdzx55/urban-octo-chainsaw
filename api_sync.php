@@ -948,6 +948,19 @@ try {
                 $ord = $chk->fetch(PDO::FETCH_ASSOC);
 
                 if (!$ord) {
+                    $t_chk = $pdo->prepare("SELECT * FROM temp_invoices WHERE sales_code = ? OR id = ? LIMIT 1");
+                    $t_chk->execute([$order_id, $order_id]);
+                    $t_row = $t_chk->fetch(PDO::FETCH_ASSOC);
+                    if ($t_row) {
+                        $upd_t = $pdo->prepare("UPDATE temp_invoices SET status = 'تم التقفيل' WHERE id = ?");
+                        $upd_t->execute([$t_row['id']]);
+                        echo json_encode([
+                            'success' => true,
+                            'message' => "تم تقفيل الفاتورة المؤقتة #{$t_row['sales_code']} بنجاح ✓",
+                            'order_id' => $t_row['sales_code']
+                        ], JSON_UNESCAPED_UNICODE);
+                        break;
+                    }
                     echo json_encode(['success' => false, 'error' => 'الطلب غير موجود']);
                     break;
                 }
@@ -1074,6 +1087,104 @@ try {
             break;
 
         // ============================================================
+        // 2.15.5 جلب الفواتير المؤقتة والمعلقة (DreamSoft & Cloud Temp Invoices)
+        // ============================================================
+        case 'get_temp_invoices':
+            // 1. Fetch DreamSoft temporary invoices from temp_invoices table
+            $dreamsoft_invoices = [];
+            try {
+                $stmt = $pdo->query("
+                    SELECT 
+                        id, sales_code, sales_date, client_code, client_name, client_phone,
+                        delivery_code, delivery_name, user_id, user_name, notes,
+                        total_value, discount_value, net_value, paid_value, items_count, items_json, source, status,
+                        created_at
+                    FROM temp_invoices
+                    WHERE status = 'معلقة'
+                    ORDER BY sales_code DESC
+                ");
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $r) {
+                    $items = json_decode($r['items_json'] ?? '[]', true) ?: [];
+                    $cust_name = trim($r['client_name'] ?? '');
+                    if (empty($cust_name) || $cust_name === 'عميل نقدي' || $cust_name === 'عميل كاشير') {
+                        $cust_name = trim($r['notes'] ?? '') ?: ('فاتورة مؤقتة #' . $r['sales_code']);
+                    }
+                    $dreamsoft_invoices[] = [
+                        'id' => (int)$r['sales_code'],
+                        'sales_code' => (int)$r['sales_code'],
+                        'invoice_number' => 'DS-' . $r['sales_code'],
+                        'source' => 'dreamsoft',
+                        'customer_name' => $cust_name,
+                        'customer_phone' => $r['client_phone'] ?? '',
+                        'driver_name' => $r['delivery_name'] ?? '',
+                        'net_items_price' => (float)$r['net_value'],
+                        'delivery_fee' => 0.0,
+                        'total_price' => (float)$r['total_value'],
+                        'paid_amount' => (float)$r['paid_value'],
+                        'notes' => $r['notes'] ?? '',
+                        'created_at' => $r['sales_date'] ? date('Y-m-d H:i', strtotime($r['sales_date'])) : '',
+                        'items_count' => (int)$r['items_count'],
+                        'items' => $items
+                    ];
+                }
+            } catch (Exception $e) {}
+
+            // 2. Fetch pending web delivery orders from orders table (synced = 2 or pending)
+            $web_delivery_orders = [];
+            try {
+                $stmt2 = $pdo->query("
+                    SELECT 
+                        id, customer_name, customer_phone, customer_address, total_price, discount_amount,
+                        delivery_fee, delivery_person, status, cashier_name, created_at, items_json, invoice_barcode
+                    FROM orders
+                    WHERE (order_type = 'delivery' OR delivery_fee > 0)
+                      AND (
+                        synced = 2 
+                        OR status IN ('قيد التوصيل', 'معلق', 'pending')
+                      )
+                      AND status NOT IN ('تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed', 'ملغي', 'cancelled')
+                      AND created_at >= CURDATE() - INTERVAL 3 DAY
+                    ORDER BY id DESC
+                ");
+                $w_rows = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($w_rows as $wr) {
+                    $w_items = json_decode($wr['items_json'] ?? '[]', true) ?: [];
+                    $deliv_fee = (float)($wr['delivery_fee'] ?? 0);
+                    $tot = (float)($wr['total_price'] ?? 0);
+                    $net = max(0.0, $tot - $deliv_fee);
+                    $web_delivery_orders[] = [
+                        'id' => (int)$wr['id'],
+                        'sales_code' => 0,
+                        'invoice_number' => $wr['invoice_barcode'] ?: ('ORD-' . $wr['id']),
+                        'source' => 'web_delivery',
+                        'customer_name' => $wr['customer_name'] ?: 'عميل دليفري',
+                        'customer_phone' => $wr['customer_phone'] ?: '',
+                        'customer_address' => $wr['customer_address'] ?: '',
+                        'driver_name' => $wr['delivery_person'] ?: '',
+                        'net_items_price' => $net,
+                        'delivery_fee' => $deliv_fee,
+                        'total_price' => $tot,
+                        'notes' => 'دليفري قيد التحصيل مع الطيار',
+                        'created_at' => date('Y-m-d H:i', strtotime($wr['created_at'])),
+                        'items_count' => count($w_items),
+                        'items' => $w_items
+                    ];
+                }
+            } catch (Exception $e) {}
+
+            $all_temp = array_merge($dreamsoft_invoices, $web_delivery_orders);
+
+            echo json_encode([
+                'success' => true,
+                'total_count' => count($all_temp),
+                'dreamsoft_count' => count($dreamsoft_invoices),
+                'web_count' => count($web_delivery_orders),
+                'orders' => $all_temp
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 2.16 جلب تفاصيل فاتورة محددة بالرقم أو الباركود (Get Order Details)
         // ============================================================
         case 'get_order_details':
@@ -1095,6 +1206,36 @@ try {
                 $stmt = $pdo->prepare("SELECT * FROM orders WHERE invoice_barcode LIKE ? OR customer_phone = ? LIMIT 1");
                 $stmt->execute(["%{$q}%", $q]);
                 $ord = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$ord && !empty($num_clean)) {
+                $t_stmt = $pdo->prepare("SELECT * FROM temp_invoices WHERE sales_code = ? OR id = ? LIMIT 1");
+                $t_stmt->execute([(int)$num_clean, (int)$num_clean]);
+                $t_ord = $t_stmt->fetch(PDO::FETCH_ASSOC);
+                if ($t_ord) {
+                    $t_items = json_decode($t_ord['items_json'] ?? '[]', true) ?: [];
+                    $ord = [
+                        'id' => (int)$t_ord['sales_code'],
+                        'invoice_barcode' => 'DS-' . $t_ord['sales_code'],
+                        'customer_name' => $t_ord['client_name'] ?: ($t_ord['notes'] ?: ('فاتورة مؤقتة #' . $t_ord['sales_code'])),
+                        'customer_phone' => $t_ord['client_phone'],
+                        'customer_address' => '',
+                        'total_price' => (float)$t_ord['total_value'],
+                        'discount_amount' => (float)$t_ord['discount_value'],
+                        'shipping_cost' => 0.0,
+                        'payment_method' => 'نقدي',
+                        'payment_status' => 'معلق',
+                        'status' => 'مؤقتة دريم سوفت',
+                        'source' => 'dreamsoft',
+                        'cashier_name' => $t_ord['user_name'] ?: 'كاشير دريم سوفت',
+                        'delivery_person' => $t_ord['delivery_name'] ?: '',
+                        'delivery_fee' => 0.0,
+                        'created_at' => $t_ord['sales_date'],
+                        'order_type' => 'temp',
+                        'items_json' => $t_ord['items_json'],
+                        'items' => $t_items
+                    ];
+                }
             }
 
             if (!$ord) {
@@ -4115,47 +4256,6 @@ try {
                 $orders = [];
             }
             echo json_encode(['success' => true, 'orders' => $orders], JSON_UNESCAPED_UNICODE);
-            break;
-
-        // ============================================================
-        // 15.1 جلب الفواتير المؤقتة والمعلقة (Temporary & In-Transit Orders)
-        // ============================================================
-        case 'get_temp_invoices':
-            try {
-                $stmt = $pdo->prepare("SELECT id, invoice_barcode, customer_name, customer_phone, customer_address, total_price, shipping_cost, delivery_fee, payment_method, payment_status, status, delivery_person, cashier_name, items_json, created_at, synced 
-                                       FROM orders 
-                                       WHERE (order_type = 'delivery' OR delivery_fee > 0 OR shipping_cost > 0 OR synced = 2) 
-                                         AND status NOT IN ('تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'ملغي', 'completed', 'cancelled')
-                                       ORDER BY id DESC LIMIT 100");
-                $stmt->execute();
-                $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($orders as &$ord) {
-                    $ord['id'] = (int)$ord['id'];
-                    $tot = (float)$ord['total_price'];
-                    $fee = max((float)($ord['delivery_fee'] ?? 0), (float)($ord['shipping_cost'] ?? 0));
-                    $net_items = max(0, $tot - $fee);
-                    $ord['total_price'] = $tot;
-                    $ord['net_items_price'] = $net_items;
-                    $ord['delivery_fee'] = $fee;
-                    $ord['shipping_cost'] = $fee;
-                    $ord['address'] = $ord['customer_address'] ?? '';
-                    $ord['invoice_number'] = $ord['invoice_barcode'] ?? "INV-{$ord['id']}";
-                    $ord['driver_name'] = !empty($ord['delivery_person']) ? $ord['delivery_person'] : 'بدون طيار';
-                    
-                    if (!empty($ord['items_json'])) {
-                        $ord['items'] = json_decode($ord['items_json'], true) ?: [];
-                    } else {
-                        $s_it = $pdo->prepare("SELECT product_name as name, quantity as qty, unit_price as price, total_price as total FROM order_items WHERE order_id = ?");
-                        $s_it->execute([$ord['id']]);
-                        $ord['items'] = $s_it->fetchAll(PDO::FETCH_ASSOC);
-                    }
-                }
-                unset($ord);
-            } catch (Exception $e) {
-                $orders = [];
-            }
-            echo json_encode(['success' => true, 'count' => count($orders), 'orders' => $orders], JSON_UNESCAPED_UNICODE);
             break;
 
         case 'settle_adhoc_delivery':

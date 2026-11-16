@@ -1790,55 +1790,62 @@ class POSCart {
         });
       }
 
-      // 2. Active Cloud / Delivery Orders (أوردرات مؤقتة مع الطيارين)
+      // 2. Active Cloud & DreamSoft Temp Invoices (فواتير معلقة ودليفري)
       orders.forEach(ord => {
-        const orderId = ord.id;
-        const custName = ord.customer_name || 'عميل دليفري';
+        const orderId = ord.id || ord.sales_code;
+        const isDreamSoft = ord.source === 'dreamsoft';
+        const custName = ord.customer_name || (isDreamSoft ? (ord.notes || 'فاتورة معلقة') : 'عميل دليفري');
         const custPhone = ord.customer_phone || '';
-        const driverName = ord.driver_name || 'بدون طيار';
+        const driverName = ord.driver_name || '';
         const netItems = (parseFloat(ord.net_items_price) || 0).toFixed(2);
         const fee = (parseFloat(ord.delivery_fee) || 0).toFixed(2);
         const total = (parseFloat(ord.total_price) || 0).toFixed(2);
-        const isWithDriver = driverName && driverName !== 'بدون طيار';
-        const itemsList = Array.isArray(ord.items) ? ord.items.map(it => `${it.qty || it.quantity || 1}x ${it.name || it.product_name || 'صنف'}`).join(' • ') : '';
+        const isWithDriver = driverName && driverName !== 'بدون طيار' && driverName.trim() !== '';
+        const itemsList = Array.isArray(ord.items) ? ord.items.map(it => `${it.qty || it.quantity || 1}× ${it.name || it.product_name || 'صنف'}`).join(' • ') : '';
 
         html += `
-          <div class="p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col gap-3 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 transition">
+          <div class="p-4 rounded-2xl border ${isDreamSoft ? 'border-purple-200 dark:border-purple-800/60 bg-purple-50/20 dark:bg-purple-950/10' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} flex flex-col gap-3 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 transition">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700/60 pb-2.5">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">#${ord.invoice_number || orderId}</span>
+                <span class="font-mono font-black text-xs px-2 py-0.5 rounded-lg ${isDreamSoft ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}">
+                  #${ord.invoice_number || orderId}
+                </span>
+                ${isDreamSoft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">💻 دريم سوفت معلقة</span>` : ''}
                 <span class="text-xs font-bold text-gray-900 dark:text-white">${custName}</span>
                 ${custPhone ? `<span class="text-[11px] text-gray-400 font-mono">(${custPhone})</span>` : ''}
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isWithDriver ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}">
-                  ${isWithDriver ? `🛵 طيار: ${driverName}` : '⌛ بدون طيار'}
-                </span>
+                ${isWithDriver ? `
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                    🛵 طيار: ${driverName}
+                  </span>
+                ` : ''}
+                ${ord.notes && ord.notes !== custName ? `<span class="text-[11px] text-amber-700 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">📝 ${ord.notes}</span>` : ''}
                 <span class="text-[10px] text-gray-400 font-mono">${ord.created_at || ''}</span>
               </div>
               <div class="text-left shrink-0">
-                <span class="text-xs text-gray-400">الصافي: </span>
+                <span class="text-xs text-gray-400">الإجمالي: </span>
                 <span class="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">${netItems} ج.م</span>
                 ${parseFloat(fee) > 0 ? `<span class="text-[10px] text-gray-400 font-mono mr-1">(+${fee} توصيل)</span>` : ''}
               </div>
             </div>
 
             ${itemsList ? `
-              <div class="text-[11px] text-gray-500 line-clamp-2 bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl">
-                <span class="font-bold text-gray-700 dark:text-gray-300">الأصناف: </span>${itemsList}
+              <div class="text-[11px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/30 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/40">
+                <span class="font-bold text-gray-800 dark:text-gray-200">الأصناف (${ord.items_count || (ord.items || []).length}): </span>${itemsList}
               </div>
             ` : ''}
 
             <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
-              <span class="text-[11px] text-gray-400">إجمالي الأوردر المطلوب: <strong class="text-gray-800 dark:text-gray-200 font-mono">${total} ج.م</strong></span>
+              <span class="text-[11px] text-gray-400">${isDreamSoft ? 'فاتورة محفوظة في دريم سوفت بالكمبيوتر' : 'أوردر دليفري معلق مع الطيار'}</span>
               <div class="flex items-center gap-1.5 ms-auto">
-                <button onclick="window.cart?.loadTempOrderToCart(${orderId})" class="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold transition flex items-center gap-1">
+                <button onclick="window.cart?.loadTempOrderToCart(${orderId})" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
                   <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
-                  <span>تعديل بالسلة</span>
+                  <span>تعديل بالسلة / فتح</span>
                 </button>
                 <button onclick="window.cart?.settleTempInvoiceQuick(${orderId}, '${custName.replace(/'/g, "\\'")}', ${total})" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
                   <i data-lucide="check" class="w-3.5 h-3.5"></i>
                   <span>محاسبة وتقفيل</span>
                 </button>
-                <button onclick="window.cart?.printTempInvoiceQuick(${orderId})" class="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition" title="طباعة بون الفاتورة">
+                <button onclick="window.cart?.printTempInvoiceQuick(${orderId})" class="p-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition" title="طباعة بون">
                   <i data-lucide="printer" class="w-4 h-4"></i>
                 </button>
               </div>

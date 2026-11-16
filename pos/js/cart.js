@@ -1699,6 +1699,232 @@ class POSCart {
       window.app?.showToast(`تم تعديل سعر ${item.name} لهذه الفاتورة (${newPrice.toFixed(2)} ج.م)`, 'info');
     }
   }
+
+  // ==================== TEMPORARY / HELD INVOICES MANAGEMENT ====================
+  showTempInvoicesModal() {
+    const modal = document.getElementById('temp-invoices-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+    this.loadTempInvoices();
+  }
+
+  closeTempInvoicesModal() {
+    const modal = document.getElementById('temp-invoices-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async loadTempInvoices() {
+    const container = document.getElementById('temp-invoices-list');
+    const badge = document.getElementById('temp-modal-count-badge');
+    const headerBadge = document.getElementById('temp-invoices-badge');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="text-center py-10 text-gray-400">
+        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-amber-500"></i>
+        <p class="text-xs font-bold">جاري جلب الفواتير المؤقتة والمعلقة...</p>
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+
+    try {
+      const res = await window.api.getTempInvoices();
+      let orders = (res && res.success && Array.isArray(res.orders)) ? res.orders : [];
+
+      // Also incorporate locally held carts if any
+      const heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
+      
+      const totalCount = orders.length + heldCarts.length;
+      if (badge) badge.textContent = `${totalCount} فواتير`;
+      if (headerBadge) {
+        headerBadge.textContent = totalCount;
+        if (totalCount > 0) headerBadge.classList.remove('hidden');
+        else headerBadge.classList.add('hidden');
+      }
+
+      if (totalCount === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+            <i data-lucide="clipboard-check" class="w-12 h-12 mx-auto mb-3 text-emerald-500 opacity-60"></i>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">لا توجد فواتير مؤقتة أو معلقة حالياً</h4>
+            <p class="text-xs text-gray-400 mt-1">جميع الأوردرات مسددة ومرحلة للنظام الأساسي بنجاح ✨</p>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+
+      let html = '';
+
+      // 1. Local held carts (مسودات السلة)
+      if (heldCarts.length > 0) {
+        heldCarts.forEach((hc, idx) => {
+          const itemsCount = (hc.items || []).reduce((sum, it) => sum + (it.qty || 1), 0);
+          const totalVal = (hc.items || []).reduce((sum, it) => sum + ((it.price || 0) * (it.qty || 1)), 0);
+          html += `
+            <div class="p-4 rounded-2xl border border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
+                  <i data-lucide="pause-circle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-md bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 text-[10px] font-bold">مسودة معلقة</span>
+                    <span class="text-xs font-bold text-gray-900 dark:text-white">${hc.name || `مسودة #${idx + 1}`}</span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 mt-0.5">${itemsCount} أصناف • إجمالي: <strong class="text-amber-700 dark:text-amber-400 font-mono">${totalVal.toFixed(2)} ج.م</strong></p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 self-end sm:self-center">
+                <button onclick="window.cart?.restoreHeldCart(${idx})" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
+                  <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
+                  <span>استرجاع للسلة</span>
+                </button>
+                <button onclick="window.cart?.deleteHeldCart(${idx})" class="p-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition" title="حذف المسودة">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // 2. Active Cloud / Delivery Orders (أوردرات مؤقتة مع الطيارين)
+      orders.forEach(ord => {
+        const orderId = ord.id;
+        const custName = ord.customer_name || 'عميل دليفري';
+        const custPhone = ord.customer_phone || '';
+        const driverName = ord.driver_name || 'بدون طيار';
+        const netItems = (parseFloat(ord.net_items_price) || 0).toFixed(2);
+        const fee = (parseFloat(ord.delivery_fee) || 0).toFixed(2);
+        const total = (parseFloat(ord.total_price) || 0).toFixed(2);
+        const isWithDriver = driverName && driverName !== 'بدون طيار';
+        const itemsList = Array.isArray(ord.items) ? ord.items.map(it => `${it.qty || it.quantity || 1}x ${it.name || it.product_name || 'صنف'}`).join(' • ') : '';
+
+        html += `
+          <div class="p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col gap-3 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 transition">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700/60 pb-2.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">#${ord.invoice_number || orderId}</span>
+                <span class="text-xs font-bold text-gray-900 dark:text-white">${custName}</span>
+                ${custPhone ? `<span class="text-[11px] text-gray-400 font-mono">(${custPhone})</span>` : ''}
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isWithDriver ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}">
+                  ${isWithDriver ? `🛵 طيار: ${driverName}` : '⌛ بدون طيار'}
+                </span>
+                <span class="text-[10px] text-gray-400 font-mono">${ord.created_at || ''}</span>
+              </div>
+              <div class="text-left shrink-0">
+                <span class="text-xs text-gray-400">الصافي: </span>
+                <span class="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">${netItems} ج.م</span>
+                ${parseFloat(fee) > 0 ? `<span class="text-[10px] text-gray-400 font-mono mr-1">(+${fee} توصيل)</span>` : ''}
+              </div>
+            </div>
+
+            ${itemsList ? `
+              <div class="text-[11px] text-gray-500 line-clamp-2 bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl">
+                <span class="font-bold text-gray-700 dark:text-gray-300">الأصناف: </span>${itemsList}
+              </div>
+            ` : ''}
+
+            <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
+              <span class="text-[11px] text-gray-400">إجمالي الأوردر المطلوب: <strong class="text-gray-800 dark:text-gray-200 font-mono">${total} ج.م</strong></span>
+              <div class="flex items-center gap-1.5 ms-auto">
+                <button onclick="window.cart?.loadTempOrderToCart(${orderId})" class="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold transition flex items-center gap-1">
+                  <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
+                  <span>تعديل بالسلة</span>
+                </button>
+                <button onclick="window.cart?.settleTempInvoiceQuick(${orderId}, '${custName.replace(/'/g, "\\'")}', ${total})" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                  <span>محاسبة وتقفيل</span>
+                </button>
+                <button onclick="window.cart?.printTempInvoiceQuick(${orderId})" class="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition" title="طباعة بون الفاتورة">
+                  <i data-lucide="printer" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      if (window.lucide) window.lucide.createIcons();
+    } catch (e) {
+      console.warn('Error loading temp invoices:', e);
+      container.innerHTML = `
+        <div class="text-center py-8 text-rose-500">
+          <p class="text-xs font-bold">حدث خطأ أثناء تحميل الفواتير المؤقتة: ${e.message || e}</p>
+        </div>
+      `;
+    }
+  }
+
+  async settleTempInvoiceQuick(orderId, custName, amount) {
+    if (!confirm(`هل أنت متأكد من تقفيل الفاتورة المؤقتة #${orderId} للعميل (${custName}) بمبلغ ${amount} ج.م؟`)) {
+      return;
+    }
+    window.app?.showLoading(true, 'جاري تقفيل الفاتورة وترحيلها للكاشير...');
+    try {
+      const res = await window.api.settleDeliveryOrder(orderId, 'كاشير المحل', 'تقفيل فاتورة مؤقتة');
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(`✅ تم تقفيل الفاتورة #${orderId} بنجاح وترحيلها للكاشير`, 'success');
+        this.loadTempInvoices();
+      } else {
+        window.app?.showToast(res.error || 'فشل التقفيل', 'error');
+      }
+    } catch (e) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ أثناء تقفيل الفاتورة', 'error');
+    }
+  }
+
+  async loadTempOrderToCart(orderId) {
+    window.app?.showLoading(true, 'جاري استرجاع أصناف الفاتورة للسلة...');
+    try {
+      const res = await window.api.get('get_order_details', { order_id: orderId });
+      window.app?.showLoading(false);
+      if (res && res.success && res.order && Array.isArray(res.order.items)) {
+        if (this.items.length > 0 && !confirm('السلة الحالية بها أصناف، هل تريد استبدالها بأصناف الفاتورة المؤقتة؟')) {
+          return;
+        }
+        this.items = [];
+        res.order.items.forEach(it => {
+          this.items.push({
+            id: it.product_id || it.id,
+            product_id: it.product_id || it.id,
+            name: it.product_name || it.name,
+            price: parseFloat(it.unit_price || it.price || 0),
+            qty: parseFloat(it.quantity || it.qty || 1),
+            barcode: it.barcode || '',
+            local_code: it.local_code || '',
+            is_scale: it.is_scale || false
+          });
+        });
+        this.saveToStorage();
+        this.render();
+        this.closeTempInvoicesModal();
+        window.app?.switchView('pos');
+        window.app?.showToast(`تم استرجاع أصناف الفاتورة #${orderId} في السلة بنجاح 🛒`, 'success');
+      } else {
+        window.app?.showToast('لم يتم العثور على تفاصيل الأصناف', 'warning');
+      }
+    } catch (e) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ أثناء استرجاع الأصناف', 'error');
+    }
+  }
+
+  async printTempInvoiceQuick(orderId) {
+    try {
+      const res = await window.api.get('get_order_details', { order_id: orderId });
+      if (res && res.success && res.order) {
+        this.printInvoice(res.order);
+      }
+    } catch (e) {
+      window.app?.showToast('خطأ في الطباعة', 'error');
+    }
+  }
 }
 
 window.cart = new POSCart();

@@ -367,125 +367,6 @@ include 'header.php';
                     </div>
                 </form>
 
-                <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const isWeightBased = <?php echo !empty($p['is_weight_based']) ? 'true' : 'false'; ?>;
-                    const baseKgPrice = <?php echo (float)$p['price']; ?>;
-                    const priceDisplay = document.getElementById('display-product-price');
-                    const radios = document.querySelectorAll('.variant-radio-input');
-                    const weightRadios = document.querySelectorAll('.weight-radio-input');
-                    const hiddenWeight = document.getElementById('hidden_selected_weight');
-                    const hiddenWeightLabel = document.getElementById('hidden_weight_label');
-                    const weightBadge = document.getElementById('selected-weight-badge');
-                    const btnCart = document.getElementById('add-to-cart-submit-btn');
-
-                    function escapeHtml(str) {
-                        if (!str) return '';
-                        return str.toString()
-                            .replace(/&/g, "&amp;")
-                            .replace(/</g, "&lt;")
-                            .replace(/>/g, "&gt;")
-                            .replace(/"/g, "&quot;")
-                            .replace(/'/g, "&#039;");
-                    }
-
-                    function updateCalculatedPrice() {
-                        let currentWeightFactor = 1.0;
-                        let currentWeightLabel = '';
-
-                        if (isWeightBased && weightRadios.length > 0) {
-                            weightRadios.forEach(wr => {
-                                if (wr.checked) {
-                                    currentWeightFactor = parseFloat(wr.getAttribute('data-weight')) || 1.0;
-                                    currentWeightLabel = wr.getAttribute('data-label') || '';
-                                    
-                                    if (hiddenWeight) hiddenWeight.value = currentWeightFactor;
-                                    if (hiddenWeightLabel) hiddenWeightLabel.value = currentWeightLabel;
-                                    if (weightBadge) weightBadge.textContent = currentWeightLabel;
-
-                                    const parent = wr.closest('.weight-pill-label');
-                                    if (parent) {
-                                        const siblings = parent.parentElement.querySelectorAll('.weight-pill-label');
-                                        siblings.forEach(s => {
-                                            s.className = 'weight-pill-label relative group cursor-pointer border border-gray-200 bg-white text-gray-700 hover:border-amber-300 p-3 rounded-xl transition-all select-none flex flex-col items-center justify-center text-center';
-                                        });
-                                        parent.className = 'weight-pill-label relative group cursor-pointer border border-amber-500 bg-amber-500/15 text-amber-900 ring-2 ring-amber-500/30 shadow-xs p-3 rounded-xl transition-all select-none flex flex-col items-center justify-center text-center';
-                                    }
-                                }
-                            });
-                        }
-
-                        let totalMod = 0;
-                        radios.forEach(r => {
-                            if (r.checked) {
-                                const mod = parseFloat(r.getAttribute('data-price-mod')) || 0;
-                                totalMod += mod;
-
-                                const vType = r.getAttribute('data-type');
-                                const vName = r.getAttribute('data-name');
-                                const lbl = document.querySelector(`.selected-variant-label[data-for-type="${vType}"]`);
-                                if (lbl) lbl.textContent = vName;
-
-                                // 1. تحديث أزرار الألوان (Color Swatches)
-                                const colorSwatch = r.closest('.variant-color-swatch');
-                                if (colorSwatch) {
-                                    const allSwatches = colorSwatch.parentElement.querySelectorAll('.variant-color-swatch');
-                                    allSwatches.forEach(sw => {
-                                        const circle = sw.querySelector('.swatch-circle');
-                                        const check = sw.querySelector('.swatch-check');
-                                        if (circle) circle.classList.remove('ring-2', 'ring-royal-gold', 'ring-offset-2', 'scale-110', 'shadow-md');
-                                        if (check) check.classList.add('opacity-0');
-                                    });
-                                    const activeCircle = colorSwatch.querySelector('.swatch-circle');
-                                    const activeCheck = colorSwatch.querySelector('.swatch-check');
-                                    if (activeCircle) activeCircle.classList.add('ring-2', 'ring-royal-gold', 'ring-offset-2', 'scale-110', 'shadow-md');
-                                    if (activeCheck) activeCheck.classList.remove('opacity-0');
-                                }
-
-                                // 2. تحديث أزرار المقاسات والخيارات الأخرى (Pills)
-                                const parentLabel = r.closest('.variant-pill-label');
-                                if (parentLabel) {
-                                    const siblings = parentLabel.parentElement.querySelectorAll('.variant-pill-label');
-                                    siblings.forEach(s => {
-                                        s.className = 'variant-pill-label relative cursor-pointer border border-gray-200 bg-white text-gray-600 hover:border-gray-300 py-2 px-4 rounded-xl text-xs font-bold transition-all select-none flex items-center gap-2';
-                                    });
-                                    parentLabel.className = 'variant-pill-label relative cursor-pointer border border-royal-gold bg-royal-sand/40 text-royal-dark ring-1 ring-royal-gold py-2 px-4 rounded-xl text-xs font-bold transition-all select-none flex items-center gap-2 shadow-sm';
-                                }
-                            }
-                        });
-
-                        const singleUnitPrice = (baseKgPrice * currentWeightFactor) + totalMod;
-                        const qtyInput = document.getElementById('input-prod-qty');
-                        const qtyVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
-
-                        if (priceDisplay) {
-                            const newTotal = (singleUnitPrice * qtyVal).toFixed(2);
-                            priceDisplay.textContent = parseFloat(newTotal);
-                        }
-
-                        if (btnCart && isWeightBased && currentWeightLabel) {
-                            btnCart.innerHTML = `إضافة (${escapeHtml(currentWeightLabel)}) للحقيبة <i class="fa-solid fa-bag-shopping ms-1"></i>`;
-                        }
-                    }
-
-                    radios.forEach(r => {
-                        r.addEventListener('change', updateCalculatedPrice);
-                    });
-
-                    weightRadios.forEach(wr => {
-                        wr.addEventListener('change', updateCalculatedPrice);
-                    });
-
-                    document.querySelectorAll('.qty-plus, .qty-minus').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            setTimeout(updateCalculatedPrice, 20);
-                        });
-                    });
-
-                    updateCalculatedPrice();
-                });
-                </script>
-
             <!-- مشاركة المنتج -->
             <?php
             $prod_protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
@@ -664,6 +545,7 @@ include 'header.php';
             btn.addEventListener('click', function() {
                 let input = this.previousElementSibling;
                 input.value = parseInt(input.value) + 1;
+                setTimeout(updateCalculatedPrice, 20);
             });
         });
         
@@ -672,9 +554,117 @@ include 'header.php';
                 let input = this.nextElementSibling;
                 if(parseInt(input.value) > 1) { 
                     input.value = parseInt(input.value) - 1; 
+                    setTimeout(updateCalculatedPrice, 20);
                 }
             });
         });
+
+        // حساب السعر وتحديث خيارات الوزن والمواصفات
+        const isWeightBased = <?php echo !empty($p['is_weight_based']) ? 'true' : 'false'; ?>;
+        const baseKgPrice = <?php echo (float)$p['price']; ?>;
+        const priceDisplay = document.getElementById('display-product-price');
+        const radios = document.querySelectorAll('.variant-radio-input');
+        const weightRadios = document.querySelectorAll('.weight-radio-input');
+        const hiddenWeight = document.getElementById('hidden_selected_weight');
+        const hiddenWeightLabel = document.getElementById('hidden_weight_label');
+        const weightBadge = document.getElementById('selected-weight-badge');
+        const btnCart = document.getElementById('add-to-cart-submit-btn');
+
+        function safeEscape(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        function updateCalculatedPrice() {
+            let currentWeightFactor = 1.0;
+            let currentWeightLabel = '';
+
+            if (isWeightBased && weightRadios.length > 0) {
+                weightRadios.forEach(wr => {
+                    if (wr.checked) {
+                        currentWeightFactor = parseFloat(wr.getAttribute('data-weight')) || 1.0;
+                        currentWeightLabel = wr.getAttribute('data-label') || '';
+                        
+                        if (hiddenWeight) hiddenWeight.value = currentWeightFactor;
+                        if (hiddenWeightLabel) hiddenWeightLabel.value = currentWeightLabel;
+                        if (weightBadge) weightBadge.textContent = currentWeightLabel;
+
+                        const parent = wr.closest('.weight-pill-label');
+                        if (parent) {
+                            const siblings = parent.parentElement.querySelectorAll('.weight-pill-label');
+                            siblings.forEach(s => {
+                                s.className = 'weight-pill-label relative group cursor-pointer border border-gray-200 bg-white text-gray-700 hover:border-amber-300 p-3 rounded-xl transition-all select-none flex flex-col items-center justify-center text-center';
+                            });
+                            parent.className = 'weight-pill-label relative group cursor-pointer border border-amber-500 bg-amber-500/15 text-amber-900 ring-2 ring-amber-500/30 shadow-xs p-3 rounded-xl transition-all select-none flex flex-col items-center justify-center text-center';
+                        }
+                    }
+                });
+            }
+
+            let totalMod = 0;
+            radios.forEach(r => {
+                if (r.checked) {
+                    const mod = parseFloat(r.getAttribute('data-price-mod')) || 0;
+                    totalMod += mod;
+
+                    const vType = r.getAttribute('data-type');
+                    const vName = r.getAttribute('data-name');
+                    const lbl = document.querySelector(`.selected-variant-label[data-for-type="${vType}"]`);
+                    if (lbl) lbl.textContent = vName;
+
+                    // 1. تحديث أزرار الألوان (Color Swatches)
+                    const colorSwatch = r.closest('.variant-color-swatch');
+                    if (colorSwatch) {
+                        const allSwatches = colorSwatch.parentElement.querySelectorAll('.variant-color-swatch');
+                        allSwatches.forEach(sw => {
+                            const circle = sw.querySelector('.swatch-circle');
+                            const check = sw.querySelector('.swatch-check');
+                            if (circle) circle.classList.remove('ring-2', 'ring-royal-gold', 'ring-offset-2', 'scale-110', 'shadow-md');
+                            if (check) check.classList.add('opacity-0');
+                        });
+                        const activeCircle = colorSwatch.querySelector('.swatch-circle');
+                        const activeCheck = colorSwatch.querySelector('.swatch-check');
+                        if (activeCircle) activeCircle.classList.add('ring-2', 'ring-royal-gold', 'ring-offset-2', 'scale-110', 'shadow-md');
+                        if (activeCheck) activeCheck.classList.remove('opacity-0');
+                    }
+
+                    // 2. تحديث أزرار المقاسات والخيارات الأخرى (Pills)
+                    const parentLabel = r.closest('.variant-pill-label');
+                    if (parentLabel) {
+                        const siblings = parentLabel.parentElement.querySelectorAll('.variant-pill-label');
+                        siblings.forEach(s => {
+                            s.className = 'variant-pill-label relative cursor-pointer border border-gray-200 bg-white text-gray-600 hover:border-gray-300 py-2 px-4 rounded-xl text-xs font-bold transition-all select-none flex items-center gap-2';
+                        });
+                        parentLabel.className = 'variant-pill-label relative cursor-pointer border border-royal-gold bg-royal-sand/40 text-royal-dark ring-1 ring-royal-gold py-2 px-4 rounded-xl text-xs font-bold transition-all select-none flex items-center gap-2 shadow-sm';
+                    }
+                }
+            });
+
+            const singleUnitPrice = (baseKgPrice * currentWeightFactor) + totalMod;
+            const qtyInput = document.getElementById('input-prod-qty');
+            const qtyVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+
+            if (priceDisplay) {
+                const newTotal = (singleUnitPrice * qtyVal).toFixed(2);
+                priceDisplay.textContent = parseFloat(newTotal);
+            }
+
+            if (btnCart && isWeightBased && currentWeightLabel) {
+                btnCart.innerHTML = `إضافة (${safeEscape(currentWeightLabel)}) للحقيبة <i class="fa-solid fa-bag-shopping ms-1"></i>`;
+            }
+        }
+
+        radios.forEach(r => {
+            r.addEventListener('change', updateCalculatedPrice);
+        });
+
+        weightRadios.forEach(wr => {
+            wr.addEventListener('change', updateCalculatedPrice);
+        });
+
+        updateCalculatedPrice();
 
         // تغيير الصورة الكبيرة عند الحوم (hover) أو اللمس (touch) على المصغرات
         setTimeout(() => {

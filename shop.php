@@ -83,13 +83,27 @@ include 'header.php';
                     <a href="shop.php" class="text-[10px] text-red-500 font-bold hover:underline">إلغاء التصفية ✕</a>
                 <?php endif; ?>
             </div>
-            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                <a href="shop.php" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all <?php echo (empty($cat) && empty($sub_cat)) ? 'bg-royal-charcoal text-white shadow-sm' : 'bg-royal-sand/60 text-gray-700'; ?>">
-                    كل المعروضات
+            <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-none items-center py-1">
+                <a href="shop.php" class="shrink-0 flex flex-col items-center gap-1 group">
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all <?php echo (empty($cat) && empty($sub_cat)) ? 'border-royal-gold bg-royal-charcoal text-royal-gold shadow-md scale-105' : 'border-gray-200 bg-white text-gray-500 hover:border-royal-gold'; ?>">
+                        <i class="fa-solid fa-store text-lg"></i>
+                    </div>
+                    <span class="text-[10px] font-bold <?php echo (empty($cat) && empty($sub_cat)) ? 'text-royal-darkgold font-extrabold' : 'text-gray-600'; ?>">الكل</span>
                 </a>
-                <?php foreach($categories_tree as $c_mob): ?>
-                    <a href="shop.php?category=<?php echo urlencode($c_mob['name']); ?>" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all <?php echo ($cat === $c_mob['name'] && empty($sub_cat)) ? 'bg-royal-gold text-royal-charcoal shadow-sm' : 'bg-royal-sand/60 text-gray-700 hover:bg-royal-gold/20'; ?>">
-                        <?php echo htmlspecialchars($c_mob['name']); ?>
+                <?php foreach($categories_tree as $c_mob): 
+                    $c_img = !empty($c_mob['image_url']) ? $c_mob['image_url'] : 'images/categories/pantry.jpg';
+                    $is_active = ($cat === $c_mob['name'] && empty($sub_cat));
+                ?>
+                    <a href="shop.php?category=<?php echo urlencode($c_mob['name']); ?>" class="shrink-0 flex flex-col items-center gap-1 group">
+                        <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all relative <?php echo $is_active ? 'border-royal-gold ring-2 ring-royal-gold/50 shadow-md scale-105' : 'border-gray-200 bg-white hover:border-royal-gold/60'; ?>">
+                            <img src="<?php echo htmlspecialchars($c_img); ?>" class="w-full h-full object-cover" alt="<?php echo htmlspecialchars($c_mob['name']); ?>" loading="lazy">
+                            <?php if ($is_active): ?>
+                                <div class="absolute inset-0 bg-royal-gold/15"></div>
+                            <?php endif; ?>
+                        </div>
+                        <span class="text-[10px] font-bold max-w-[68px] text-center truncate <?php echo $is_active ? 'text-royal-darkgold font-extrabold' : 'text-gray-600'; ?>">
+                            <?php echo htmlspecialchars($c_mob['name']); ?>
+                        </span>
                     </a>
                 <?php endforeach; ?>
             </div>

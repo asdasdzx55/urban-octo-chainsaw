@@ -351,6 +351,13 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 22.1.1 Get Temporary & Active Invoices (جلب الفواتير المؤقتة والمعلقة)
+   */
+  async getTempInvoices() {
+    return await this.get('get_temp_invoices');
+  }
+
+  /**
    * 22.2 Settle Ad-hoc / Temporary Delivery (تقفيل أوردر دليفري مؤقت بملاحظة وتوريد النقدية)
    */
   async settleAdhocDelivery(settlePayload) {

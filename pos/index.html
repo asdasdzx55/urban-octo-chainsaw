@@ -336,6 +336,11 @@
         <i data-lucide="history" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
       </button>
 
+      <!-- Temporary Invoices Quick Button -->
+      <button type="button" onclick="window.cart?.showTempInvoicesModal()" class="w-9 h-9 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 transition flex items-center justify-center cursor-pointer shadow-2xs relative" title="عرض الفواتير المؤقتة والمعلقة 📋">
+        <i data-lucide="clock" class="w-4 h-4"></i>
+      </button>
+
       <!-- Theme Switcher (Desktop Only) -->
       <button id="btn-theme-toggle" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition hidden lg:flex items-center justify-center cursor-pointer" title="تبديل المظهر">
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
@@ -576,6 +581,12 @@
             <!-- 4. زرار جديد (فاتورة بيع جديدة) -->
             <button type="button" onclick="window.cart?.newSale()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition cursor-pointer shadow-xs active:scale-95" title="فاتورة جديدة ➕">
               <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+
+            <!-- 5. زر الفواتير المؤقتة والمعلقة -->
+            <button type="button" onclick="window.cart?.showTempInvoicesModal()" class="relative w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-2xs" title="الفواتير المؤقتة والمعلقة 📋">
+              <i data-lucide="clock" class="w-4 h-4"></i>
+              <span id="temp-invoices-badge" class="hidden absolute -top-1.5 -right-1.5 px-1 py-0.2 rounded-full text-[9px] font-bold bg-amber-500 text-white font-mono shrink-0">0</span>
             </button>
 
             <!-- 5. زرار تفريغ السلة -->
@@ -4222,6 +4233,56 @@
         <i data-lucide="check-circle-2" class="w-4 h-4"></i>
         <span>تأكيد تقفيل الأوردر وتوريد النقدية</span>
       </button>
+
+    </div>
+  </div>
+
+  <!-- ==================== TEMPORARY & HELD INVOICES MODAL (الفواتير المؤقتة والمعلقة) ==================== -->
+  <div id="temp-invoices-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 max-w-2xl w-full flex flex-col gap-4 shadow-2xl border border-gray-200 dark:border-gray-700 animate-scale-in max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold">
+            <i data-lucide="clock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm sm:text-base font-black text-gray-900 dark:text-white">الفواتير المؤقتة والمعلقة</h3>
+              <span id="temp-modal-count-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 font-mono">0 فواتير</span>
+            </div>
+            <p class="text-xs text-gray-500">فواتير الدليفري والمؤقتات المحفوظة مع الطيارين أو المعلقة</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.cart?.loadTempInvoices()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition" title="تحديث القائمة">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+          <button onclick="window.cart?.closeTempInvoicesModal()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-700 transition">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Invoices List Container -->
+      <div id="temp-invoices-list" class="flex flex-col gap-3 overflow-y-auto max-h-[60vh] pr-1 scrollbar-thin">
+        <div class="text-center py-10 text-gray-400">
+          <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-amber-500"></i>
+          <p class="text-xs font-bold">جاري تحميل الفواتير المؤقتة...</p>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 shrink-0">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-amber-500"></i>
+          المبالغ الصافية للأصناف تظهر بدون خدمة التوصيل لمطابقة دريم سوفت
+        </span>
+        <button onclick="window.cart?.closeTempInvoicesModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold transition">
+          إغلاق
+        </button>
+      </div>
 
     </div>
   </div>

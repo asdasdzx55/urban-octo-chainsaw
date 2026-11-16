@@ -179,81 +179,76 @@ if(!empty($cats_to_show)):
             </div>
         </div>
 
-        <!-- Scrollable Category Track with Smooth Auto-Scroll & Touch/Mouse Drag -->
+        <!-- Categories Swiper Slider with Seamless Autoplay & Touch Drag -->
         <div class="relative group">
-            <div id="categories-carousel-track" class="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-3 px-1 select-none cursor-grab active:cursor-grabbing">
-                <?php foreach($cats_to_show as $cat): 
-                    $cat_img = !empty($cat['image_url']) ? htmlspecialchars($cat['image_url']) : 'images/cat_pantry.jpg';
-                    $count = isset($cat['product_count']) ? (int)$cat['product_count'] : 0;
-                ?>
-                <a href="shop.php?category=<?php echo urlencode($cat['name']); ?>" class="group/card shrink-0 w-28 sm:w-36 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1.5">
-                    <!-- Circular/Squircle Luxury Image Frame -->
-                    <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl overflow-hidden relative p-1 bg-gradient-to-tr from-amber-200 via-royal-gold to-amber-500 shadow-md group-hover/card:shadow-xl group-hover/card:shadow-amber-500/20 transition-all duration-300">
-                        <div class="w-full h-full rounded-[22px] overflow-hidden bg-white relative">
-                            <img src="<?php echo $cat_img; ?>" 
-                                 class="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-115" 
-                                 alt="<?php echo htmlspecialchars($cat['name']); ?>" 
-                                 loading="lazy" 
-                                 decoding="async">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-60 group-hover/card:opacity-30 transition-opacity"></div>
-                            <?php if ($count > 0): ?>
-                            <span class="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/65 backdrop-blur-xs text-[9px] sm:text-[10px] font-mono text-amber-200 font-bold whitespace-nowrap shadow-xs">
-                                <?php echo number_format($count); ?> صنف
-                            </span>
-                            <?php endif; ?>
-                        </div>
+            <div class="swiper categories-swiper !py-4 !px-1">
+                <div class="swiper-wrapper items-stretch">
+                    <?php foreach($cats_to_show as $cat): 
+                        $cat_img = !empty($cat['image_url']) ? htmlspecialchars($cat['image_url']) : 'images/categories/pantry.jpg';
+                        $count = isset($cat['product_count']) ? (int)$cat['product_count'] : 0;
+                    ?>
+                    <div class="swiper-slide !w-auto">
+                        <a href="shop.php?category=<?php echo urlencode($cat['name']); ?>" class="group/card block w-28 sm:w-36 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-2">
+                            <!-- Circular/Squircle Luxury Image Frame -->
+                            <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl overflow-hidden relative p-1 bg-gradient-to-tr from-amber-200 via-royal-gold to-amber-500 shadow-md group-hover/card:shadow-xl group-hover/card:shadow-amber-500/30 transition-all duration-300 ring-1 ring-royal-gold/20">
+                                <div class="w-full h-full rounded-[22px] overflow-hidden bg-white relative">
+                                    <img src="<?php echo $cat_img; ?>" 
+                                         class="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-115" 
+                                         alt="<?php echo htmlspecialchars($cat['name']); ?>" 
+                                         loading="lazy" 
+                                         decoding="async">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-60 group-hover/card:opacity-20 transition-opacity"></div>
+                                    <?php if ($count > 0): ?>
+                                    <span class="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-xs text-[9px] sm:text-[10px] font-mono text-amber-200 font-bold whitespace-nowrap shadow-xs">
+                                        <?php echo number_format($count); ?> صنف
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <!-- Title -->
+                            <h4 class="text-xs sm:text-sm font-bold font-serif text-royal-dark group-hover/card:text-royal-darkgold transition-colors mt-2.5 line-clamp-1">
+                                <?php echo htmlspecialchars($cat['name']); ?>
+                            </h4>
+                        </a>
                     </div>
-                    <!-- Title -->
-                    <h4 class="text-xs sm:text-sm font-bold font-serif text-royal-dark group-hover/card:text-royal-darkgold transition-colors mt-2.5 line-clamp-1">
-                        <?php echo htmlspecialchars($cat['name']); ?>
-                    </h4>
-                </a>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </div>
             </div>
             
             <!-- Edge Fade Gradients for Luxury Look -->
-            <div class="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-14 bg-gradient-to-l from-royal-sand/35 to-transparent hidden sm:block"></div>
-            <div class="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-14 bg-gradient-to-r from-royal-sand/35 to-transparent hidden sm:block"></div>
+            <div class="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-16 bg-gradient-to-l from-royal-sand/40 to-transparent z-10 hidden sm:block"></div>
+            <div class="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-16 bg-gradient-to-r from-royal-sand/40 to-transparent z-10 hidden sm:block"></div>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const track = document.getElementById('categories-carousel-track');
-    const btnLeft = document.getElementById('cat-scroll-left');
-    const btnRight = document.getElementById('cat-scroll-right');
-    if (!track) return;
-
-    // Arrow navigation
-    if (btnLeft) {
-        btnLeft.addEventListener('click', () => {
-            track.scrollBy({ left: -260, behavior: 'smooth' });
-        });
-    }
-    if (btnRight) {
-        btnRight.addEventListener('click', () => {
-            track.scrollBy({ left: 260, behavior: 'smooth' });
-        });
-    }
-
-    // Auto-scroll loop with pause on hover/touch
-    let isPaused = false;
-    track.addEventListener('mouseenter', () => isPaused = true);
-    track.addEventListener('mouseleave', () => isPaused = false);
-    track.addEventListener('touchstart', () => isPaused = true, { passive: true });
-    track.addEventListener('touchend', () => setTimeout(() => isPaused = false, 2000));
-
-    let autoScrollInterval = setInterval(() => {
-        if (!isPaused && track) {
-            const maxScroll = track.scrollWidth - track.clientWidth;
-            if (Math.abs(track.scrollLeft) >= maxScroll - 5) {
-                track.scrollTo({ left: 0, behavior: 'smooth' });
-            } else {
-                track.scrollBy({ left: -1, behavior: 'auto' });
+    if (typeof Swiper !== 'undefined') {
+        const catSwiper = new Swiper('.categories-swiper', {
+            slidesPerView: 'auto',
+            spaceBetween: 14,
+            freeMode: {
+                enabled: true,
+                sticky: false,
+                momentumRatio: 1.1
+            },
+            autoplay: {
+                delay: 2800,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true
+            },
+            navigation: {
+                nextEl: '#cat-scroll-left',
+                prevEl: '#cat-scroll-right'
+            },
+            breakpoints: {
+                640: {
+                    spaceBetween: 22
+                }
             }
-        }
-    }, 35);
+        });
+    }
 });
 </script>
 <?php endif; ?>

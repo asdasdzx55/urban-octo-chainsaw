@@ -2720,12 +2720,6 @@ try {
                 $upd = $pdo->prepare("UPDATE products SET name = ?, category = ?, sub_category = ?, price = ?, old_price = ?, cost = ?, stock = ?, barcode = ?, barcode2 = ?, barcode3 = ?, all_barcodes = ?, local_code = ?, description = ?, image_url = ?, is_weight_based = ?, unit_type = ?, has_pack = ?, pack_name = ?, pack_barcode = ?, pack_price = ?, pack_qty = ? WHERE id = ?");
                 $upd->execute([$name, $category, $sub_category, $price, $final_old_price, $cost, $stock, $barcode, $barcode2, $barcode3, $all_barcodes, $local_code, $final_desc, $final_img, $is_weight_based, $unit_type, $has_pack, $pack_name, $pack_barcode, $pack_price, $pack_qty, $existing_id]);
                 $final_id = $existing_id;
-
-                // مزامنة تعديلات الصنف (السعر والاسم والتكلفة والباركود) مع كاشير دريم سوفت فورياً
-                try {
-                    $qStmt = $pdo->prepare("INSERT INTO price_changes_queue (product_id, local_code, new_price, new_name, new_cost, new_barcode, synced_to_dreamsoft) VALUES (?, ?, ?, ?, ?, ?, 0)");
-                    $qStmt->execute([$final_id, $local_code ?: '', $price, $name, $cost, $barcode]);
-                } catch (Exception $e) {}
                 $action_done = 'updated';
 
                 $old_stock_val = (float)($old_prod_row['stock'] ?? 0);
@@ -3774,11 +3768,8 @@ try {
             $in_transit = [];
             $pending = [];
             $delivered_today = [];
-            $settled_today = [];
             $total_cash_in_hand = 0;
             $total_commission = 0;
-            $pending_commission = 0;
-            $settled_commission = 0;
             $today = date('Y-m-d');
 
             foreach ($orders as &$ord) {
@@ -3795,35 +3786,26 @@ try {
 
                 $status = trim($ord['status'] ?? 'جديد');
                 $created_date = substr($ord['created_at'] ?? '', 0, 10);
-                $is_synced = (int)($ord['synced'] ?? 0) === 1;
 
-                // أوردرات في الطريق / قيد التوصيل (اليوم فقط لمنع تراكم الأوردرات القديمة)
+                // أوردرات في الطريق / قيد التوصيل
                 if (in_array($status, ['قيد التوصيل', 'جاري التوصيل', 'في الطريق', 'مع الطيار'])) {
-                    if ($created_date === $today) {
-                        $in_transit[] = $ord;
-                    }
+                    $in_transit[] = $ord;
                 }
-                // أوردرات بانتظار الطيار أو قيد التجهيز (اليوم فقط)
+                // أوردرات بانتظار الطيار أو قيد التجهيز
                 elseif (in_array($status, ['بانتظار الطيار', 'بانتظار الاستلام', 'قيد التجهيز', 'جديد', 'مؤقتة', 'معلق', 'pending'])) {
-                    if ($created_date === $today) {
-                        $pending[] = $ord;
-                    }
+                    $pending[] = $ord;
                 }
-                // أوردرات تم تسليمها (تُعرض فقط غير المحاسب عليها - أي أوردر حاسب عليه الكاشير يُحذف من شاشة التحصيل المباشرة)
+                // أوردرات تم تسليمها
                 elseif (in_array($status, ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'])) {
                     if ($created_date === $today) {
-                        if (!$is_synced) {
-                            $delivered_today[] = $ord;
-                            if ($ord['is_cash']) {
-                                $total_cash_in_hand += $ord['total_price'];
-                            }
-                            $pending_commission += $fee;
-                        } else {
-                            $settled_today[] = $ord;
-                            $settled_commission += $fee;
-                        }
-                        $total_commission += $fee;
+                        $delivered_today[] = $ord;
                     }
+                    if ($ord['is_cash']) {
+                        $total_cash_in_hand += $ord['total_price'];
+                    }
+                    $total_commission += $ord['shipping_cost'];
+                } else {
+                    $in_transit[] = $ord;
                 }
             }
             unset($ord);
@@ -3840,17 +3822,13 @@ try {
                     'in_transit_count' => count($in_transit),
                     'pending_count' => count($pending),
                     'delivered_today_count' => count($delivered_today),
-                    'settled_today_count' => count($settled_today),
                     'cash_in_hand' => $total_cash_in_hand,
                     'driver_balance' => $drv_bal,
-                    'total_commission' => $total_commission,
-                    'pending_commission' => $pending_commission,
-                    'settled_commission' => $settled_commission
+                    'total_commission' => $total_commission
                 ],
                 'orders_in_transit' => $in_transit,
                 'orders_pending' => $pending,
                 'orders_delivered_today' => $delivered_today,
-                'orders_settled_today' => $settled_today,
                 'all_orders' => $orders
             ], JSON_UNESCAPED_UNICODE);
             break;
@@ -4137,6 +4115,47 @@ try {
                 $orders = [];
             }
             echo json_encode(['success' => true, 'orders' => $orders], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 15.1 جلب الفواتير المؤقتة والمعلقة (Temporary & In-Transit Orders)
+        // ============================================================
+        case 'get_temp_invoices':
+            try {
+                $stmt = $pdo->prepare("SELECT id, invoice_barcode, customer_name, customer_phone, customer_address, total_price, shipping_cost, delivery_fee, payment_method, payment_status, status, delivery_person, cashier_name, items_json, created_at, synced 
+                                       FROM orders 
+                                       WHERE (order_type = 'delivery' OR delivery_fee > 0 OR shipping_cost > 0 OR synced = 2) 
+                                         AND status NOT IN ('تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'ملغي', 'completed', 'cancelled')
+                                       ORDER BY id DESC LIMIT 100");
+                $stmt->execute();
+                $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($orders as &$ord) {
+                    $ord['id'] = (int)$ord['id'];
+                    $tot = (float)$ord['total_price'];
+                    $fee = max((float)($ord['delivery_fee'] ?? 0), (float)($ord['shipping_cost'] ?? 0));
+                    $net_items = max(0, $tot - $fee);
+                    $ord['total_price'] = $tot;
+                    $ord['net_items_price'] = $net_items;
+                    $ord['delivery_fee'] = $fee;
+                    $ord['shipping_cost'] = $fee;
+                    $ord['address'] = $ord['customer_address'] ?? '';
+                    $ord['invoice_number'] = $ord['invoice_barcode'] ?? "INV-{$ord['id']}";
+                    $ord['driver_name'] = !empty($ord['delivery_person']) ? $ord['delivery_person'] : 'بدون طيار';
+                    
+                    if (!empty($ord['items_json'])) {
+                        $ord['items'] = json_decode($ord['items_json'], true) ?: [];
+                    } else {
+                        $s_it = $pdo->prepare("SELECT product_name as name, quantity as qty, unit_price as price, total_price as total FROM order_items WHERE order_id = ?");
+                        $s_it->execute([$ord['id']]);
+                        $ord['items'] = $s_it->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                }
+                unset($ord);
+            } catch (Exception $e) {
+                $orders = [];
+            }
+            echo json_encode(['success' => true, 'count' => count($orders), 'orders' => $orders], JSON_UNESCAPED_UNICODE);
             break;
 
         case 'settle_adhoc_delivery':

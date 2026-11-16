@@ -1194,10 +1194,45 @@ try {
                 exit;
             }
 
-            $num_clean = preg_replace('/[^0-9]/', '', $q);
+            $source_req = trim($_GET['source'] ?? $_POST['source'] ?? '');
+            $is_dreamsoft = ($source_req === 'dreamsoft') || str_starts_with($q, 'DS-');
 
+            $num_clean = preg_replace('/[^0-9]/', '', $q);
             $ord = null;
-            if (!empty($num_clean)) {
+
+            // 1. If explicit DreamSoft request, check temp_invoices first
+            if ($is_dreamsoft && !empty($num_clean)) {
+                $t_stmt = $pdo->prepare("SELECT * FROM temp_invoices WHERE sales_code = ? OR id = ? LIMIT 1");
+                $t_stmt->execute([(int)$num_clean, (int)$num_clean]);
+                $t_ord = $t_stmt->fetch(PDO::FETCH_ASSOC);
+                if ($t_ord) {
+                    $t_items = json_decode($t_ord['items_json'] ?? '[]', true) ?: [];
+                    $ord = [
+                        'id' => (int)$t_ord['sales_code'],
+                        'invoice_barcode' => 'DS-' . $t_ord['sales_code'],
+                        'customer_name' => $t_ord['client_name'] ?: ($t_ord['notes'] ?: ('فاتورة مؤقتة #' . $t_ord['sales_code'])),
+                        'customer_phone' => $t_ord['client_phone'],
+                        'customer_address' => '',
+                        'total_price' => (float)$t_ord['total_value'],
+                        'discount_amount' => (float)$t_ord['discount_value'],
+                        'shipping_cost' => 0.0,
+                        'payment_method' => 'نقدي',
+                        'payment_status' => 'معلق',
+                        'status' => 'مؤقتة دريم سوفت',
+                        'source' => 'dreamsoft',
+                        'cashier_name' => $t_ord['user_name'] ?: 'كاشير دريم سوفت',
+                        'delivery_person' => $t_ord['delivery_name'] ?: '',
+                        'delivery_fee' => 0.0,
+                        'created_at' => $t_ord['sales_date'],
+                        'order_type' => 'temp',
+                        'items_json' => $t_ord['items_json'],
+                        'items' => $t_items
+                    ];
+                }
+            }
+
+            // 2. Otherwise search orders table
+            if (!$ord && !empty($num_clean)) {
                 $stmt = $pdo->prepare("SELECT * FROM orders WHERE invoice_barcode = ? OR invoice_barcode = ? OR id = ? LIMIT 1");
                 $stmt->execute([$q, "INV-{$num_clean}", (int)$num_clean]);
                 $ord = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1208,6 +1243,7 @@ try {
                 $ord = $stmt->fetch(PDO::FETCH_ASSOC);
             }
 
+            // 3. Fallback to temp_invoices if still not found
             if (!$ord && !empty($num_clean)) {
                 $t_stmt = $pdo->prepare("SELECT * FROM temp_invoices WHERE sales_code = ? OR id = ? LIMIT 1");
                 $t_stmt->execute([(int)$num_clean, (int)$num_clean]);

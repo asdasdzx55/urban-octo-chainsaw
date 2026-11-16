@@ -1837,7 +1837,7 @@ class POSCart {
             <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
               <span class="text-[11px] text-gray-400">${isDreamSoft ? 'فاتورة محفوظة في دريم سوفت بالكمبيوتر' : 'أوردر دليفري معلق مع الطيار'}</span>
               <div class="flex items-center gap-1.5 ms-auto">
-                <button onclick="window.cart?.loadTempOrderToCart(${orderId})" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
+                <button onclick="window.cart?.loadTempOrderToCart('${ord.invoice_number || orderId}', '${ord.source || ''}')" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
                   <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
                   <span>تعديل بالسلة / فتح</span>
                 </button>
@@ -1886,10 +1886,10 @@ class POSCart {
     }
   }
 
-  async loadTempOrderToCart(orderId) {
+  async loadTempOrderToCart(orderId, source = '') {
     window.app?.showLoading(true, 'جاري استرجاع أصناف الفاتورة للسلة...');
     try {
-      const res = await window.api.get('get_order_details', { order_id: orderId });
+      const res = await window.api.get('get_order_details', { order_id: orderId, source: source });
       window.app?.showLoading(false);
       if (res && res.success && res.order && Array.isArray(res.order.items)) {
         if (this.items.length > 0 && !confirm('السلة الحالية بها أصناف، هل تريد استبدالها بأصناف الفاتورة المؤقتة؟')) {

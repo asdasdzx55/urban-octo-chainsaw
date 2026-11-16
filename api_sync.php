@@ -3768,8 +3768,11 @@ try {
             $in_transit = [];
             $pending = [];
             $delivered_today = [];
+            $settled_today = [];
             $total_cash_in_hand = 0;
             $total_commission = 0;
+            $pending_commission = 0;
+            $settled_commission = 0;
             $today = date('Y-m-d');
 
             foreach ($orders as &$ord) {
@@ -3786,26 +3789,35 @@ try {
 
                 $status = trim($ord['status'] ?? 'جديد');
                 $created_date = substr($ord['created_at'] ?? '', 0, 10);
+                $is_synced = (int)($ord['synced'] ?? 0) === 1;
 
-                // أوردرات في الطريق / قيد التوصيل
+                // أوردرات في الطريق / قيد التوصيل (اليوم فقط لمنع تراكم الأوردرات القديمة)
                 if (in_array($status, ['قيد التوصيل', 'جاري التوصيل', 'في الطريق', 'مع الطيار'])) {
-                    $in_transit[] = $ord;
+                    if ($created_date === $today) {
+                        $in_transit[] = $ord;
+                    }
                 }
-                // أوردرات بانتظار الطيار أو قيد التجهيز
+                // أوردرات بانتظار الطيار أو قيد التجهيز (اليوم فقط)
                 elseif (in_array($status, ['بانتظار الطيار', 'بانتظار الاستلام', 'قيد التجهيز', 'جديد', 'مؤقتة', 'معلق', 'pending'])) {
-                    $pending[] = $ord;
+                    if ($created_date === $today) {
+                        $pending[] = $ord;
+                    }
                 }
-                // أوردرات تم تسليمها
+                // أوردرات تم تسليمها (تُعرض فقط غير المحاسب عليها - أي أوردر حاسب عليه الكاشير يُحذف من شاشة التحصيل المباشرة)
                 elseif (in_array($status, ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'])) {
                     if ($created_date === $today) {
-                        $delivered_today[] = $ord;
+                        if (!$is_synced) {
+                            $delivered_today[] = $ord;
+                            if ($ord['is_cash']) {
+                                $total_cash_in_hand += $ord['total_price'];
+                            }
+                            $pending_commission += $fee;
+                        } else {
+                            $settled_today[] = $ord;
+                            $settled_commission += $fee;
+                        }
+                        $total_commission += $fee;
                     }
-                    if ($ord['is_cash']) {
-                        $total_cash_in_hand += $ord['total_price'];
-                    }
-                    $total_commission += $ord['shipping_cost'];
-                } else {
-                    $in_transit[] = $ord;
                 }
             }
             unset($ord);
@@ -3822,13 +3834,17 @@ try {
                     'in_transit_count' => count($in_transit),
                     'pending_count' => count($pending),
                     'delivered_today_count' => count($delivered_today),
+                    'settled_today_count' => count($settled_today),
                     'cash_in_hand' => $total_cash_in_hand,
                     'driver_balance' => $drv_bal,
-                    'total_commission' => $total_commission
+                    'total_commission' => $total_commission,
+                    'pending_commission' => $pending_commission,
+                    'settled_commission' => $settled_commission
                 ],
                 'orders_in_transit' => $in_transit,
                 'orders_pending' => $pending,
                 'orders_delivered_today' => $delivered_today,
+                'orders_settled_today' => $settled_today,
                 'all_orders' => $orders
             ], JSON_UNESCAPED_UNICODE);
             break;

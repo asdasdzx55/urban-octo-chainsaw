@@ -230,6 +230,20 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 12.1 Receive From Supplier (مقبوض من مورد)
+   */
+  async receiveFromSupplier(supplierPayload) {
+    return await this.post('receive_from_supplier', supplierPayload);
+  }
+
+  /**
+   * 12.2 Get Supplier Receipts History
+   */
+  async getSupplierReceipts(supplierId = 0, limit = 50) {
+    return await this.get('get_supplier_receipts', { supplier_id: supplierId, limit });
+  }
+
+  /**
    * 13. Get Suppliers, Expense Categories, and Partners List
    */
   async getPosMeta() {

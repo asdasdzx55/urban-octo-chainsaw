@@ -7,7 +7,8 @@ class ExpensesController {
   constructor() {
     this.suppliers = [];
     this.expenseCategories = ['نثريات', 'إيجار', 'فواتير (كهرباء/مياه)', 'صيانة', 'رواتب عاملين', 'سلف عاملين', 'سداد موردين', 'مشتريات بضاعة', 'مسحوبات الإدارة', 'أخرى', 'تيست'];
-    this.currentMode = 'purchase'; // 'purchase', 'expense', 'supplier', 'history'
+    this.currentMode = 'purchase';
+    this.supplierFormType = 'payout'; // 'payout' or 'receipt' // 'purchase', 'expense', 'supplier', 'history'
     this.suppliersReportLimit = 30;
     this._supSearchTimer = null;
     this._supSelectFilterTimer = null;
@@ -159,6 +160,119 @@ class ExpensesController {
     }
   }
 
+  setSupplierFormType(type) {
+    this.supplierFormType = type;
+    const btnPayout = document.getElementById('sup-type-btn-payout');
+    const btnReceipt = document.getElementById('sup-type-btn-receipt');
+    const headerIconBox = document.getElementById('sup-form-header-icon-box');
+    const headerTitle = document.getElementById('sup-form-header-title');
+    const headerDesc = document.getElementById('sup-form-header-desc');
+    const amountLabel = document.getElementById('sup-amount-label');
+    const amountInput = document.getElementById('sup-amount-input');
+    const submitBtn = document.getElementById('sup-form-submit-btn');
+    const submitBtnText = document.getElementById('sup-form-submit-text');
+    const methodSelect = document.getElementById('sup-payment-method');
+
+    if (type === 'receipt') {
+      btnReceipt?.classList.add('bg-white', 'dark:bg-gray-800', 'text-sky-600', 'dark:text-sky-400', 'shadow-sm');
+      btnReceipt?.classList.remove('text-gray-500', 'dark:text-gray-400');
+      btnPayout?.classList.remove('bg-white', 'dark:bg-gray-800', 'text-emerald-600', 'dark:text-emerald-400', 'shadow-sm');
+      btnPayout?.classList.add('text-gray-500', 'dark:text-gray-400');
+
+      if (headerIconBox) {
+        headerIconBox.className = 'w-9 h-9 rounded-2xl bg-sky-50 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold';
+        headerIconBox.innerHTML = '<i data-lucide="arrow-down-left" class="w-4 h-4"></i>';
+      }
+      if (headerTitle) headerTitle.textContent = 'سند قبض من مورد (مقبوض من مورد)';
+      if (headerDesc) headerDesc.textContent = 'استلام مبالغ نقدية أو مرتجعات أو خصومات من المورد وتوريدها للدرج والخزينة';
+      if (amountLabel) amountLabel.innerHTML = '<i data-lucide="coins" class="w-3.5 h-3.5"></i><span>المبلغ المقبوض (ج.م): <span class="text-rose-500">*</span></span>';
+      if (amountInput) amountInput.className = 'w-full bg-gray-50 dark:bg-gray-700/70 border border-sky-300 dark:border-sky-700 rounded-xl px-3 py-2 text-sm font-black text-sky-600 font-mono';
+      if (submitBtn) {
+        submitBtn.className = 'w-full py-3.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-sky-600/25 transition flex items-center justify-center gap-2 mt-2 cursor-pointer';
+      }
+      if (submitBtnText) submitBtnText.textContent = 'تأكيد تسجيل مقبوض من مورد وتوريد المبلغ للخزينة';
+      if (methodSelect && methodSelect.options.length > 0) {
+        methodSelect.options[0].text = '💵 كاش (إيداع بالدرج والخزينة)';
+      }
+    } else {
+      btnPayout?.classList.add('bg-white', 'dark:bg-gray-800', 'text-emerald-600', 'dark:text-emerald-400', 'shadow-sm');
+      btnPayout?.classList.remove('text-gray-500', 'dark:text-gray-400');
+      btnReceipt?.classList.remove('bg-white', 'dark:bg-gray-800', 'text-sky-600', 'dark:text-sky-400', 'shadow-sm');
+      btnReceipt?.classList.add('text-gray-500', 'dark:text-gray-400');
+
+      if (headerIconBox) {
+        headerIconBox.className = 'w-9 h-9 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold';
+        headerIconBox.innerHTML = '<i data-lucide="truck" class="w-4 h-4"></i>';
+      }
+      if (headerTitle) headerTitle.textContent = 'سداد دفعة حساب مورد';
+      if (headerDesc) headerDesc.textContent = 'سداد جزء أو كامل الحساب الآجل لمورد وتخفيض مديونيته';
+      if (amountLabel) amountLabel.innerHTML = '<i data-lucide="coins" class="w-3.5 h-3.5"></i><span>مبلغ السداد (ج.م): <span class="text-rose-500">*</span></span>';
+      if (amountInput) amountInput.className = 'w-full bg-gray-50 dark:bg-gray-700/70 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-2 text-sm font-black text-emerald-600 font-mono';
+      if (submitBtn) {
+        submitBtn.className = 'w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition flex items-center justify-center gap-2 mt-2 cursor-pointer';
+      }
+      if (submitBtnText) submitBtnText.textContent = 'تأكيد سداد الدفعة وتحديث حساب المورد';
+      if (methodSelect && methodSelect.options.length > 0) {
+        methodSelect.options[0].text = '💵 كاش (من درج الكاشير)';
+      }
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  submitSupplierAction() {
+    if (this.supplierFormType === 'receipt') {
+      this.submitSupplierReceipt();
+    } else {
+      this.submitSupplierPayment();
+    }
+  }
+
+  async submitSupplierReceipt() {
+    const select = document.getElementById('exp-supplier-select');
+    const supplierId = select ? parseInt(select.value, 10) : 0;
+    const supplierName = select && select.selectedIndex > -1 ? select.options[select.selectedIndex].text.split('(')[0].trim() : '';
+    const amount = parseFloat(document.getElementById('sup-amount-input')?.value || 0);
+    const note = document.getElementById('sup-note-input')?.value.trim() || '';
+    const paymentMethod = document.getElementById('sup-payment-method')?.value || 'كاش';
+
+    if (amount <= 0) {
+      window.app?.showToast('يرجى إدخال مبلغ مقبوض صحيح أكبر من الصفر', 'error');
+      return;
+    }
+
+    const payload = {
+      supplier_id: supplierId,
+      supplier_name: supplierName,
+      amount: amount,
+      note: note,
+      payment_method: paymentMethod,
+      date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
+
+    try {
+      window.app?.showLoading(true, 'جاري تسجيل سند القبض من المورد وتحديث الحساب...');
+      const res = await window.api.receiveFromSupplier(payload);
+      window.app?.showLoading(false);
+
+      if (res && res.success) {
+        try { window.posScanner?.playSuccessBeep?.(); } catch(e) {}
+        window.app?.showToast(res.message || 'تم تسجيل مقبوض من المورد وتحديث الحساب بنجاح ✅', 'success');
+
+        // Refresh metadata in background to get new balance
+        this.init();
+
+        // Clear input
+        document.getElementById('sup-amount-input').value = '';
+        document.getElementById('sup-note-input').value = '';
+      } else {
+        throw new Error(res?.error || 'فشل تسجيل سند القبض');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast(`خطأ في تسجيل المقبوض: ${err.message}`, 'error');
+    }
+  }
+
   async submitSupplierPayment() {
     const select = document.getElementById('exp-supplier-select');
     const supplierId = select ? parseInt(select.value, 10) : 0;
@@ -296,6 +410,10 @@ class ExpensesController {
                 <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
                 <span>سداد</span>
               </button>
+              <button type="button" onclick="window.receiveSupplierDirect(${s.id})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-300 hover:bg-sky-100 transition font-bold text-xs cursor-pointer border border-sky-200 dark:border-sky-800" title="سند قبض من المورد وتوريد للخزينة">
+                <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
+                <span>قبض</span>
+              </button>
               <button type="button" onclick="window.openSupplierStatement(${s.id}, '${s.name.replace(/'/g, "\'")}')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition font-bold text-xs cursor-pointer border border-indigo-200 dark:border-indigo-800" title="عرض كشف الحساب التفصيلي">
                 <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
                 <span>كشف حساب</span>
@@ -381,14 +499,18 @@ class ExpensesController {
             </div>
 
             <!-- Mobile Action Buttons -->
-            <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-              <button type="button" onclick="window.paySupplierDirect(${s.id})" class="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800 transition shadow-2xs">
+            <div class="grid grid-cols-3 gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+              <button type="button" onclick="window.paySupplierDirect(${s.id})" class="py-2.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-800 transition shadow-2xs">
                 <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
-                <span>سداد دفعة</span>
+                <span>سداد</span>
               </button>
-              <button type="button" onclick="window.openSupplierStatement(${s.id}, '${s.name.replace(/'/g, "\'")}')" class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition shadow-2xs">
+              <button type="button" onclick="window.receiveSupplierDirect(${s.id})" class="py-2.5 px-2 rounded-xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-1 border border-sky-200 dark:border-sky-800 transition shadow-2xs">
+                <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
+                <span>قبض</span>
+              </button>
+              <button type="button" onclick="window.openSupplierStatement(${s.id}, '${s.name.replace(/'/g, "\'")}')" class="py-2.5 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800 transition shadow-2xs">
                 <i data-lucide="receipt-text" class="w-3.5 h-3.5"></i>
-                <span>كشف حساب</span>
+                <span>كشف</span>
               </button>
             </div>
           </div>
@@ -842,9 +964,15 @@ class ExpensesController {
     // 1. Desktop Table
     tbody.innerHTML = txs.map(t => {
       const isPurch = t.type === 'فاتورة توريد';
-      const typeBadge = isPurch 
-        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">توريد بضاعة 📥</span>`
-        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">سداد نقدي 💵</span>`;
+      const isReceipt = t.type === 'مقبوض من مورد' || (t.type && t.type.includes('قبض'));
+      let typeBadge = '';
+      if (isPurch) {
+        typeBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">توريد بضاعة 📥</span>`;
+      } else if (isReceipt) {
+        typeBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">مقبوض من مورد 🧾</span>`;
+      } else {
+        typeBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">سداد نقدي 💵</span>`;
+      }
 
       const creditStr = (t.credit > 0) ? `<span class="font-bold text-rose-600 dark:text-rose-400 font-mono">+${parseFloat(t.credit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
       const debitStr = (t.debit > 0) ? `<span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">-${parseFloat(t.debit).toFixed(2)}</span>` : '<span class="text-gray-300">-</span>';
@@ -914,7 +1042,8 @@ class ExpensesController {
       mobileContainer.innerHTML = txs.map(t => {
         const isPurch = t.type === 'فاتورة توريد';
         const badgeColor = isPurch ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border-indigo-200' : 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border-emerald-200';
-        const typeTitle = isPurch ? 'توريد بضاعة 📥' : 'سداد نقدي 💵';
+        const isReceipt = t.type === 'مقبوض من مورد' || (t.type && t.type.includes('قبض'));
+      const typeTitle = isPurch ? 'توريد بضاعة 📥' : (isReceipt ? 'مقبوض من مورد 🧾' : 'سداد نقدي 💵');
         const amountDisplay = isPurch
           ? `<span class="text-rose-600 dark:text-rose-400 font-mono font-black" dir="ltr">+${parseFloat(t.credit || 0).toFixed(2)} ج.م</span>`
           : `<span class="text-emerald-600 dark:text-emerald-400 font-mono font-black" dir="ltr">-${parseFloat(t.debit || 0).toFixed(2)} ج.م</span>`;
@@ -1046,11 +1175,33 @@ class ExpensesController {
     this.setMode('suppliers_report');
   }
 
+  receiveSupplierDirect(supplierId) {
+    if (window.app && window.app.currentView !== 'expenses') {
+      window.app.switchView('expenses');
+    }
+    this.setMode('supplier');
+    this.setSupplierFormType('receipt');
+    setTimeout(() => {
+      const select = document.getElementById('exp-supplier-select');
+      if (select && supplierId) {
+        select.value = supplierId;
+        select.dispatchEvent(new Event('change'));
+      }
+      const amtInput = document.getElementById('sup-amount-input');
+      if (amtInput) {
+        amtInput.value = '';
+        amtInput.focus();
+        amtInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+  }
+
   paySupplierDirect(supplierId) {
     if (window.app && window.app.currentView !== 'expenses') {
       window.app.switchView('expenses');
     }
     this.setMode('supplier');
+    this.setSupplierFormType('payout');
     setTimeout(() => {
       const select = document.getElementById('exp-supplier-select');
       if (select && supplierId) {
@@ -1154,5 +1305,11 @@ window.openSupplierStatement = function(id, name = '') {
 window.paySupplierDirect = function(id) {
   if (window.expensesController) {
     window.expensesController.paySupplierDirect(id);
+  }
+};
+
+window.receiveSupplierDirect = function(id) {
+  if (window.expensesController) {
+    window.expensesController.receiveSupplierDirect(id);
   }
 };

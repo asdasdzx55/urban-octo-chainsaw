@@ -2000,16 +2000,28 @@
           </button>
         </div>
 
-        <!-- ==================== FORM 2: SUPPLIER PAYMENT ==================== -->
+        <!-- ==================== FORM 2: SUPPLIER TRANSACTIONS (PAYMENT & RECEIPT) ==================== -->
         <div id="expense-supplier-form" class="hidden w-full max-w-2xl mx-auto p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-4 animate-scale-in">
           
+          <!-- Segmented Type Selector: Payout vs Receipt -->
+          <div class="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-700/80 rounded-2xl">
+            <button type="button" id="sup-type-btn-payout" onclick="window.expensesController.setSupplierFormType('payout')" class="flex-1 py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm cursor-pointer">
+              <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+              <span>صرف لمورد (سداد دفعة) 💸</span>
+            </button>
+            <button type="button" id="sup-type-btn-receipt" onclick="window.expensesController.setSupplierFormType('receipt')" class="flex-1 py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+              <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+              <span>قبض من مورد (مقبوضات) 📥</span>
+            </button>
+          </div>
+
           <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-gray-700">
-            <div class="w-9 h-9 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-              <i data-lucide="truck" class="w-4 h-4"></i>
+            <div id="sup-form-header-icon-box" class="w-9 h-9 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <i id="sup-form-header-icon" data-lucide="truck" class="w-4 h-4"></i>
             </div>
             <div>
-              <h3 class="text-sm font-bold text-gray-900 dark:text-white">سداد دفعة حساب مورد</h3>
-              <p class="text-[11px] text-gray-400">سداد جزء أو كامل الحساب الآجل لمورد وتخفيض مديونيته</p>
+              <h3 id="sup-form-header-title" class="text-sm font-bold text-gray-900 dark:text-white">سداد دفعة حساب مورد</h3>
+              <p id="sup-form-header-desc" class="text-[11px] text-gray-400">سداد جزء أو كامل الحساب الآجل لمورد وتخفيض مديونيته</p>
             </div>
           </div>
 
@@ -2033,7 +2045,7 @@
             </div>
 
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <label id="sup-amount-label" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <i data-lucide="coins" class="w-3.5 h-3.5"></i>
                 <span>مبلغ السداد (ج.م): <span class="text-rose-500">*</span></span>
               </label>
@@ -2041,7 +2053,7 @@
             </div>
 
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label id="sup-method-label" class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-600"></i>
                 <span>طريقة السداد:</span>
               </label>
@@ -2054,7 +2066,7 @@
             </div>
 
             <div class="sm:col-span-2 flex flex-col gap-1">
-              <label class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label id="sup-note-label" class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-600"></i>
                 <span>ملاحظات / رقم إيصال الاستلام:</span>
               </label>
@@ -2062,9 +2074,9 @@
             </div>
           </div>
 
-          <button onclick="window.expensesController.submitSupplierPayment()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition flex items-center justify-center gap-2 mt-2 cursor-pointer">
+          <button id="sup-form-submit-btn" onclick="window.expensesController.submitSupplierAction()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition flex items-center justify-center gap-2 mt-2 cursor-pointer">
             <i data-lucide="check-circle" class="w-4 h-4"></i>
-            <span>تأكيد سداد الدفعة وتحديث حساب المورد</span>
+            <span id="sup-form-submit-text">تأكيد سداد الدفعة وتحديث حساب المورد</span>
           </button>
         </div>
 

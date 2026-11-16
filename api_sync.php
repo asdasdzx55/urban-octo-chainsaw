@@ -141,6 +141,54 @@ if (!function_exists('normalize_egypt_phone_variants')) {
 }
 
 // دالة لضمان وجود وترقية جداول وأعمدة العملاء والطلبات تلقائياً وبشكل ذاتي
+if (!function_exists('ensure_supplier_receipts_schema')) {
+    function ensure_supplier_receipts_schema($pdo) {
+        static $done = false;
+        if ($done) return;
+        try {
+            $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS supplier_receipts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    supplier_id INTEGER NULL,
+                    supplier_code INTEGER NULL,
+                    supplier_name TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    payment_method TEXT DEFAULT 'كاش',
+                    note TEXT NULL,
+                    cashier_name TEXT DEFAULT 'كاشير 1',
+                    date TEXT DEFAULT CURRENT_TIMESTAMP,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    synced INTEGER DEFAULT 0,
+                    dreamsoft_code INTEGER NULL,
+                    dreamsoft_synced_at TEXT NULL
+                );");
+            } else {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS supplier_receipts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    supplier_id INT NULL,
+                    supplier_code INT NULL,
+                    supplier_name VARCHAR(150) NOT NULL,
+                    amount DECIMAL(12,2) NOT NULL,
+                    payment_method VARCHAR(100) DEFAULT 'كاش',
+                    note TEXT NULL,
+                    cashier_name VARCHAR(100) DEFAULT 'كاشير 1',
+                    date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    synced TINYINT DEFAULT 0,
+                    dreamsoft_code INT NULL,
+                    dreamsoft_synced_at DATETIME NULL,
+                    INDEX idx_supplier_id (supplier_id),
+                    INDEX idx_supplier_code (supplier_code),
+                    INDEX idx_synced (synced),
+                    INDEX idx_dreamsoft_code (dreamsoft_code)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            }
+            $done = true;
+        } catch (Exception $e) {}
+    }
+}
+
 if (!function_exists('ensure_customers_schema')) {
     function ensure_customers_schema($pdo) {
         static $done = false;
@@ -1752,6 +1800,53 @@ try {
                 ];
             }
 
+            ensure_supplier_receipts_schema($pdo);
+            // 3. سندات القبض من جدول supplier_receipts
+            $rec_sql = "SELECT id, amount, note, date, created_at, payment_method, dreamsoft_code FROM supplier_receipts WHERE (supplier_id = ? OR supplier_code = ? OR supplier_name = ?)";
+            $rec_params = [$actual_id, $actual_code, $actual_name];
+            if (!empty($from_date)) {
+                $rec_sql .= " AND (date >= ? OR created_at >= ?)";
+                $rec_params[] = $from_date . ' 00:00:00';
+                $rec_params[] = $from_date . ' 00:00:00';
+            }
+            if (!empty($to_date)) {
+                $rec_sql .= " AND (date <= ? OR created_at <= ?)";
+                $rec_params[] = $to_date . ' 23:59:59';
+                $rec_params[] = $to_date . ' 23:59:59';
+            }
+            $rec_sql .= " ORDER BY date DESC, id DESC LIMIT 200";
+            try {
+                $r_stmt = $pdo->prepare($rec_sql);
+                $r_stmt->execute($rec_params);
+                $rec_rows = $r_stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $rec_rows = [];
+            }
+
+            $total_receipts = 0.0;
+            foreach ($rec_rows as $rr) {
+                $amt = (float)$rr['amount'];
+                $total_receipts += $amt;
+
+                $ref = 'سند قبض #' . $rr['id'];
+                if (!empty($rr['dreamsoft_code'])) {
+                    $ref .= " (دريم #{$rr['dreamsoft_code']})";
+                }
+
+                $transactions[] = [
+                    'id' => (int)$rr['id'],
+                    'date' => $rr['date'] ?: $rr['created_at'],
+                    'type' => 'مقبوض من مورد',
+                    'reference' => $ref,
+                    'credit' => $amt,
+                    'debit' => 0.0,
+                    'remaining' => 0.0,
+                    'note' => $rr['note'],
+                    'payment_method' => $rr['payment_method'],
+                    'items' => []
+                ];
+            }
+
             usort($transactions, function($a, $b) {
                 return strcmp($b['date'] ?? '', $a['date'] ?? '');
             });
@@ -1769,7 +1864,9 @@ try {
                     'current_balance' => (float)($sup['balance'] ?? 0.0),
                     'total_purchases' => round($total_purchases, 2),
                     'total_payments' => round($total_payments, 2),
-                    'purchases_count' => count($purch_rows)
+                    'total_receipts' => round($total_receipts, 2),
+                    'purchases_count' => count($purch_rows),
+                    'receipts_count' => count($rec_rows)
                 ],
                 'filter' => [
                     'from_date' => $from_date,
@@ -3319,6 +3416,133 @@ try {
             break;
 
         // ============================================================
+        
+        // 6.1 سند قبض من مورد (Supplier Receipt / Refund)
+        // ============================================================
+        case 'record_supplier_receipt':
+        case 'receive_from_supplier':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $sup_id = (int)($data['supplier_id'] ?? 0);
+            $sup_code = (int)($data['supplier_code'] ?? 0);
+            $sup_name = trim($data['supplier_name'] ?? '');
+            $amount = (float)($data['amount'] ?? 0);
+            $note = trim($data['note'] ?? '');
+            $payment_method = trim($data['payment_method'] ?? 'كاش');
+            $cashier_name = trim($data['cashier_name'] ?? 'كاشير 1');
+            $date = !empty($data['date']) ? $data['date'] : date('Y-m-d H:i:s');
+
+            if ($amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'مبلغ السند يجب أن يكون أكبر من الصفر!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            ensure_supplier_receipts_schema($pdo);
+
+            try { $pdo->exec("ALTER TABLE suppliers ADD COLUMN supplier_code VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+            $found_sup = null;
+            if ($sup_id > 0) {
+                try {
+                    $st = $pdo->prepare("SELECT id, supplier_code, name, balance FROM suppliers WHERE id = ? LIMIT 1");
+                    $st->execute([$sup_id]);
+                    $found_sup = $st->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) {
+                    $st = $pdo->prepare("SELECT id, name, balance FROM suppliers WHERE id = ? LIMIT 1");
+                    $st->execute([$sup_id]);
+                    $found_sup = $st->fetch(PDO::FETCH_ASSOC);
+                }
+            }
+            if (!$found_sup && $sup_code > 0) {
+                try {
+                    $st = $pdo->prepare("SELECT id, supplier_code, name, balance FROM suppliers WHERE supplier_code = ? LIMIT 1");
+                    $st->execute([$sup_code]);
+                    $found_sup = $st->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) {}
+            }
+            if (!$found_sup && !empty($sup_name)) {
+                try {
+                    $st = $pdo->prepare("SELECT id, supplier_code, name, balance FROM suppliers WHERE name = ? LIMIT 1");
+                    $st->execute([$sup_name]);
+                    $found_sup = $st->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) {
+                    $st = $pdo->prepare("SELECT id, name, balance FROM suppliers WHERE name = ? LIMIT 1");
+                    $st->execute([$sup_name]);
+                    $found_sup = $st->fetch(PDO::FETCH_ASSOC);
+                }
+            }
+
+            if ($found_sup) {
+                $sup_id = (int)$found_sup['id'];
+                $sup_code = (int)($found_sup['supplier_code'] ?? 0);
+                $sup_name = $found_sup['name'];
+                $upd = $pdo->prepare("UPDATE suppliers SET balance = balance + ? WHERE id = ?");
+                $upd->execute([$amount, $sup_id]);
+            } elseif (!empty($sup_name)) {
+                $upd = $pdo->prepare("UPDATE suppliers SET balance = balance + ? WHERE name = ?");
+                $upd->execute([$amount, $sup_name]);
+            } else {
+                $sup_name = 'مورد عام';
+            }
+
+            $now_dt = date('Y-m-d H:i:s');
+            $ins = $pdo->prepare("INSERT INTO supplier_receipts 
+                (supplier_id, supplier_code, supplier_name, amount, payment_method, note, cashier_name, date, created_at, synced) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)");
+            $ins->execute([
+                $sup_id > 0 ? $sup_id : null,
+                $sup_code > 0 ? $sup_code : null,
+                $sup_name,
+                $amount,
+                $payment_method,
+                $note,
+                $cashier_name,
+                $date,
+                $now_dt
+            ]);
+            $rec_id = $pdo->lastInsertId();
+
+            // إرجاع الرصيد المحدث
+            $new_balance = null;
+            if ($sup_id > 0) {
+                $new_balance = $pdo->query("SELECT balance FROM suppliers WHERE id = {$sup_id}")->fetchColumn();
+            }
+
+            echo json_encode([
+                'success' => true,
+                'receipt_id' => (int)$rec_id,
+                'supplier_name' => $sup_name,
+                'amount' => $amount,
+                'new_balance' => $new_balance !== null ? (float)$new_balance : null,
+                'message' => "✅ تم تسجيل مقبوض من المورد ({$sup_name}) بمبلغ " . number_format($amount, 2) . " ج.م وتوريد المبلغ للخزينة بنجاح."
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        // ============================================================
+        // 6.2 جلب سندات القبض من الموردين (Get Supplier Receipts)
+        // ============================================================
+        case 'get_supplier_receipts':
+            ensure_supplier_receipts_schema($pdo);
+            $sup_id = (int)($_GET['supplier_id'] ?? $_POST['supplier_id'] ?? 0);
+            $limit = min(100, max(1, (int)($_GET['limit'] ?? $_POST['limit'] ?? 50)));
+            $sql = "SELECT * FROM supplier_receipts WHERE 1=1";
+            $params = [];
+            if ($sup_id > 0) {
+                $sql .= " AND (supplier_id = ? OR supplier_code = ?)";
+                $params[] = $sup_id;
+                $params[] = $sup_id;
+            }
+            $sql .= " ORDER BY date DESC, id DESC LIMIT {$limit}";
+            $st = $pdo->prepare($sql);
+            $st->execute($params);
+            $receipts = $st->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'count' => count($receipts),
+                'receipts' => $receipts
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        // ============================================================
         // 2.651 تسجيل سند قبض / مقبوض من عميل (Customer Receipt)
         // ============================================================
         
@@ -3742,8 +3966,25 @@ try {
             }
 
             $total_all_expenses = ($total_general_expenses + $total_supplier_payouts + $total_partner_withdrawals);
-            // صافي الكاش بالدرج (الصندوق لا يتأثر بخسائر التالف/الجرد غير النقدية)
-            $net_cash_in_drawer = max(0, $sales_by_method['كاش'] - $cash_outflows);
+            
+            // جلب سندات القبض من الموردين خلال الفترة
+            $total_supplier_receipts = 0.0;
+            $total_supplier_cash_receipts = 0.0;
+            try {
+                $sr_stmt = $pdo->prepare("SELECT amount, payment_method FROM supplier_receipts WHERE date >= ? AND date <= ?");
+                $sr_stmt->execute([$start_dt, $end_dt]);
+                foreach ($sr_stmt->fetchAll(PDO::FETCH_ASSOC) as $sr_row) {
+                    $s_amt = (float)$sr_row['amount'];
+                    $total_supplier_receipts += $s_amt;
+                    $s_pm = trim((string)($sr_row['payment_method'] ?? ''));
+                    if ($s_pm === '' || $s_pm === 'كاش' || mb_strpos($s_pm, 'درج') !== false) {
+                        $total_supplier_cash_receipts += $s_amt;
+                    }
+                }
+            } catch (Exception $e) {}
+
+            // صافي الكاش بالدرج (مبيعات كاش + مقبوضات موردين كاش - مصروفات ومسحوبات وسدادات كاش)
+            $net_cash_in_drawer = max(0, $sales_by_method['كاش'] + $total_supplier_cash_receipts - $cash_outflows);
             $gross_profit = $total_sales_amount - $total_cogs;
             $gross_margin = $total_sales_amount > 0 ? round(($gross_profit / $total_sales_amount) * 100, 1) : 0;
 

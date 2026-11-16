@@ -1961,27 +1961,42 @@ try {
         case 'assign_delivery_driver':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $order_id = (int)($data['order_id'] ?? 0);
-            $inv_num = trim($data['invoice_number'] ?? '');
-            $driver_name = trim($data['delivery_person'] ?? $data['driver_name'] ?? '');
+            $inv_num = trim($data['invoice_number'] ?? ($data['invoice_barcode'] ?? ''));
+            $driver_name = trim($data['delivery_person'] ?? ($data['driver_name'] ?? ''));
 
             if (empty($driver_name)) {
                 echo json_encode(['success' => false, 'error' => 'اسم الطيار مطلوب!']);
-                exit;
+                break;
+            }
+
+            if ($order_id <= 0 && !empty($inv_num)) {
+                $st = $pdo->prepare("SELECT id FROM orders WHERE invoice_barcode = ? OR id = ? LIMIT 1");
+                $st->execute([$inv_num, (int)$inv_num]);
+                $order_id = (int)$st->fetchColumn();
             }
 
             if ($order_id > 0) {
-                $upd = $pdo->prepare("UPDATE orders SET delivery_person = ?, status = 'قيد التوصيل' WHERE id = ?");
-                $upd->execute([$driver_name, $order_id]);
-            } elseif (!empty($inv_num)) {
-                $upd = $pdo->prepare("UPDATE orders SET delivery_person = ?, status = 'قيد التوصيل' WHERE invoice_number = ? OR id = ?");
-                $upd->execute([$driver_name, $inv_num, (int)$inv_num]);
-            }
+                $chk = $pdo->prepare("SELECT status FROM orders WHERE id = ?");
+                $chk->execute([$order_id]);
+                $cur_status = trim($chk->fetchColumn() ?: '');
 
-            echo json_encode([
-                'success' => true,
-                'message' => "✅ تم إسناد الأوردر للطيار ({$driver_name}) بنجاح.",
-                'delivery_person' => $driver_name
-            ], JSON_UNESCAPED_UNICODE);
+                // إذا كان الأوردر تم تسليمه مسبقاً، نحافظ على حالة التسليم ونحدث اسم الطيار لحساب أتعابه
+                if (in_array($cur_status, ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'])) {
+                    $upd = $pdo->prepare("UPDATE orders SET delivery_person = ? WHERE id = ?");
+                    $upd->execute([$driver_name, $order_id]);
+                } else {
+                    $upd = $pdo->prepare("UPDATE orders SET delivery_person = ?, status = 'قيد التوصيل' WHERE id = ?");
+                    $upd->execute([$driver_name, $order_id]);
+                }
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => "✅ تم إسناد الأوردر #{$order_id} للطيار ({$driver_name}) بنجاح.",
+                    'delivery_person' => $driver_name
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'الطلب غير موجود']);
+            }
             break;
 
         // ============================================================
@@ -3760,7 +3775,11 @@ try {
             foreach ($orders as &$ord) {
                 $ord['id'] = (int)$ord['id'];
                 $ord['total_price'] = (float)$ord['total_price'];
-                $ord['shipping_cost'] = (float)($ord['shipping_cost'] ?? 0);
+                $fee = max((float)($ord['delivery_fee'] ?? 0), (float)($ord['shipping_cost'] ?? 0));
+                $ord['delivery_fee'] = $fee;
+                $ord['shipping_cost'] = $fee;
+                $ord['address'] = $ord['customer_address'] ?? ($ord['address'] ?? '');
+                $ord['invoice_number'] = $ord['invoice_barcode'] ?? "INV-{$ord['id']}";
                 $ord['payment_method'] = $ord['payment_method'] ?? 'كاش';
                 $pm = $ord['payment_method'];
                 $ord['is_cash'] = (empty($pm) || mb_stripos($pm, 'كاش') !== false || mb_stripos($pm, 'cash') !== false || mb_stripos($pm, 'استلام') !== false || mb_stripos($pm, 'تحصيل') !== false);
@@ -3817,6 +3836,35 @@ try {
         // ============================================================
         // 13. تحديث حالة توصيل الأوردر (استلام / تم التسليم / راجع)
         // ============================================================
+                case 'update_order_status':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $order_id = (int)($data['order_id'] ?? 0);
+            $status = trim($data['status'] ?? '');
+
+            if ($order_id <= 0 || empty($status)) {
+                echo json_encode(['success' => false, 'error' => 'بيانات الطلب غير مكتملة']);
+                break;
+            }
+
+            $map = [
+                'pending' => 'جديد',
+                'processing' => 'قيد التجهيز',
+                'shipped' => 'قيد التوصيل',
+                'delivered' => 'تم التسليم',
+                'cancelled' => 'ملغي'
+            ];
+            $final_status = $map[$status] ?? $status;
+
+            $upd = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
+            $upd->execute([$final_status, $order_id]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'تم تحديث حالة الطلب بنجاح',
+                'status' => $final_status
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
         case 'update_delivery_status':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $order_id = (int)($data['order_id'] ?? 0);
@@ -4043,9 +4091,26 @@ try {
         // ============================================================
         case 'get_unassigned_delivery_orders':
             try {
-                $stmt = $pdo->prepare("SELECT id, invoice_number, customer_name, customer_phone, address, total_price, payment_method, payment_status, status, delivery_person, is_adhoc, created_at FROM orders WHERE order_type = 'delivery' AND (delivery_person IS NULL OR delivery_person = '' OR delivery_person = 'ديلفري غير معروف' OR delivery_person LIKE 'مؤقت%') AND status != 'تم التسليم' AND status != 'ملغي' ORDER BY id DESC LIMIT 50");
+                $stmt = $pdo->prepare("SELECT id, invoice_barcode, customer_name, customer_phone, customer_address, total_price, shipping_cost, delivery_fee, payment_method, payment_status, status, delivery_person, created_at, synced 
+                                       FROM orders 
+                                       WHERE (order_type = 'delivery' OR delivery_fee > 0 OR shipping_cost > 0) 
+                                         AND (delivery_person IS NULL OR delivery_person = '' OR delivery_person = 'ديلفري غير معروف' OR delivery_person LIKE 'مؤقت%') 
+                                         AND status != 'ملغي' 
+                                       ORDER BY id DESC LIMIT 50");
                 $stmt->execute();
                 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($orders as &$ord) {
+                    $ord['id'] = (int)$ord['id'];
+                    $ord['total_price'] = (float)$ord['total_price'];
+                    $fee = max((float)($ord['delivery_fee'] ?? 0), (float)($ord['shipping_cost'] ?? 0));
+                    $ord['delivery_fee'] = $fee;
+                    $ord['shipping_cost'] = $fee;
+                    $ord['address'] = $ord['customer_address'] ?? '';
+                    $ord['invoice_number'] = $ord['invoice_barcode'] ?? "INV-{$ord['id']}";
+                    $ord['is_adhoc'] = (!empty($ord['delivery_person']) && (str_starts_with($ord['delivery_person'], 'مؤقت') || $ord['delivery_person'] === 'ديلفري غير معروف'));
+                }
+                unset($ord);
             } catch (Exception $e) {
                 $orders = [];
             }

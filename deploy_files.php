@@ -66,6 +66,7 @@ $rootPhpFiles = [
     'api_barcode.php',
     'ai_helpers.php',
     'ajax_ai_description.php',
+    'admin_suppliers.php',
 ];
 foreach ($rootPhpFiles as $rootFile) {
     $srcPath = $sourceDir . '/' . $rootFile;

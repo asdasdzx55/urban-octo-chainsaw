@@ -908,16 +908,22 @@ try {
                 } catch (Exception $e) {}
             }
 
-            // 2. تحديد ما إذا كان الطلب دليفري لحفظه مؤقتاً لحين محاسبة الطيار
+            // 2. تحديد ما إذا كان الطلب مؤقتاً أو دليفري لحفظه مؤقتاً لحين محاسبة الطيار أو الاستدعاء
             $req_order_type = strtolower(trim($data['order_type'] ?? ''));
+            $is_temp = ($req_order_type === 'temp' || $req_order_type === 'مؤقت' || !empty($data['is_temp']));
             $is_delivery = ($req_order_type === 'delivery' || $req_order_type === 'دليفري') 
                            || (!empty($delivery_person) && $delivery_person !== 'بدون توصيل (تيك أواي)') 
                            || ($delivery_fee > 0);
 
-            if ($is_delivery) {
+            if ($is_temp) {
+                $order_type = $is_delivery ? 'delivery' : 'temp';
+                $order_status = 'معلق';
+                $synced_flag = 2; // مؤقت بانتظار استدعاء أو محاسبة - يترحل إلى HomeTempSalesInvoice بدريم سوفت
+                $pay_status = 'معلق';
+            } else if ($is_delivery) {
                 $order_type = 'delivery';
                 $order_status = 'قيد التوصيل';
-                $synced_flag = 2; // مؤقت بانتظار محاسبة الدليفري - لا يُرسل لدريم سوفت إلا بعد التحصيل
+                $synced_flag = 2; // مؤقت بانتظار محاسبة الدليفري - يترحل إلى HomeTempSalesInvoice بدريم سوفت
                 $is_cod = ($payment_method === 'تحصيل عند الاستلام (آجل)' || (isset($data['delivery_pay_mode']) && $data['delivery_pay_mode'] === 'cod'));
                 $pay_status = $is_cod ? 'معلق' : 'مدفوع';
             } else {

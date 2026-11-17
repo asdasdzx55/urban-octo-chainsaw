@@ -50,7 +50,9 @@ class ExpensesController {
       }
     });
 
+    const dsPurchView = document.getElementById('purchases-desktop-dreamsoft-view');
     purchForm?.classList.add('hidden');
+    dsPurchView?.classList.add('hidden');
     expForm?.classList.add('hidden');
     supForm?.classList.add('hidden');
     historyBox?.classList.add('hidden');
@@ -58,8 +60,16 @@ class ExpensesController {
     ledgerBox?.classList.add('hidden');
 
     if (mode === 'purchase') {
-      purchForm?.classList.remove('hidden');
+      if (window.innerWidth >= 1024) {
+        dsPurchView?.classList.remove('hidden');
+        purchForm?.classList.add('hidden');
+      } else {
+        purchForm?.classList.remove('hidden');
+        dsPurchView?.classList.add('hidden');
+      }
       window.purchasesController?.init();
+      window.purchasesController?.renderCart();
+      window.purchasesController?.updateTotalsDisplay();
     } else if (mode === 'expense') {
       expForm?.classList.remove('hidden');
     } else if (mode === 'supplier') {

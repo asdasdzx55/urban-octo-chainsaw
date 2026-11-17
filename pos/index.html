@@ -788,6 +788,12 @@
             <span>جديد (F2)</span>
           </button>
 
+          <!-- F1: بحث عن صنف -->
+          <button type="button" onclick="window.app?.openDsProductSearchModal()" class="px-2 py-0.5 rounded bg-white hover:bg-sky-50 text-blue-800 border border-blue-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="بحث عن صنف (F1)">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span>بحث (F1)</span>
+          </button>
+
           <!-- F7: حفظ مؤقت -->
           <button type="button" onclick="window.cart?.holdCart()" class="px-2 py-0.5 rounded bg-white hover:bg-amber-50 text-amber-900 border border-amber-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="حفظ مؤقت (F7)">
             <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-600"></i>
@@ -894,11 +900,15 @@
 
         <!-- Line 3: كود الصنف | الكمية | صافي الحساب | شارة الحالة باللون الأحمر -->
         <div class="grid grid-cols-12 gap-2 items-center pt-0.5">
-          <!-- كود الصنف (Scanner Input with Cursor) -->
+          <!-- كود الصنف (Scanner Input with Cursor & F1 Search Button) -->
           <div class="col-span-5 flex items-center gap-1.5">
             <label class="ds-win-label w-20 text-blue-900 font-black">كود الصنف:</label>
-            <div class="flex-1 flex gap-1">
+            <div class="flex-1 flex gap-1 items-center">
               <input type="search" id="ds-barcode-input" name="ds_barcode_direct" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="امسح الباركود أو اكتب الكود واضغط Enter..." class="ds-win-input flex-1 font-mono font-black text-blue-900 text-sm border-2 border-blue-500 focus:bg-yellow-50 focus:border-blue-700 shadow-inner px-2 py-1">
+              <button type="button" onclick="window.app?.openDsProductSearchModal()" class="px-2.5 py-1 bg-gradient-to-b from-sky-100 to-sky-200 hover:from-sky-200 hover:to-sky-300 text-blue-900 border border-sky-400 rounded text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 shrink-0" title="بحث عن صنف بالاسم أو الباركود (F1)">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-blue-700"></i>
+                <span>بحث (F1)</span>
+              </button>
             </div>
           </div>
 
@@ -1076,6 +1086,11 @@
           <span class="text-blue-800 font-bold flex items-center gap-1">
             <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">Home</kbd>
             <span>للرجوع لكود الصنف</span>
+          </span>
+
+          <span class="text-blue-900 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">F1</kbd>
+            <span>بحث عن صنف</span>
           </span>
 
           <span class="text-blue-800 font-bold flex items-center gap-1">
@@ -2118,7 +2133,291 @@
         </div>
 
         <!-- ==================== FORM 0: PURCHASE INVOICE (POS STYLE REGISTER) ==================== -->
-        <div id="purchase-invoice-form" class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+                <!-- ==================== DESKTOP DREAMSOFT PURCHASES WINDOW REPLICA ==================== -->
+        <div id="purchases-desktop-dreamsoft-view" class="hidden lg:flex flex-col gap-1.5 h-full overflow-hidden min-h-0 select-none p-2 rounded-xl border border-sky-400/80 shadow-md" style="background-color: #cce4f7;">
+          
+          <!-- Window Title Bar & Navigation Ribbon -->
+          <div class="flex items-center justify-between px-2.5 py-1 bg-gradient-to-r from-sky-200 via-blue-200 to-sky-300 border border-sky-400/80 rounded-t-lg shadow-2xs shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded bg-blue-700 text-white flex items-center justify-center text-xs shadow-2xs font-bold">📦</span>
+              <span class="text-xs font-black text-blue-950">المشتريات - دريم سوفت (فاتورة توريد بضاعة وزيادة المخزون)</span>
+            </div>
+
+            <!-- Action Buttons Ribbon -->
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="window.purchasesController?.submitPurchaseInvoice()" class="px-2 py-0.5 rounded bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="حفظ وترحيل الفاتورة (F5)">
+                <i data-lucide="save" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>حفظ (F5)</span>
+              </button>
+
+              <button type="button" onclick="window.purchasesController?.clearPurchaseCart()" class="px-2 py-0.5 rounded bg-white hover:bg-blue-50 text-blue-800 border border-blue-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="فاتورة جديدة (F2)">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-blue-600"></i>
+                <span>جديد (F2)</span>
+              </button>
+
+              <button type="button" onclick="window.purchasesController?.removeLastItem()" class="px-2 py-0.5 rounded bg-white hover:bg-rose-50 text-rose-800 border border-rose-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="حذف الصنف الأخير (Delete)">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-600"></i>
+                <span>حذف (Del)</span>
+              </button>
+
+              <button type="button" onclick="window.app?.openDsProductSearchModal()" class="px-2 py-0.5 rounded bg-white hover:bg-sky-50 text-blue-800 border border-blue-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="بحث عن صنف بالاسم أو الباركود (F1)">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-blue-600"></i>
+                <span>بحث صنف (F1)</span>
+              </button>
+
+              <button type="button" onclick="window.purchasesController?.openNewCustomProductModal()" class="px-2 py-0.5 rounded bg-white hover:bg-purple-50 text-purple-800 border border-purple-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="إضافة صنف جديد مخصص">
+                <i data-lucide="package-plus" class="w-3.5 h-3.5 text-purple-600"></i>
+                <span>+ صنف جديد</span>
+              </button>
+
+              <button type="button" onclick="window.purchasesController?.openNewSupplierModal()" class="px-2 py-0.5 rounded bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="إضافة مورد جديد">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5 text-indigo-600"></i>
+                <span>+ مورد</span>
+              </button>
+
+              <button type="button" onclick="window.purchasesController?.openSelectedSupplierStatement()" class="px-2 py-0.5 rounded bg-white hover:bg-slate-50 text-slate-800 border border-slate-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="كشف حساب المورد">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-600"></i>
+                <span>كشف حساب</span>
+              </button>
+
+              <button type="button" onclick="window.expensesController?.setMode('history')" class="px-2 py-0.5 rounded bg-white hover:bg-amber-50 text-amber-800 border border-amber-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="سجل فواتير المشتريات السابقة">
+                <i data-lucide="history" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span>سجل المشتريات</span>
+              </button>
+            </div>
+
+            <!-- Left Controls -->
+            <div class="flex items-center gap-1">
+              <span class="w-3 h-3 rounded-full bg-slate-300 border border-slate-400 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-slate-300 border border-slate-400 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-rose-400 border border-rose-500 inline-block"></span>
+            </div>
+          </div>
+
+          <!-- Header Form Fields -->
+          <div class="bg-gradient-to-b from-sky-100 to-sky-200/90 border-x border-b border-sky-400/80 p-2 flex flex-col gap-1.5 shrink-0 shadow-2xs">
+            <!-- Row 1: رقم الفاتورة | تاريخ الفاتورة | طريقة الدفع -->
+            <div class="grid grid-cols-12 gap-2 items-center">
+              <div class="col-span-4 flex items-center gap-1.5">
+                <label class="ds-win-label w-20">رقم الفاتورة:</label>
+                <input type="text" id="ds-purch-invoice-num" readonly value="PUR-..." class="ds-win-input flex-1 text-center font-mono font-black text-rose-700 bg-white">
+              </div>
+
+              <div class="col-span-5 flex items-center gap-1.5">
+                <label class="ds-win-label w-20">تاريخ الفاتورة:</label>
+                <input type="text" id="ds-purch-invoice-date" readonly value="..." class="ds-win-input flex-1 font-mono text-center text-slate-800 bg-white">
+              </div>
+
+              <div class="col-span-3 flex items-center gap-1.5">
+                <label class="ds-win-label w-18">طريقة الدفع:</label>
+                <select id="ds-purch-pay-method" onchange="window.purchasesController?.setDsPaymentMethod(this.value)" class="ds-win-input flex-1 text-center font-bold text-blue-900 bg-white">
+                  <option value="آجل">1 | آجل (على الحساب)</option>
+                  <option value="كاش">2 | نقدي (خزينة المحل)</option>
+                  <option value="إنستاباي">3 | إنستاباي</option>
+                  <option value="فودافون كاش">4 | فودافون كاش</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 2: المورد | المخزن | رقم إذن التوريد -->
+            <div class="grid grid-cols-12 gap-2 items-center">
+              <div class="col-span-6 flex items-center gap-1.5">
+                <label class="ds-win-label w-20">المورد:</label>
+                <div class="flex-1 flex gap-1 items-center">
+                  <select id="ds-purch-supplier-select" onchange="window.purchasesController?.onDsSupplierSelected(this.value)" class="ds-win-input flex-1 font-bold text-blue-900 bg-white">
+                    <option value="">-- اختر المورد --</option>
+                  </select>
+                  <button type="button" onclick="window.purchasesController?.openNewSupplierModal()" class="px-2 py-1 bg-white hover:bg-sky-50 text-blue-700 border border-sky-400 rounded text-xs font-bold shrink-0 cursor-pointer" title="إضافة مورد جديد">+ مورد</button>
+                  <span id="ds-purch-supplier-bal-badge" class="px-2 py-1 rounded bg-white border border-sky-300 font-mono font-bold text-xs text-rose-700 shrink-0">الرصيد: 0.00</span>
+                </div>
+              </div>
+
+              <div class="col-span-3 flex items-center gap-1.5">
+                <label class="ds-win-label w-14">المخزن:</label>
+                <input type="text" readonly value="1 | البيت السوري" class="ds-win-input flex-1 font-bold text-slate-800 bg-white">
+              </div>
+
+              <div class="col-span-3 flex items-center gap-1.5">
+                <label class="ds-win-label w-20">إذن التوريد:</label>
+                <input type="text" id="ds-purch-ref-num" placeholder="رقم بون المورد..." oninput="window.purchasesController?.setDsRefNum(this.value)" class="ds-win-input flex-1 font-mono font-bold text-slate-800 bg-white">
+              </div>
+            </div>
+
+            <!-- Row 3: كود الصنف / الباركود | مضاعف الكمية | شارة الحالة الحمراء -->
+            <div class="grid grid-cols-12 gap-2 items-center pt-0.5">
+              <div class="col-span-6 flex items-center gap-1.5">
+                <label class="ds-win-label w-20 text-blue-900 font-black">كود الصنف:</label>
+                <div class="flex-1 flex gap-1 items-center">
+                  <input type="search" id="ds-purch-barcode-input" placeholder="امسح باركود الصنف أو اكتب الكود واضغط Enter..." onkeydown="window.purchasesController?.handleDsBarcodeInput(event)" class="ds-win-input flex-1 font-mono font-black text-blue-900 text-sm border-2 border-blue-500 focus:bg-yellow-50 focus:border-blue-700 shadow-inner px-2 py-1">
+                  <button type="button" onclick="window.app?.openDsProductSearchModal()" class="px-2.5 py-1 bg-gradient-to-b from-sky-100 to-sky-200 hover:from-sky-200 hover:to-sky-300 text-blue-900 border border-sky-400 rounded text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 shrink-0" title="بحث عن صنف (F1)">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-blue-700"></i>
+                    <span>بحث (F1)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="col-span-2 flex items-center gap-1">
+                <label class="ds-win-label">الكمية:</label>
+                <input type="number" id="ds-purch-qty-multiplier" value="1" min="1" step="1" class="ds-win-input w-14 text-center font-mono font-black text-blue-900">
+                <span class="text-xs font-black text-slate-500">×</span>
+              </div>
+
+              <div class="col-span-4 flex items-center justify-end gap-2">
+                <span id="ds-purch-status-indicator" class="text-xs font-black text-rose-600 animate-pulse tracking-wide">
+                  فاتورة مشتريات : آجل
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Central Section: Left Totals Box (3 cols) + Right Invoice Table (9 cols) -->
+          <div class="flex-1 grid grid-cols-12 gap-2 min-h-0 overflow-hidden">
+            
+            <!-- Left Totals Panel -->
+            <div class="col-span-3 flex flex-col gap-2 bg-gradient-to-b from-sky-100 to-sky-200/90 border border-sky-400/80 rounded-lg p-2.5 shadow-2xs h-full min-h-0 justify-between">
+              <div class="flex flex-col gap-2">
+                
+                <!-- 1. إجمالي الفاتورة (Large Bold Red Digits) -->
+                <div class="flex flex-col gap-0.5">
+                  <label class="text-center font-black text-blue-950 text-sm tracking-wide">صافي الفاتورة</label>
+                  <div class="ds-total-card p-2 flex flex-col items-center justify-center">
+                    <span id="ds-purch-led-total" class="ds-total-red">
+                      0.000
+                    </span>
+                    <span class="text-[10px] font-bold text-slate-500">جنيه مصري</span>
+                  </div>
+                </div>
+
+                <!-- 2. المدفوع للمورد -->
+                <div class="flex flex-col gap-0.5">
+                  <label class="text-center font-black text-blue-950 text-xs">المدفوع للمورد</label>
+                  <input type="number" id="ds-purch-paid-input" min="0" step="1" placeholder="0.00" oninput="window.purchasesController?.onDsPaidInput(this.value)" class="ds-win-input w-full text-center font-mono font-black text-base py-1 text-slate-900 border-2 border-slate-400">
+                  <div class="grid grid-cols-4 gap-1 mt-1">
+                    <button type="button" onclick="document.getElementById('ds-purch-paid-input').value = window.purchasesController?.calcTotalAmount() || 0; window.purchasesController?.onDsPaidInput(document.getElementById('ds-purch-paid-input').value);" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-blue-800 border border-blue-300 text-[10px] font-bold shadow-2xs text-center cursor-pointer">بالضبط</button>
+                    <button type="button" onclick="const el = document.getElementById('ds-purch-paid-input'); el.value = (parseFloat(el.value || 0) + 100); window.purchasesController?.onDsPaidInput(el.value);" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-slate-800 border border-slate-300 text-[10px] font-mono font-bold shadow-2xs text-center cursor-pointer">+100</button>
+                    <button type="button" onclick="const el = document.getElementById('ds-purch-paid-input'); el.value = (parseFloat(el.value || 0) + 500); window.purchasesController?.onDsPaidInput(el.value);" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-slate-800 border border-slate-300 text-[10px] font-mono font-bold shadow-2xs text-center cursor-pointer">+500</button>
+                    <button type="button" onclick="const el = document.getElementById('ds-purch-paid-input'); el.value = (parseFloat(el.value || 0) + 1000); window.purchasesController?.onDsPaidInput(el.value);" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-slate-800 border border-slate-300 text-[10px] font-mono font-bold shadow-2xs text-center cursor-pointer">+1000</button>
+                  </div>
+                </div>
+
+                <!-- 3. المتبقي للمورد (الآجل) -->
+                <div class="flex flex-col gap-0.5">
+                  <label class="text-center font-black text-blue-950 text-xs">المتبقي للمورد (آجل يُضاف لرصيده)</label>
+                  <div class="ds-win-input w-full text-center font-mono font-black text-sm py-1 text-blue-900 bg-white border-2 border-slate-400 h-[34px] flex items-center justify-center">
+                    <span id="ds-purch-led-remind">0.00</span>
+                  </div>
+                </div>
+
+                <!-- 4. خصم التوريد -->
+                <div class="flex flex-col gap-0.5">
+                  <label class="text-xs font-bold text-rose-700">خصم من المورد</label>
+                  <input type="number" id="ds-purch-discount-input" min="0" step="1" placeholder="0.00" oninput="window.purchasesController?.onDsDiscountInput(this.value)" class="ds-win-input w-full text-center font-mono font-bold text-rose-600 bg-white">
+                </div>
+
+                <!-- 5. ملاحظات -->
+                <div class="flex flex-col gap-0.5">
+                  <label class="text-xs font-bold text-slate-700">ملاحظات التوريد</label>
+                  <textarea id="ds-purch-notes" rows="2" placeholder="أي ملاحظات أو تفاصيل..." oninput="window.purchasesController?.setDsNotes(this.value)" class="ds-win-input w-full text-xs font-medium resize-none bg-white"></textarea>
+                </div>
+
+              </div>
+
+              <!-- Save Button -->
+              <div class="pt-2 border-t border-sky-300">
+                <button type="button" onclick="window.purchasesController?.submitPurchaseInvoice()" class="w-full py-2.5 px-3 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md flex items-center justify-between cursor-pointer transition active:scale-98">
+                  <span>💾 حفظ وترحيل فاتورة المشتريات</span>
+                  <kbd class="px-1.5 py-0.2 bg-emerald-800 text-white font-mono text-[10px] rounded">F5</kbd>
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Right Items Table -->
+            <div class="col-span-9 flex flex-col bg-white border border-sky-400/80 rounded-lg shadow-2xs overflow-hidden h-full min-h-0">
+              
+              <div class="flex-1 overflow-y-auto min-h-0" style="background-color: #e8ecf8;">
+                <table class="ds-table-replica">
+                  <thead class="sticky top-0 z-10 shadow-2xs">
+                    <tr>
+                      <th class="w-8">م</th>
+                      <th class="w-24">كود الصنف</th>
+                      <th>اسم الصنف</th>
+                      <th class="w-24">الكمية</th>
+                      <th class="w-16">الوحدة</th>
+                      <th class="w-24">سعر الشراء (التكلفة)</th>
+                      <th class="w-24">سعر البيع المقترح</th>
+                      <th class="w-24">إجمالي التكلفة</th>
+                      <th class="w-10">حذف</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ds-purch-table-body">
+                    <!-- Dynamically rendered -->
+                  </tbody>
+                </table>
+
+                <div id="ds-purch-empty-notice" class="flex flex-col items-center justify-center py-24 text-slate-500">
+                  <span class="text-4xl mb-2 opacity-50">📦</span>
+                  <p class="text-sm font-bold text-slate-700">فاتورة المشتريات فارغة • ابدأ بمسح باركود البضاعة</p>
+                  <p class="text-xs text-slate-500 mt-0.5">أو اضغط زر [بحث صنف F1] لاختيار الأصناف الموردة</p>
+                </div>
+              </div>
+
+              <!-- Table Summary Bar -->
+              <div class="bg-gradient-to-r from-sky-100 via-sky-200 to-sky-100 border-t border-sky-400/80 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0 text-xs font-bold text-blue-950">
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-1">
+                    <span>إجمالي التكلفة:</span>
+                    <input type="text" id="ds-purch-summary-subtotal" readonly value="0.000" class="ds-win-input w-24 text-center font-mono font-black text-blue-900 bg-white">
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-4 text-[11px] text-slate-600 font-mono">
+                  <span>عدد الأصناف: <strong id="ds-purch-items-count" class="text-blue-900">0</strong></span>
+                  <span>إجمالي القطع/الكمية: <strong id="ds-purch-qty-count" class="text-blue-900">0</strong></span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Bottom Function Keys Toolbar -->
+          <div class="ds-footer-bar flex items-center justify-between shrink-0 text-[11px] shadow-xs">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-emerald-700 font-black flex items-center gap-1">
+                <kbd class="px-1 py-0.2 rounded bg-emerald-100 border border-emerald-300 text-emerald-800 font-mono">F5</kbd>
+                <span>حفظ الفاتورة</span>
+              </span>
+
+              <span class="text-rose-600 font-bold flex items-center gap-1">
+                <kbd class="px-1 py-0.2 rounded bg-rose-100 border border-rose-300 text-rose-700 font-mono">Delete</kbd>
+                <span>لحذف صنف</span>
+              </span>
+
+              <span class="text-blue-800 font-bold flex items-center gap-1">
+                <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">Home</kbd>
+                <span>للرجوع لكود الصنف</span>
+              </span>
+
+              <span class="text-blue-900 font-bold flex items-center gap-1">
+                <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">F1</kbd>
+                <span>بحث عن صنف</span>
+              </span>
+
+              <span class="text-slate-700 font-bold flex items-center gap-1">
+                <kbd class="px-1 py-0.2 rounded bg-slate-200 border border-slate-300 text-slate-800 font-mono">F2</kbd>
+                <span>فاتورة جديدة</span>
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 text-slate-500 font-mono text-[10px]">
+              <span>DreamSoft Purchases Mode</span>
+            </div>
+          </div>
+
+        </div>
+
+<div id="purchase-invoice-form" class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           
           <!-- Mobile Tab Switcher (Visible on Mobile only) -->
           <div class="lg:hidden col-span-full flex items-center bg-gray-200 dark:bg-gray-700/80 p-1 rounded-2xl mb-1">
@@ -5764,5 +6063,70 @@
   <script src="js/auth.js?v=2.7.5"></script>
   <script src="js/customers.js?v=2.7.7"></script>
   <script src="js/app.js?v=3.2.1"></script>
+  <!-- ==================== DREAMSOFT PRODUCT SEARCH MODAL (F1) ==================== -->
+  <div id="ds-product-search-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-2xs flex items-center justify-center p-3 sm:p-5 hidden">
+    <div class="w-full max-w-4xl bg-[#cce4f7] rounded-xl border-2 border-sky-400 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Modal Title Bar -->
+      <div class="px-3 py-2 bg-gradient-to-r from-sky-200 via-blue-200 to-sky-300 border-b border-sky-400 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-blue-700 text-white flex items-center justify-center text-xs font-bold">🔍</span>
+          <h3 class="text-xs font-black text-blue-950">شاشة البحث عن الأصناف - دريم سوفت (F1)</h3>
+        </div>
+        <button type="button" onclick="window.app?.closeDsProductSearchModal()" class="w-6 h-6 rounded bg-rose-500 hover:bg-rose-600 text-white font-bold flex items-center justify-center text-xs cursor-pointer shadow-2xs">✕</button>
+      </div>
+
+      <!-- Search Controls Bar -->
+      <div class="p-3 bg-gradient-to-b from-sky-100 to-sky-200 border-b border-sky-300 flex flex-col sm:flex-row items-center gap-2.5">
+        <div class="flex-1 w-full flex items-center gap-2">
+          <label class="ds-win-label text-blue-950 font-black shrink-0">اسم / كود الصنف:</label>
+          <div class="relative flex-1">
+            <input type="search" id="ds-modal-search-input" autocomplete="off" placeholder="اكتب للبحث بالاسم أو الباركود أو الكود..." oninput="window.app?.filterDsSearchModal(this.value)" onkeydown="window.app?.handleDsSearchKeydown(event)" class="ds-win-input w-full text-sm font-bold text-blue-900 border-2 border-blue-500 focus:bg-yellow-50 focus:border-blue-700 shadow-inner px-3 py-1.5">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+          <label class="ds-win-label text-blue-950">القسم:</label>
+          <select id="ds-modal-cat-filter" onchange="window.app?.filterDsSearchModal()" class="ds-win-input text-xs font-bold text-blue-900 bg-white">
+            <option value="">جميع الأقسام</option>
+          </select>
+          <span id="ds-modal-results-badge" class="px-2 py-1 rounded bg-white border border-sky-400 font-mono font-bold text-xs text-blue-900">0 صنف</span>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="flex-1 overflow-y-auto min-h-0 bg-[#e8ecf8]">
+        <table class="ds-table-replica">
+          <thead class="sticky top-0 z-10 shadow-2xs">
+            <tr>
+              <th class="w-8">م</th>
+              <th class="w-24">كود الصنف</th>
+              <th>اسم الصنف</th>
+              <th class="w-28">القسم</th>
+              <th class="w-16">الوحدة</th>
+              <th class="w-24">سعر البيع</th>
+              <th class="w-20">المتاح</th>
+              <th class="w-24">اختيار</th>
+            </tr>
+          </thead>
+          <tbody id="ds-modal-search-table-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer Guide -->
+      <div class="ds-footer-bar flex items-center justify-between shrink-0 text-xs text-slate-700">
+        <div class="flex items-center gap-3">
+          <span>الأسهم <kbd class="px-1 rounded bg-white border">↑</kbd> <kbd class="px-1 rounded bg-white border">↓</kbd> للتنقل</span>
+          <span><kbd class="px-1.5 rounded bg-blue-600 text-white font-mono">Enter</kbd> أو <kbd class="px-1.5 rounded bg-emerald-600 text-white font-mono">نقرة مزدوجة</kbd> لإضافة الصنف للفاتورة</span>
+          <span><kbd class="px-1 rounded bg-white border">Esc</kbd> للخروج</span>
+        </div>
+        <button type="button" onclick="window.app?.closeDsProductSearchModal()" class="px-3 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs cursor-pointer">إغلاق</button>
+      </div>
+
+    </div>
+  </div>
+
 </body>
 </html>

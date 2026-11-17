@@ -397,6 +397,7 @@ button:active, .mobile-tab-btn:active {
 /* Strict Mobile Isolation: DreamSoft layout NEVER displays on mobile screens */
 @media (max-width: 1023px) {
   #view-pos-dreamsoft,
+  #purchases-desktop-dreamsoft-view,
   .dreamsoft-fn-bar,
   .ds-footer-bar {
     display: none !important;

@@ -2368,28 +2368,93 @@ class POSCart {
     window.app?.showToast(`تم حذف الصنف (${removed.name || ''}) من الفاتورة (Del)`, 'info');
   }
 
-  holdCart() {
+  async holdCart() {
     if (!this.items || this.items.length === 0) {
       window.app?.showToast('السلة فارغة، لا يوجد ما يتم حفظه مؤقتاً', 'warning');
       return;
     }
-    const heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
-    const heldItem = {
-      id: 'held_' + Date.now(),
-      created_at: new Date().toISOString(),
-      customer_name: this.customerName || 'عميل نقدي',
-      customer_phone: this.customerPhone || '',
-      order_type: this.orderType || 'hall',
-      delivery_fee: this.deliveryFee || 0,
-      notes: document.getElementById('ds-invoice-notes')?.value || '',
-      items: JSON.parse(JSON.stringify(this.items))
-    };
-    heldCarts.push(heldItem);
-    localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
-    this.clear();
-    const notesEl = document.getElementById('ds-invoice-notes');
-    if (notesEl) notesEl.value = '';
-    window.app?.showToast('تم حفظ الفاتورة مؤقتاً بنجاح ✨ (اضغط F8 للاستدعاء)', 'success');
+
+    const itemsCopy = JSON.parse(JSON.stringify(this.items));
+    const custName = this.customerName || 'عميل نقدي';
+    const custPhone = this.customerPhone || '';
+    const ordType = this.orderType || 'hall';
+    const delivFee = parseFloat(this.deliveryFee || 0);
+    const subtotal = this.getSubtotal();
+    const discount = this.discountAmount || 0;
+    const total = this.getTotal();
+    const notes = document.getElementById('ds-invoice-notes')?.value || '';
+
+    window.app?.showLoading(true, 'جاري حفظ الفاتورة مؤقتاً ومزامنتها مع دريم سوفت...');
+
+    try {
+      let orderId = 'TEMP-' + Date.now();
+      if (window.api && typeof window.api.pushSale === 'function') {
+        const res = await window.api.pushSale({
+          customer: custName,
+          phone: custPhone,
+          address: this.customerAddress || '',
+          delivery_person: this.deliveryDriver || '',
+          delivery_fee: ordType === 'delivery' ? delivFee : 0,
+          order_type: ordType === 'delivery' ? 'delivery' : 'temp',
+          is_temp: true,
+          payment_method: 'معلق (مؤقت)',
+          discount: discount,
+          total: total,
+          cashier_name: window.auth?.currentUser?.name || 'كاشير المحل',
+          source: 'dreamsoft_pos',
+          items: itemsCopy
+        });
+        if (res && res.success && (res.order_id || res.remote_id)) {
+          orderId = res.order_id || res.remote_id;
+        }
+      }
+
+      // Also keep local copy in heldCarts
+      const heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
+      heldCarts.push({
+        id: orderId,
+        created_at: new Date().toISOString(),
+        customer_name: custName,
+        customer_phone: custPhone,
+        order_type: ordType,
+        delivery_fee: delivFee,
+        notes: notes,
+        items: itemsCopy
+      });
+      localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
+
+      window.app?.showLoading(false);
+      window.posScanner?.playSuccessBeep();
+
+      // Clear cart and start fresh new sale
+      this.clearCart();
+      const notesEl = document.getElementById('ds-invoice-notes');
+      if (notesEl) notesEl.value = '';
+      this.newSale();
+
+      window.app?.showToast(`✅ تم حفظ الفاتورة مؤقتاً برقم #${orderId} وبدء فاتورة جديدة! (تتم المزامنة مع دريم سوفت F8)`, 'success');
+      document.getElementById('ds-barcode-input')?.focus();
+
+    } catch (e) {
+      window.app?.showLoading(false);
+      console.warn('Hold cart error:', e);
+      const heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
+      heldCarts.push({
+        id: 'held_' + Date.now(),
+        created_at: new Date().toISOString(),
+        customer_name: custName,
+        customer_phone: custPhone,
+        order_type: ordType,
+        delivery_fee: delivFee,
+        notes: notes,
+        items: itemsCopy
+      });
+      localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
+      this.clearCart();
+      this.newSale();
+      window.app?.showToast('تم حفظ الفاتورة مؤقتاً محلياً وبدء فاتورة جديدة ✨', 'info');
+      document.getElementById('ds-barcode-input')?.focus();
+    }
   }
 
   restoreHeldCart(idxOrId) {

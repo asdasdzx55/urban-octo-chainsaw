@@ -1522,6 +1522,14 @@ class App {
 
     // Global Keyboard Shortcuts (F1..F12 DreamSoft POS Shortcuts)
     window.addEventListener('keydown', (e) => {
+      // F1: شاشة البحث عن صنف (DreamSoft Item Search Lookup)
+      if (e.key === 'F1' || e.keyCode === 112) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openDsProductSearchModal();
+        return;
+      }
+
       // F2: New Sale / Clear cart
       if (e.key === 'F2' || e.keyCode === 113) {
         e.preventDefault();
@@ -1814,6 +1822,164 @@ class App {
     if (window.lucide) window.lucide.createIcons();
     this.renderDsFastItems();
     window.cart?.render();
+  }
+
+  // ==================== DREAMSOFT ITEM SEARCH MODAL (F1) ====================
+  openDsProductSearchModal() {
+    const modal = document.getElementById('ds-product-search-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    this.populateDsModalCategories();
+    this.filterDsSearchModal('');
+    const input = document.getElementById('ds-modal-search-input');
+    if (input) {
+      input.value = '';
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 50);
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeDsProductSearchModal() {
+    const modal = document.getElementById('ds-product-search-modal');
+    if (modal) modal.classList.add('hidden');
+    const barcodeInp = document.getElementById('ds-barcode-input') || document.getElementById('ds-purch-barcode-input');
+    if (barcodeInp) barcodeInp.focus();
+  }
+
+  populateDsModalCategories() {
+    const select = document.getElementById('ds-modal-cat-filter');
+    if (!select || !this.categories) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">جميع الأقسام</option>' + 
+      this.categories.map(c => `<option value="${c.id || c.name}">${c.name}</option>`).join('');
+    if (current) select.value = current;
+  }
+
+  filterDsSearchModal(query) {
+    if (query === undefined) {
+      query = document.getElementById('ds-modal-search-input')?.value || '';
+    }
+    query = (query || '').trim().toLowerCase();
+    const catFilter = document.getElementById('ds-modal-cat-filter')?.value || '';
+    const tbody = document.getElementById('ds-modal-search-table-body');
+    const badge = document.getElementById('ds-modal-results-badge');
+    if (!tbody) return;
+
+    let list = this.products || [];
+    if (catFilter) {
+      list = list.filter(p => (p.category_id == catFilter || p.category_name == catFilter || p.category == catFilter));
+    }
+    if (query) {
+      list = list.filter(p => {
+        const name = (p.name || '').toLowerCase();
+        const bc = (p.barcode || '').toLowerCase();
+        const code = String(p.local_code || p.id || '').toLowerCase();
+        return name.includes(query) || bc.includes(query) || code.includes(query);
+      });
+    }
+
+    const displayList = list.slice(0, 60);
+    if (badge) badge.textContent = `${list.length} صنف`;
+    this._dsModalFilteredProducts = displayList;
+    this._dsModalSelectedIdx = 0;
+
+    if (displayList.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-10 text-slate-500 font-bold">
+            <span class="text-2xl block mb-1">🔍</span>
+            لم يتم العثور على أصناف مطابقة لكلمة البحث
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = displayList.map((p, idx) => {
+      const isWeight = p.unit_type === 'weight' || p.unit === 'كجم';
+      const code = p.local_code || p.barcode || p.id;
+      const stockVal = parseFloat(p.stock || 0);
+      const stockBadge = stockVal > 0 
+        ? `<span class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-mono font-bold text-[10px]">${stockVal}</span>`
+        : `<span class="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 font-mono font-bold text-[10px]">0</span>`;
+
+      return `
+        <tr id="ds-modal-row-${idx}" onclick="window.app?.selectDsModalRowIndex(${idx})" ondblclick="window.app?.selectDsModalItem(${p.id})" class="ds-modal-row hover:bg-sky-100 cursor-pointer transition ${idx === 0 ? 'bg-sky-200/90 font-bold border-l-4 border-blue-600' : 'bg-white'}">
+          <td class="text-center font-mono text-slate-600 py-1.5 px-1 text-[11px]">${idx + 1}</td>
+          <td class="font-mono font-bold text-slate-800 py-1.5 px-2 text-[11px] truncate max-w-[95px]">${code}</td>
+          <td class="py-1.5 px-2 font-bold text-blue-950 text-xs truncate max-w-xs">${p.name}</td>
+          <td class="text-center text-slate-600 py-1.5 px-1 text-[11px] truncate max-w-[100px]">${p.category_name || p.category || '-'}</td>
+          <td class="text-center font-bold text-slate-700 py-1.5 px-1 text-[11px]">${p.unit || (isWeight ? 'كجم' : 'قطعة')}</td>
+          <td class="text-center font-mono font-black text-xs text-blue-900 py-1.5 px-2 whitespace-nowrap">${parseFloat(p.price || 0).toFixed(2)} ج.م</td>
+          <td class="text-center py-1.5 px-1">${stockBadge}</td>
+          <td class="text-center py-1.5 px-1">
+            <button type="button" onclick="event.stopPropagation(); window.app?.selectDsModalItem(${p.id})" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition active:scale-95 cursor-pointer">
+              <span>إضافة ↵</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  selectDsModalRowIndex(idx) {
+    this._dsModalSelectedIdx = idx;
+    document.querySelectorAll('.ds-modal-row').forEach((r, i) => {
+      if (i === idx) {
+        r.classList.add('bg-sky-200/90', 'font-bold', 'border-l-4', 'border-blue-600');
+        r.classList.remove('bg-white');
+        r.scrollIntoView({ block: 'nearest' });
+      } else {
+        r.classList.remove('bg-sky-200/90', 'font-bold', 'border-l-4', 'border-blue-600');
+        r.classList.add('bg-white');
+      }
+    });
+  }
+
+  handleDsSearchKeydown(e) {
+    if (!this._dsModalFilteredProducts || this._dsModalFilteredProducts.length === 0) return;
+    const len = this._dsModalFilteredProducts.length;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this._dsModalSelectedIdx = (this._dsModalSelectedIdx + 1) % len;
+      this.selectDsModalRowIndex(this._dsModalSelectedIdx);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this._dsModalSelectedIdx = (this._dsModalSelectedIdx - 1 + len) % len;
+      this.selectDsModalRowIndex(this._dsModalSelectedIdx);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const selected = this._dsModalFilteredProducts[this._dsModalSelectedIdx];
+      if (selected) {
+        this.selectDsModalItem(selected.id);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this.closeDsProductSearchModal();
+    }
+  }
+
+  selectDsModalItem(productId) {
+    const prod = this.products?.find(p => p.id == productId);
+    if (!prod) return;
+
+    if (this.currentView === 'expenses' || this.currentView === 'purchases') {
+      window.purchasesController?.openProductEntryModal(prod);
+      this.closeDsProductSearchModal();
+      return;
+    }
+
+    const multInput = document.getElementById('ds-qty-multiplier');
+    const mult = multInput ? (parseFloat(multInput.value) || 1) : 1;
+    window.cart?.addItem(prod, mult);
+    window.posScanner?.playSuccessBeep();
+    if (multInput) multInput.value = 1;
+    this.closeDsProductSearchModal();
+    window.app?.showToast(`تمت إضافة (${prod.name}) إلى الفاتورة`, 'info');
   }
 
   startDsClock() {

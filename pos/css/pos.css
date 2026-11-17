@@ -409,3 +409,13 @@ button:active, .mobile-tab-btn:active {
 .dreamsoft-table-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.7);
 }
+
+
+/* ABSOLUTE MOBILE ENFORCEMENT: DreamSoft desktop view and function bars NEVER show on mobile screens */
+@media (max-width: 1023px) {
+  #view-pos-dreamsoft,
+  .dreamsoft-fn-bar,
+  #pos-desktop-dreamsoft-view {
+    display: none !important;
+  }
+}

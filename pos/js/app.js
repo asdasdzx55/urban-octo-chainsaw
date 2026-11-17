@@ -28,10 +28,23 @@ class App {
     // Render persistent cart items on startup
     window.cart?.render();
 
-    // Init DreamSoft Desktop Mode & Live Clock
-    const savedLayoutMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
-    this.applyPosLayoutMode(savedLayoutMode);
-    this.startDsClock();
+    // Init DreamSoft Desktop Mode & Live Clock (Desktop ONLY >= 1024px)
+    if (window.innerWidth >= 1024) {
+      const savedLayoutMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
+      this.applyPosLayoutMode(savedLayoutMode);
+      this.startDsClock();
+    } else {
+      const dsPos = document.getElementById('view-pos-dreamsoft');
+      if (dsPos) {
+        dsPos.classList.add('hidden');
+        dsPos.style.display = 'none';
+      }
+      const classicPos = document.getElementById('view-pos');
+      if (classicPos) {
+        classicPos.classList.remove('hidden', 'lg:hidden');
+        classicPos.style.display = '';
+      }
+    }
 
     // Render initial products from local cache immediately (instant startup)
     if (this.products.length > 0) {
@@ -828,13 +841,37 @@ class App {
       if (el) {
         if (v === viewName) {
           el.classList.remove('hidden');
-          el.classList.add('flex');
+          el.classList.add(v === 'pos' && window.innerWidth < 1024 ? 'grid' : 'flex');
         } else {
           el.classList.add('hidden');
-          el.classList.remove('flex');
+          el.classList.remove('flex', 'grid');
         }
       }
     });
+
+    // Mobile / Desktop POS View Routing
+    const dsPosEl = document.getElementById('view-pos-dreamsoft');
+    if (viewName === 'pos') {
+      if (window.innerWidth >= 1024) {
+        const savedMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
+        this.applyPosLayoutMode(savedMode);
+      } else {
+        if (dsPosEl) {
+          dsPosEl.classList.add('hidden');
+          dsPosEl.style.display = 'none';
+        }
+        const classicPos = document.getElementById('view-pos');
+        if (classicPos) {
+          classicPos.classList.remove('hidden', 'lg:hidden');
+          classicPos.style.display = '';
+        }
+      }
+    } else {
+      if (dsPosEl) {
+        dsPosEl.classList.add('hidden');
+        dsPosEl.style.display = 'none';
+      }
+    }
 
     if (viewName === 'orders') {
       const isSettlement = document.getElementById('hub-panel-settlement')?.classList.contains('hidden') === false;
@@ -1583,6 +1620,28 @@ class App {
       }
     });
 
+
+    // Window Resize Handler (Ensures clean separation of Mobile vs Desktop Layouts)
+    window.addEventListener('resize', () => {
+      if (this.currentView === 'pos') {
+        if (window.innerWidth < 1024) {
+          const dsView = document.getElementById('view-pos-dreamsoft');
+          if (dsView) {
+            dsView.classList.add('hidden');
+            dsView.style.display = 'none';
+          }
+          const classicPos = document.getElementById('view-pos');
+          if (classicPos) {
+            classicPos.classList.remove('hidden', 'lg:hidden');
+            classicPos.style.display = '';
+          }
+        } else {
+          const savedMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
+          this.applyPosLayoutMode(savedMode);
+        }
+      }
+    });
+
     // Receipt Modal Close & Print
     document.getElementById('btn-close-receipt')?.addEventListener('click', () => {
       document.getElementById('receipt-modal')?.classList.add('hidden');
@@ -1675,6 +1734,7 @@ class App {
 
   /* ==================== DREAMSOFT POS LAYOUT & CLOCK ENGINE ==================== */
   togglePosLayoutMode(forceMode) {
+    if (window.innerWidth < 1024) return; // Strict lock: mobile always stays in original view!
     const currentMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
     const newMode = forceMode || (currentMode === 'dreamsoft' ? 'catalog' : 'dreamsoft');
     localStorage.setItem('pos_desktop_layout_mode', newMode);
@@ -1683,17 +1743,45 @@ class App {
   }
 
   applyPosLayoutMode(mode) {
-    const dsView = document.getElementById('pos-desktop-dreamsoft-view');
-    const catView = document.getElementById('pos-desktop-catalog-view');
+    const dsView = document.getElementById('view-pos-dreamsoft');
+    const classicPos = document.getElementById('view-pos');
     const modeLabel = document.getElementById('pos-layout-mode-label');
 
+    // STRICT MOBILE SAFETY LOCK: On mobile screens (< 1024px), NEVER activate dreamsoft layout!
+    if (window.innerWidth < 1024) {
+      if (dsView) {
+        dsView.classList.add('hidden');
+        dsView.style.display = 'none';
+      }
+      if (classicPos && this.currentView === 'pos') {
+        classicPos.classList.remove('hidden', 'lg:hidden');
+        classicPos.style.display = '';
+      }
+      return;
+    }
+
+    // DESKTOP ONLY (>= 1024px)
+    if (this.currentView !== 'pos') return;
+
     if (mode === 'catalog') {
-      if (dsView) dsView.classList.add('hidden');
-      if (catView) catView.classList.remove('lg:hidden');
+      if (dsView) {
+        dsView.classList.add('hidden');
+        dsView.style.display = 'none';
+      }
+      if (classicPos) {
+        classicPos.classList.remove('hidden', 'lg:hidden');
+        classicPos.style.display = '';
+      }
       if (modeLabel) modeLabel.textContent = '🖥️ مظهر دريم سوفت';
     } else {
-      if (dsView) dsView.classList.remove('hidden');
-      if (catView) catView.classList.add('lg:hidden');
+      if (classicPos) {
+        classicPos.classList.add('lg:hidden');
+        classicPos.style.display = 'none';
+      }
+      if (dsView) {
+        dsView.classList.remove('hidden');
+        dsView.style.display = 'flex';
+      }
       if (modeLabel) modeLabel.textContent = '🛍️ مظهر الكتالوج';
     }
     if (window.lucide) window.lucide.createIcons();

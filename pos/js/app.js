@@ -28,6 +28,11 @@ class App {
     // Render persistent cart items on startup
     window.cart?.render();
 
+    // Init DreamSoft Desktop Mode & Live Clock
+    const savedLayoutMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
+    this.applyPosLayoutMode(savedLayoutMode);
+    this.startDsClock();
+
     // Render initial products from local cache immediately (instant startup)
     if (this.products.length > 0) {
       if (window.syncManager) {
@@ -36,6 +41,7 @@ class App {
       this.extractCategories();
       this.renderCategories();
       this.renderProducts();
+      this.renderDsFastItems();
     } else {
       this.renderProducts();
     }
@@ -145,6 +151,7 @@ class App {
       this.extractCategories();
       this.renderCategories();
       this.renderProducts();
+      this.renderDsFastItems();
       if (isManual) {
         this.showToast('تعذر الاتصال بالسيرفر للمزامنة - تم الإبقاء على البيانات المحلية', 'warning');
       }
@@ -1416,6 +1423,38 @@ class App {
       }
     });
 
+    // DreamSoft Dedicated Direct Barcode Input
+    const dsBarcodeInput = document.getElementById('ds-barcode-input');
+    dsBarcodeInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = (e.target.value || '').trim();
+        if (val) {
+          e.preventDefault();
+          e.stopPropagation();
+          let qty = null;
+          let code = val;
+          if (val.includes('*')) {
+            const parts = val.split('*');
+            if (parts.length === 2 && !isNaN(parseFloat(parts[0]))) {
+              qty = parseFloat(parts[0]);
+              code = parts[1].trim();
+            }
+          }
+          if (window.posScanner) {
+            if (qty !== null) {
+              const multInput = document.getElementById('ds-qty-multiplier');
+              if (multInput) multInput.value = qty;
+            }
+            window.posScanner.onDecodedText(code, 'search_input');
+          } else {
+            window.cart?.addProductByBarcode(code, qty);
+          }
+          e.target.value = '';
+          setTimeout(() => e.target.focus(), 60);
+        }
+      }
+    });
+
     // Theme toggle
     document.getElementById('btn-theme-toggle')?.addEventListener('click', () => this.toggleTheme());
 
@@ -1444,8 +1483,33 @@ class App {
     document.getElementById('btn-submit-payment')?.addEventListener('click', () => window.cart?.checkout(true));
     document.getElementById('btn-submit-save-only')?.addEventListener('click', () => window.cart?.checkout(false));
 
-    // Global Keyboard Shortcuts (F5: Save & Print, F4: Save Only, F7: Detailed Search)
+    // Global Keyboard Shortcuts (F1..F12 DreamSoft POS Shortcuts)
     window.addEventListener('keydown', (e) => {
+      // F2: New Sale / Clear cart
+      if (e.key === 'F2' || e.keyCode === 113) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.cart?.newSale();
+        document.getElementById('ds-barcode-input')?.focus();
+        return;
+      }
+
+      // F3: Edit last item price/quantity
+      if (e.key === 'F3' || e.keyCode === 114) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.cart?.editLastItemPrice();
+        return;
+      }
+
+      // F4: Quick save WITHOUT printing
+      if (e.key === 'F4' || e.keyCode === 115) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.quickSaveWithoutPrint();
+        return;
+      }
+
       // F5: Quick save WITH printing
       if (e.key === 'F5' || e.keyCode === 116) {
         e.preventDefault();
@@ -1470,11 +1534,11 @@ class App {
         return;
       }
 
-      // F4: Quick save WITHOUT printing
-      if (e.key === 'F4' || e.keyCode === 115) {
+      // F6: Customer & Delivery Checkout
+      if (e.key === 'F6' || e.keyCode === 117) {
         e.preventDefault();
         e.stopPropagation();
-        this.quickSaveWithoutPrint();
+        this.openCheckoutModal();
         return;
       }
 
@@ -1483,6 +1547,38 @@ class App {
         e.preventDefault();
         e.stopPropagation();
         this.toggleAdvancedSearch();
+        return;
+      }
+
+      // F8: Switch to returns
+      if (e.key === 'F8' || e.keyCode === 119) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.switchView('returns');
+        return;
+      }
+
+      // F9: Show suspended / temporary invoices modal
+      if (e.key === 'F9' || e.keyCode === 120) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.cart?.showTempInvoicesModal();
+        return;
+      }
+
+      // F10: Toggle Fullscreen
+      if (e.key === 'F10' || e.keyCode === 121) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleFullscreen();
+        return;
+      }
+
+      // F11: Invoice Discount
+      if (e.key === 'F11' || e.keyCode === 122) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.promptQuickDiscount();
         return;
       }
     });
@@ -1576,6 +1672,83 @@ class App {
       loader.style.display = 'none';
     }
   }
+
+  /* ==================== DREAMSOFT POS LAYOUT & CLOCK ENGINE ==================== */
+  togglePosLayoutMode(forceMode) {
+    const currentMode = localStorage.getItem('pos_desktop_layout_mode') || 'dreamsoft';
+    const newMode = forceMode || (currentMode === 'dreamsoft' ? 'catalog' : 'dreamsoft');
+    localStorage.setItem('pos_desktop_layout_mode', newMode);
+    this.applyPosLayoutMode(newMode);
+    this.showToast(newMode === 'dreamsoft' ? '🖥️ تم التبديل إلى مظهر كاشير دريم سوفت' : '🛍️ تم التبديل إلى مظهر الكتالوج المصور', 'info');
+  }
+
+  applyPosLayoutMode(mode) {
+    const dsView = document.getElementById('pos-desktop-dreamsoft-view');
+    const catView = document.getElementById('pos-desktop-catalog-view');
+    const modeLabel = document.getElementById('pos-layout-mode-label');
+
+    if (mode === 'catalog') {
+      if (dsView) dsView.classList.add('hidden');
+      if (catView) catView.classList.remove('lg:hidden');
+      if (modeLabel) modeLabel.textContent = '🖥️ مظهر دريم سوفت';
+    } else {
+      if (dsView) dsView.classList.remove('hidden');
+      if (catView) catView.classList.add('lg:hidden');
+      if (modeLabel) modeLabel.textContent = '🛍️ مظهر الكتالوج';
+    }
+    if (window.lucide) window.lucide.createIcons();
+    this.renderDsFastItems();
+    window.cart?.render();
+  }
+
+  startDsClock() {
+    const clockEl = document.getElementById('ds-live-clock');
+    if (!clockEl) return;
+    const update = () => {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'numeric', day: 'numeric' });
+      clockEl.textContent = `${dateStr} • ${timeStr}`;
+    };
+    update();
+    setInterval(update, 1000);
+  }
+
+  renderDsFastItems() {
+    const grid = document.getElementById('ds-fast-items-grid');
+    if (!grid) return;
+    if (!this.products || this.products.length === 0) {
+      grid.innerHTML = '<span class="text-[10px] text-gray-400 col-span-2 text-center py-2">لا توجد أصناف سريعة</span>';
+      return;
+    }
+    // Filter items without barcode or weight items or top 10 products
+    const fast = this.products.filter(p => !p.barcode || p.unit_type === 'weight' || p.unit === 'كجم').slice(0, 10);
+    const itemsToShow = fast.length >= 4 ? fast : this.products.slice(0, 10);
+
+    grid.innerHTML = itemsToShow.map(p => {
+      const isWeight = p.unit_type === 'weight' || p.unit === 'كجم';
+      return `
+        <button type="button" onclick="window.cart?.addItem(window.app?.products?.find(x => x.id == ${p.id}), 1)" class="p-1.5 rounded-xl bg-slate-50 hover:bg-indigo-50 dark:bg-slate-700/60 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 flex flex-col justify-between text-right transition cursor-pointer active:scale-95 shadow-2xs group min-h-[46px]">
+          <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate w-full group-hover:text-indigo-600 dark:group-hover:text-indigo-400" title="${p.name}">${p.name}</span>
+          <div class="flex items-center justify-between w-full mt-0.5">
+            <span class="text-[10px] font-mono font-black text-emerald-600 dark:text-emerald-400">${parseFloat(p.price || 0).toFixed(2)} ج.م</span>
+            ${isWeight ? '<span class="text-[8px] px-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded font-bold">⚖️ وزن</span>' : ''}
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+
+  toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.warn(err));
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => console.warn(err));
+      }
+    }
+  }
+
 }
 
 function initApp() {

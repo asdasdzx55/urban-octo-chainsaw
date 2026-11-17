@@ -105,14 +105,18 @@ class POSCart {
     window.app?.showToast(`تمت إضافة كرتونة/دستة: ${packName} (${validQty}) 📦`, 'success');
   }
 
-  async addProductByBarcode(barcode) {
+  async addProductByBarcode(barcode, customQty = null) {
     const rawCode = String(barcode || '').trim();
     if (!rawCode) return;
+
+    const multInput = document.getElementById('ds-qty-multiplier');
+    const mult = customQty !== null ? Math.max(0.001, parseFloat(customQty)) : (multInput ? Math.max(1, parseFloat(multInput.value) || 1) : 1);
 
     // 0. Check if this barcode matches a pack barcode in cached products
     let matchedPack = window.app?.products?.find(p => p.has_pack == 1 && String(p.pack_barcode || '').trim() === rawCode);
     if (matchedPack) {
-      this.addPackItem(matchedPack, 1);
+      this.addPackItem(matchedPack, mult);
+      if (multInput) multInput.value = 1;
       return;
     }
 
@@ -140,6 +144,7 @@ class POSCart {
         });
 
     if (product) {
+      const finalQty = parsed.isScale ? parsed.quantity : mult;
       const productToAdd = parsed.isScale ? {
         ...product,
         unit_type: 'weight',
@@ -147,7 +152,8 @@ class POSCart {
         is_weight: true
       } : product;
 
-      this.addItem(productToAdd, parsed.quantity);
+      this.addItem(productToAdd, finalQty);
+      if (multInput) multInput.value = 1;
       return;
     }
 
@@ -1393,10 +1399,9 @@ class POSCart {
     const mobileListContainer = document.getElementById('mobile-cart-drawer-list');
     const fabBadge = document.getElementById('fab-cart-count');
     const fabTotal = document.getElementById('fab-cart-total');
-
     const centerCartBadge = document.getElementById('center-cart-count');
 
-    // Update Totals
+    // Update Totals (Standard views)
     if (subtotalEl) subtotalEl.textContent = `${this.getSubtotal().toFixed(2)} ج.م`;
     if (discountEl) discountEl.textContent = `-${this.discountAmount.toFixed(2)} ج.م`;
     if (totalEl) totalEl.textContent = `${total.toFixed(2)} ج.م`;
@@ -1407,6 +1412,63 @@ class POSCart {
     if (fabTotal) fabTotal.textContent = `${total.toFixed(2)} ج.م`;
     if (centerCartBadge) centerCartBadge.textContent = count;
 
+    // DreamSoft Elements
+    const dsTableBody = document.getElementById('dreamsoft-table-body');
+    const dsEmptyNotice = document.getElementById('ds-empty-notice');
+    const dsTableBadge = document.getElementById('ds-table-badge-count');
+    const ledTotal = document.getElementById('ds-led-total');
+    const ledItemsCount = document.getElementById('ds-led-items-count');
+    const ledQtyCount = document.getElementById('ds-led-qty-count');
+    const ledDiscount = document.getElementById('ds-led-discount');
+    const dsInvoiceLabel = document.getElementById('ds-active-invoice-label');
+    const dsCustomerName = document.getElementById('ds-customer-name');
+    const dsOrderType = document.getElementById('ds-order-type-badge');
+    const dsEditingBanner = document.getElementById('ds-editing-banner');
+    const dsEditingTitle = document.getElementById('ds-editing-title');
+
+    // Update DreamSoft LED Displays
+    if (ledTotal) ledTotal.textContent = total.toFixed(2);
+    if (ledItemsCount) ledItemsCount.textContent = this.items.length;
+    if (ledQtyCount) {
+      const totalPieces = this.items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0);
+      ledQtyCount.textContent = Number.isInteger(totalPieces) ? totalPieces : totalPieces.toFixed(2);
+    }
+    if (ledDiscount) ledDiscount.textContent = this.discountAmount.toFixed(2);
+    if (dsTableBadge) dsTableBadge.textContent = `${this.items.length} أصناف`;
+    this.updateDsChange();
+
+    // Update DreamSoft Header Details
+    if (this.editingOrderId) {
+      if (dsInvoiceLabel) dsInvoiceLabel.textContent = `تعديل أوردر #${this.editingOrderId}`;
+      if (dsEditingBanner) dsEditingBanner.classList.remove('hidden');
+      if (dsEditingTitle) dsEditingTitle.textContent = `✏️ وضع التعديل: أوردر #${this.editingOrderId} (${this.customerName || 'عميل'})`;
+    } else if (this.currentInvoiceNavIndex !== undefined && this.currentInvoiceNavIndex >= 0) {
+      const orders = this.getCompletedOrders();
+      const cur = orders[this.currentInvoiceNavIndex];
+      if (cur && dsInvoiceLabel) {
+        dsInvoiceLabel.textContent = `فاتورة سابقة #${cur.order_id || cur.id}`;
+      }
+      if (dsEditingBanner) dsEditingBanner.classList.add('hidden');
+    } else {
+      if (dsInvoiceLabel) dsInvoiceLabel.textContent = `فاتورة بيع جديدة`;
+      if (dsEditingBanner) dsEditingBanner.classList.add('hidden');
+    }
+
+    if (dsCustomerName) {
+      dsCustomerName.textContent = this.customerName || 'عميل نقدي';
+    }
+
+    if (dsOrderType) {
+      if (this.orderType === 'delivery') {
+        dsOrderType.innerHTML = `<span>🛵 دليفري (${this.deliveryDriver || 'طيار'})</span>`;
+        dsOrderType.className = "px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 flex items-center gap-1";
+      } else {
+        dsOrderType.innerHTML = `<span>🛒 بيع صالة (كاش)</span>`;
+        dsOrderType.className = "px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1";
+      }
+    }
+
+    // Card Items HTML (For Mobile Drawer & Catalog Panel)
     const itemsHTML = this.items.map(item => {
       const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
       const step = isWeight ? 0.25 : 1;
@@ -1417,8 +1479,6 @@ class POSCart {
 
       return `
         <div class="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200/90 dark:border-gray-600/70 shadow-2xs flex items-center justify-between gap-2 cart-item-highlight transition">
-          
-          <!-- Product Name & Unit Price -->
           <div class="flex-1 min-w-0">
             <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate" title="${item.name}">${item.name}</h4>
             <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
@@ -1431,68 +1491,77 @@ class POSCart {
               ${item.is_pack ? `<span class="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded text-[9px] font-bold">📦 كرتونة (خصم ${item.pack_multiplier || 1})</span>` : ''}
             </div>
           </div>
-
-          <!-- Quantity / Weight Control -->
           <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl p-0.5 shrink-0 border border-gray-200 dark:border-gray-600 shadow-2xs">
             <button onclick="window.cart.updateQty('${item.cart_key || item.product_id}', ${prevQty})" class="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition" title="تقليل">-</button>
-            
             <span onclick="${isWeight ? `window.app.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 text-center font-mono font-bold text-xs text-gray-900 dark:text-white ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? `الوزن: ${gramsVal} جم (${parseFloat(item.qty).toFixed(3)} كجم) - اضغط للتعديل بالجرام` : ''}">
               ${qtyLabel}
             </span>
-
             <button onclick="window.cart.updateQty('${item.cart_key || item.product_id}', ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs active:scale-95 transition" title="زيادة">+</button>
           </div>
-
-          <!-- Total & Remove -->
           <div class="text-left shrink-0 min-w-[55px]">
             <div class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">${(item.price * item.qty).toFixed(2)}</div>
             <button onclick="window.cart.removeItem('${item.cart_key || item.product_id}')" class="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline transition cursor-pointer">حذف ✕</button>
           </div>
-
         </div>
       `;
     }).join('');
 
+    // DreamSoft Table Rows HTML
+    const tableRowsHTML = this.items.map((item, idx) => {
+      const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
+      const step = isWeight ? 0.25 : 1;
+      const prevQty = isWeight ? parseFloat((item.qty - step).toFixed(3)) : item.qty - 1;
+      const nextQty = isWeight ? parseFloat((item.qty + step).toFixed(3)) : item.qty + 1;
+      const gramsVal = Math.round(item.qty * 1000);
+      const qtyLabel = isWeight ? (item.qty < 1 ? `${gramsVal} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : item.qty;
+      const lineTotal = (item.price * item.qty).toFixed(2);
+      const itemCode = item.local_code || item.barcode || item.product_id;
+
+      return `
+        <tr class="hover:bg-indigo-50/50 dark:hover:bg-slate-700/50 transition">
+          <td class="text-center font-bold font-mono text-slate-500 py-2 px-1 text-[11px]">${idx + 1}</td>
+          <td class="font-mono font-bold text-slate-600 dark:text-slate-300 py-2 px-2 text-[11px] truncate max-w-[95px]" title="${itemCode}">${itemCode}</td>
+          <td class="py-2 px-2">
+            <div class="font-bold text-slate-900 dark:text-white leading-tight truncate max-w-xs text-xs" title="${item.name}">${item.name}</div>
+            ${isWeight ? `<span class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[9px] font-bold">⚖️ وزن: ${gramsVal} جم</span>` : ''}
+            ${item.is_pack ? `<span class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold">📦 كرتونة</span>` : ''}
+          </td>
+          <td class="text-center font-bold text-slate-600 dark:text-slate-300 py-2 px-1 text-[11px]">${item.unit || (isWeight ? 'كجم' : 'قطعة')}</td>
+          <td class="text-center py-2 px-1">
+            <button type="button" onclick="window.cart?.openEditPriceModal('${item.cart_key || item.product_id}')" class="px-1.5 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-black text-xs border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="تعديل السعر (F3)">
+              <span>${item.price.toFixed(2)}</span>
+            </button>
+          </td>
+          <td class="text-center py-2 px-1">
+            <div class="inline-flex items-center gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-xl border border-slate-300 dark:border-slate-600 shadow-2xs">
+              <button type="button" onclick="window.cart?.updateQty('${item.cart_key || item.product_id}', ${prevQty})" class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition">-</button>
+              <span onclick="${isWeight ? `window.app?.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 min-w-[34px] text-center font-mono font-bold text-xs text-slate-900 dark:text-white ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? 'اضغط لتعديل الوزن بالجرام' : ''}">
+                ${qtyLabel}
+              </span>
+              <button type="button" onclick="window.cart?.updateQty('${item.cart_key || item.product_id}', ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition">+</button>
+            </div>
+          </td>
+          <td class="text-center font-mono text-rose-500 font-bold py-2 px-1 text-[11px]">0.00</td>
+          <td class="text-center font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 py-2 px-1 whitespace-nowrap">${lineTotal} ج.م</td>
+          <td class="text-center py-2 px-1">
+            <button type="button" onclick="window.cart?.removeItem('${item.cart_key || item.product_id}')" class="p-1 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer" title="حذف هذا الصنف">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Empty state handling
     if (this.items.length === 0) {
       if (emptyNotice) emptyNotice.classList.remove('hidden');
       if (listContainer) listContainer.innerHTML = '';
       if (mobileListContainer) mobileListContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">السلة فارغة</p>';
-      // Update Editing Banners
-    const deskBanner = document.getElementById('cart-editing-banner');
-    const mobBanner = document.getElementById('mobile-cart-editing-banner');
-    const deskTitle = document.getElementById('cart-editing-title');
-    const mobTitle = document.getElementById('mobile-cart-editing-title');
-    const btnProceed = document.getElementById('btn-proceed-checkout');
-    const btnMobCheckout = document.getElementById('btn-mobile-checkout');
+      if (dsTableBody) dsTableBody.innerHTML = '';
+      if (dsEmptyNotice) dsEmptyNotice.classList.remove('hidden');
 
-    if (this.editingOrderId) {
-      const bannerText = `✏️ وضع التعديل: أوردر #${this.editingOrderId} (${this.customerName || 'عميل'})`;
-      if (deskBanner) deskBanner.classList.remove('hidden');
-      if (mobBanner) mobBanner.classList.remove('hidden');
-      if (deskTitle) deskTitle.textContent = bannerText;
-      if (mobTitle) mobTitle.textContent = bannerText;
-
-      if (btnProceed) {
-        btnProceed.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
-        btnProceed.className = "w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer";
-      }
-      if (btnMobCheckout) {
-        btnMobCheckout.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
-        btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 mt-3 flex items-center justify-center gap-2 transition";
-      }
-    } else {
-      if (deskBanner) deskBanner.classList.add('hidden');
-      if (mobBanner) mobBanner.classList.add('hidden');
-      if (btnProceed) {
-        btnProceed.innerHTML = `<i data-lucide="credit-card" class="w-4 h-4"></i><span>طرق دفع وتفاصيل أخرى (دليفري/آجل)</span>`;
-        btnProceed.className = "w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer";
-      }
-      if (btnMobCheckout) {
-        btnMobCheckout.innerHTML = `<span>متابعة الدفع</span>`;
-        btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 mt-3 flex items-center justify-center gap-2 transition";
-      }
-    }
-    if (window.lucide) window.lucide.createIcons();
+      this.updateEditingBanners();
+      if (window.lucide) window.lucide.createIcons();
       this.saveToStorage();
       return;
     }
@@ -1500,13 +1569,22 @@ class POSCart {
     if (emptyNotice) emptyNotice.classList.add('hidden');
     if (listContainer) listContainer.innerHTML = itemsHTML;
     if (mobileListContainer) mobileListContainer.innerHTML = itemsHTML;
-    // Update Editing Banners
+    if (dsTableBody) dsTableBody.innerHTML = tableRowsHTML;
+    if (dsEmptyNotice) dsEmptyNotice.classList.add('hidden');
+
+    this.updateEditingBanners();
+    if (window.lucide) window.lucide.createIcons();
+    this.saveToStorage();
+  }
+
+  updateEditingBanners() {
     const deskBanner = document.getElementById('cart-editing-banner');
     const mobBanner = document.getElementById('mobile-cart-editing-banner');
     const deskTitle = document.getElementById('cart-editing-title');
     const mobTitle = document.getElementById('mobile-cart-editing-title');
     const btnProceed = document.getElementById('btn-proceed-checkout');
     const btnMobCheckout = document.getElementById('btn-mobile-checkout');
+    const dsSaveBtn = document.getElementById('ds-btn-save-print');
 
     if (this.editingOrderId) {
       const bannerText = `✏️ وضع التعديل: أوردر #${this.editingOrderId} (${this.customerName || 'عميل'})`;
@@ -1523,6 +1601,9 @@ class POSCart {
         btnMobCheckout.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
         btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 mt-3 flex items-center justify-center gap-2 transition";
       }
+      if (dsSaveBtn) {
+        dsSaveBtn.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i><span>حفظ تعديلات الأوردر #${this.editingOrderId}</span></div><kbd class="px-2 py-0.5 rounded-lg bg-emerald-900/80 text-emerald-100 font-mono text-xs font-bold border border-emerald-400/30">F5</kbd>`;
+      }
     } else {
       if (deskBanner) deskBanner.classList.add('hidden');
       if (mobBanner) mobBanner.classList.add('hidden');
@@ -1534,9 +1615,63 @@ class POSCart {
         btnMobCheckout.innerHTML = `<span>متابعة الدفع</span>`;
         btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 mt-3 flex items-center justify-center gap-2 transition";
       }
+      if (dsSaveBtn) {
+        dsSaveBtn.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="printer" class="w-4 h-4"></i><span>حفظ وطباعة الإيصال</span></div><kbd class="px-2 py-0.5 rounded-lg bg-emerald-900/80 text-emerald-100 font-mono text-xs font-bold border border-emerald-400/30">F5</kbd>`;
+      }
     }
-    if (window.lucide) window.lucide.createIcons();
-    this.saveToStorage();
+  }
+
+  /* ==================== DREAMSOFT CASHIER HELPERS ==================== */
+  updateDsChange() {
+    const paidInput = document.getElementById('ds-cash-paid-input');
+    const changeEl = document.getElementById('ds-led-change');
+    if (!changeEl) return;
+
+    const total = this.getTotal();
+    const rawVal = paidInput ? paidInput.value.trim() : '';
+    const paid = rawVal ? parseFloat(rawVal) : 0;
+    this.paidAmount = paid;
+
+    if (paid === 0) {
+      changeEl.textContent = '0.00';
+      changeEl.className = 'text-sm font-black font-mono text-cyan-300 dreamsoft-led-glow-cyan';
+      return;
+    }
+
+    const change = paid - total;
+    if (change >= 0) {
+      changeEl.textContent = change.toFixed(2);
+      changeEl.className = 'text-sm font-black font-mono text-cyan-300 dreamsoft-led-glow-cyan';
+    } else {
+      changeEl.textContent = `متبقي: ${Math.abs(change).toFixed(2)}`;
+      changeEl.className = 'text-xs font-black font-mono text-amber-400 dreamsoft-led-glow-amber';
+    }
+  }
+
+  setDsExactCash() {
+    const total = this.getTotal();
+    const paidInput = document.getElementById('ds-cash-paid-input');
+    if (paidInput) {
+      paidInput.value = total.toFixed(2);
+    }
+    this.updateDsChange();
+  }
+
+  addDsCash(amount) {
+    const paidInput = document.getElementById('ds-cash-paid-input');
+    if (!paidInput) return;
+    const current = parseFloat(paidInput.value || 0) || 0;
+    paidInput.value = (current + amount).toFixed(2);
+    this.updateDsChange();
+  }
+
+  editLastItemPrice() {
+    if (!this.items || this.items.length === 0) {
+      window.app?.showToast('لا توجد أصناف في الفاتورة الحالية لتعديلها', 'warning');
+      return;
+    }
+    const lastItem = this.items[this.items.length - 1];
+    this.openEditPriceModal(lastItem.cart_key || lastItem.product_id);
   }
 
   /* ==================== CASHIER INVOICE NAVIGATION TOOLBAR ==================== */

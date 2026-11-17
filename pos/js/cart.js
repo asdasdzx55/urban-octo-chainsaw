@@ -235,6 +235,7 @@ class POSCart {
           customerPhone: this.customerPhone,
           customerAddress: this.customerAddress,
           customerCode: this.customerCode || '',
+          editingOrderId: this.editingOrderId,
           cashierNotes: this.cashierNotes,
           paidAmount: this.paidAmount,
           timestamp: Date.now()
@@ -283,6 +284,7 @@ class POSCart {
         this.customerPhone = data.customerPhone || '';
         this.customerAddress = data.customerAddress || '';
         this.customerCode = data.customerCode || '';
+        this.editingOrderId = data.editingOrderId || null;
         this.cashierNotes = data.cashierNotes || 'كاشير 1';
         this.paidAmount = parseFloat(data.paidAmount || 0);
         return true;
@@ -312,6 +314,8 @@ class POSCart {
     this.customerPhone = '';
     this.customerName = 'عميل نقدي';
     this.customerCode = '';
+    this.editingOrderId = null;
+    this.editingOrderData = null;
     try {
       localStorage.removeItem('pos_active_cart');
     } catch(e) {}
@@ -473,6 +477,9 @@ class POSCart {
 
   /* ==================== CHECKOUT & SUBMIT SALE ==================== */
   async checkout(shouldPrint = true) {
+    if (this.editingOrderId) {
+      return await this.saveOrderEdits();
+    }
     if (this.isSubmitting) {
       console.warn('Checkout already in progress, ignoring duplicate trigger.');
       return;
@@ -734,6 +741,8 @@ class POSCart {
       }
     } finally {
       this.isSubmitting = false;
+    this.editingOrderId = null;
+    this.editingOrderData = null;
       const submitBtn = document.getElementById('btn-submit-payment');
       const saveOnlyBtn = document.getElementById('btn-submit-save-only');
       if (submitBtn) submitBtn.disabled = false;
@@ -1448,6 +1457,42 @@ class POSCart {
       if (emptyNotice) emptyNotice.classList.remove('hidden');
       if (listContainer) listContainer.innerHTML = '';
       if (mobileListContainer) mobileListContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">السلة فارغة</p>';
+      // Update Editing Banners
+    const deskBanner = document.getElementById('cart-editing-banner');
+    const mobBanner = document.getElementById('mobile-cart-editing-banner');
+    const deskTitle = document.getElementById('cart-editing-title');
+    const mobTitle = document.getElementById('mobile-cart-editing-title');
+    const btnProceed = document.getElementById('btn-proceed-checkout');
+    const btnMobCheckout = document.getElementById('btn-mobile-checkout');
+
+    if (this.editingOrderId) {
+      const bannerText = `✏️ وضع التعديل: أوردر #${this.editingOrderId} (${this.customerName || 'عميل'})`;
+      if (deskBanner) deskBanner.classList.remove('hidden');
+      if (mobBanner) mobBanner.classList.remove('hidden');
+      if (deskTitle) deskTitle.textContent = bannerText;
+      if (mobTitle) mobTitle.textContent = bannerText;
+
+      if (btnProceed) {
+        btnProceed.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
+        btnProceed.className = "w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer";
+      }
+      if (btnMobCheckout) {
+        btnMobCheckout.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
+        btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 mt-3 flex items-center justify-center gap-2 transition";
+      }
+    } else {
+      if (deskBanner) deskBanner.classList.add('hidden');
+      if (mobBanner) mobBanner.classList.add('hidden');
+      if (btnProceed) {
+        btnProceed.innerHTML = `<i data-lucide="credit-card" class="w-4 h-4"></i><span>طرق دفع وتفاصيل أخرى (دليفري/آجل)</span>`;
+        btnProceed.className = "w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer";
+      }
+      if (btnMobCheckout) {
+        btnMobCheckout.innerHTML = `<span>متابعة الدفع</span>`;
+        btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 mt-3 flex items-center justify-center gap-2 transition";
+      }
+    }
+    if (window.lucide) window.lucide.createIcons();
       this.saveToStorage();
       return;
     }
@@ -1455,6 +1500,42 @@ class POSCart {
     if (emptyNotice) emptyNotice.classList.add('hidden');
     if (listContainer) listContainer.innerHTML = itemsHTML;
     if (mobileListContainer) mobileListContainer.innerHTML = itemsHTML;
+    // Update Editing Banners
+    const deskBanner = document.getElementById('cart-editing-banner');
+    const mobBanner = document.getElementById('mobile-cart-editing-banner');
+    const deskTitle = document.getElementById('cart-editing-title');
+    const mobTitle = document.getElementById('mobile-cart-editing-title');
+    const btnProceed = document.getElementById('btn-proceed-checkout');
+    const btnMobCheckout = document.getElementById('btn-mobile-checkout');
+
+    if (this.editingOrderId) {
+      const bannerText = `✏️ وضع التعديل: أوردر #${this.editingOrderId} (${this.customerName || 'عميل'})`;
+      if (deskBanner) deskBanner.classList.remove('hidden');
+      if (mobBanner) mobBanner.classList.remove('hidden');
+      if (deskTitle) deskTitle.textContent = bannerText;
+      if (mobTitle) mobTitle.textContent = bannerText;
+
+      if (btnProceed) {
+        btnProceed.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
+        btnProceed.className = "w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer";
+      }
+      if (btnMobCheckout) {
+        btnMobCheckout.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>💾 حفظ تعديلات الأوردر #${this.editingOrderId}</span>`;
+        btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 mt-3 flex items-center justify-center gap-2 transition";
+      }
+    } else {
+      if (deskBanner) deskBanner.classList.add('hidden');
+      if (mobBanner) mobBanner.classList.add('hidden');
+      if (btnProceed) {
+        btnProceed.innerHTML = `<i data-lucide="credit-card" class="w-4 h-4"></i><span>طرق دفع وتفاصيل أخرى (دليفري/آجل)</span>`;
+        btnProceed.className = "w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition transform active:scale-98 cursor-pointer";
+      }
+      if (btnMobCheckout) {
+        btnMobCheckout.innerHTML = `<span>متابعة الدفع</span>`;
+        btnMobCheckout.className = "w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 mt-3 flex items-center justify-center gap-2 transition";
+      }
+    }
+    if (window.lucide) window.lucide.createIcons();
     this.saveToStorage();
   }
 
@@ -1932,6 +2013,168 @@ class POSCart {
       window.app?.showToast('خطأ في الطباعة', 'error');
     }
   }
+
+  // ==================== ORDER EDITING SUITE ====================
+  async loadOrderForEditing(orderId) {
+    if (!orderId) return;
+    const cleanId = String(orderId).replace(/[^0-9]/g, '');
+    
+    window.app?.showLoading(true, `جاري تحميل الأوردر #${cleanId} للتعديل بالسلة...`);
+    try {
+      const res = await window.api.getOrderDetails(orderId);
+      window.app?.showLoading(false);
+      
+      if (!res || !res.success || !res.order) {
+        window.app?.showToast(res?.error || 'تعذر تحميل بيانات الأوردر للتعديل', 'warning');
+        return;
+      }
+      
+      const ord = res.order;
+      
+      // Confirm if current cart has items
+      if (this.items.length > 0 && !confirm(`السلة الحالية بها أصناف، هل تريد استبدالها بأصناف الأوردر #${cleanId} للتعديل؟`)) {
+        return;
+      }
+      
+      // Close other modals
+      document.getElementById('order-details-modal')?.classList.add('hidden');
+      window.deliverySettlementController?.closeSettleModal();
+      
+      // Set editing state
+      this.editingOrderId = ord.id || cleanId;
+      this.editingOrderData = ord;
+      
+      // Clear and populate items
+      this.items = [];
+      const rawItems = Array.isArray(ord.items) ? ord.items : [];
+      rawItems.forEach(it => {
+        const prodId = it.product_id || it.id || 0;
+        const p = parseFloat(it.price || it.unit_price || 0);
+        const q = parseFloat(it.qty || it.quantity || 1);
+        this.items.push({
+          cart_key: `${prodId}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          product_id: prodId,
+          name: it.name || it.product_name || 'صنف',
+          price: p,
+          qty: q,
+          barcode: it.barcode || '',
+          local_code: it.local_code || '',
+          unit_type: it.unit_type || (it.is_scale ? 'weight' : 'piece'),
+          unit: it.unit || (it.is_scale ? 'كجم' : 'قطعة'),
+          is_scale: it.is_scale || false,
+          is_pack: it.is_pack || false,
+          pack_multiplier: it.pack_multiplier || 1
+        });
+      });
+      
+      this.customerName = ord.customer_name || 'عميل نقدي';
+      this.customerPhone = ord.customer_phone || '';
+      this.customerAddress = ord.customer_address || '';
+      this.deliveryPerson = ord.delivery_person || '';
+      this.deliveryFee = parseFloat(ord.delivery_fee || 0);
+      this.discountAmount = parseFloat(ord.discount || ord.discount_amount || 0);
+      
+      const isDelivery = ord.order_type === 'delivery' || this.deliveryFee > 0 || !!this.deliveryPerson;
+      if (isDelivery) {
+        window.app?.setOrderType('delivery');
+      } else {
+        window.app?.setOrderType('hall');
+      }
+
+      // Update input fields if they exist
+      const nameInput = document.getElementById('checkout-delivery-customer-name');
+      if (nameInput) nameInput.value = this.customerName;
+      const phoneInput = document.getElementById('checkout-delivery-customer-phone');
+      if (phoneInput) phoneInput.value = this.customerPhone;
+      const addrInput = document.getElementById('checkout-delivery-customer-address');
+      if (addrInput) addrInput.value = this.customerAddress;
+      const feeInput = document.getElementById('checkout-delivery-fee');
+      if (feeInput) feeInput.value = this.deliveryFee;
+      
+      this.saveToStorage();
+      this.render();
+      
+      window.app?.switchView('pos');
+      window.app?.showToast(`✏️ تم فتح الأوردر #${this.editingOrderId} للتعديل في السلة. أضف أو احذف الأصناف ثم اضغط حفظ التعديلات!`, 'info');
+      
+    } catch (err) {
+      window.app?.showLoading(false);
+      console.error('Error loading order for edit:', err);
+      window.app?.showToast('خطأ أثناء تحميل الأوردر للتعديل', 'error');
+    }
+  }
+
+  cancelOrderEditing(confirmBefore = true) {
+    if (confirmBefore && !confirm('هل أنت متأكد من إلغاء وضع التعديل وتفريغ السلة؟')) {
+      return;
+    }
+    const oldId = this.editingOrderId;
+    this.editingOrderId = null;
+    this.editingOrderData = null;
+    this.clearCart();
+    this.render();
+    if (oldId) {
+      window.app?.showToast(`تم إلغاء تعديل الأوردر #${oldId}`, 'info');
+    }
+  }
+
+  async saveOrderEdits() {
+    if (!this.editingOrderId) return;
+    if (this.items.length === 0) {
+      window.app?.showToast('لا يمكن حفظ الأوردر بدون أصناف!', 'warning');
+      return;
+    }
+    
+    window.app?.showLoading(true, `جاري حفظ تعديلات الأوردر #${this.editingOrderId}...`);
+    try {
+      const subtotal = this.getSubtotal();
+      const total = this.getTotal();
+      const orderType = window.app?.currentOrderType || (this.deliveryFee > 0 ? 'delivery' : 'hall');
+      
+      const payload = {
+        order_id: this.editingOrderId,
+        items: this.items,
+        items_json: JSON.stringify(this.items),
+        subtotal: subtotal,
+        total_price: total,
+        discount_amount: this.discountAmount || 0,
+        delivery_fee: this.deliveryFee || 0,
+        delivery_person: this.deliveryPerson || '',
+        customer_name: this.customerName || 'عميل نقدي',
+        customer_phone: this.customerPhone || '',
+        customer_address: this.customerAddress || '',
+        order_type: orderType
+      };
+      
+      const res = await window.api.updateOrder(payload);
+      window.app?.showLoading(false);
+      
+      if (res && res.success) {
+        const savedId = this.editingOrderId;
+        window.posScanner?.playSuccessBeep();
+        window.app?.showToast(`✅ تم حفظ وتحديث الأوردر #${savedId} بنجاح!`, 'success');
+        
+        // Reset editing state
+        this.editingOrderId = null;
+        this.editingOrderData = null;
+        this.clearCart();
+        this.render();
+        
+        // Refresh orders and sales invoices
+        window.ordersController?.loadSalesInvoices();
+        window.ordersController?.loadOrders();
+        window.deliverySettlementController?.loadDrivers();
+        window.deliverySettlementController?.loadUnassignedOrders();
+      } else {
+        window.app?.showToast(res?.error || 'فشل حفظ التعديلات على السيرفر', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      console.error('Error saving order edits:', err);
+      window.app?.showToast('خطأ أثناء حفظ التعديلات', 'error');
+    }
+  }
+
 }
 
 window.cart = new POSCart();

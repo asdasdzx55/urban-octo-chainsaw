@@ -189,6 +189,29 @@ if (!function_exists('ensure_supplier_receipts_schema')) {
     }
 }
 
+if (!function_exists('ensure_orders_schema')) {
+    function ensure_orders_schema($pdo) {
+        static $done = false;
+        if ($done) return;
+        try {
+            $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $cols = $pdo->query("PRAGMA table_info(orders)")->fetchAll(PDO::FETCH_ASSOC);
+                $col_names = array_column($cols, 'name');
+                if (!in_array('settled_at', $col_names)) {
+                    $pdo->exec("ALTER TABLE orders ADD COLUMN settled_at TEXT DEFAULT NULL");
+                }
+            } else {
+                $chk = $pdo->query("SHOW COLUMNS FROM orders LIKE 'settled_at'")->fetch();
+                if (!$chk) {
+                    $pdo->exec("ALTER TABLE orders ADD COLUMN settled_at DATETIME DEFAULT NULL AFTER payment_status");
+                }
+            }
+            $done = true;
+        } catch (Exception $e) {}
+    }
+}
+
 if (!function_exists('ensure_customers_schema')) {
     function ensure_customers_schema($pdo) {
         static $done = false;
@@ -1018,6 +1041,7 @@ try {
                     status = 'تم التسليم',
                     payment_status = 'مدفوع',
                     payment_method = 'كاش',
+                    settled_at = CURRENT_TIMESTAMP,
                     synced = 0
                     WHERE id = ?");
                 $upd->execute([$order_id]);
@@ -1373,6 +1397,123 @@ try {
                 'items' => $items
             ], JSON_UNESCAPED_UNICODE);
             break;
+
+        // ============================================================
+        // 2.17 تعديل وتحديث أصناف وبيانات طلب / فاتورة مبيعات (Update Order)
+        // ============================================================
+        case 'update_order':
+            if (empty($json_payload)) {
+                $raw = file_get_contents('php://input');
+                if (!empty($raw)) $json_payload = json_decode($raw, true) ?: [];
+            }
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $order_id = (int)($data['order_id'] ?? 0);
+            if ($order_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم الطلب غير صحيح']);
+                break;
+            }
+
+            // Check orders table
+            $chk = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+            $chk->execute([$order_id]);
+            $current_order = $chk->fetch(PDO::FETCH_ASSOC);
+
+            // If not found in orders, check temp_invoices
+            if (!$current_order) {
+                $t_chk = $pdo->prepare("SELECT * FROM temp_invoices WHERE sales_code = ? OR id = ? LIMIT 1");
+                $t_chk->execute([$order_id, $order_id]);
+                $t_ord = $t_chk->fetch(PDO::FETCH_ASSOC);
+                if ($t_ord) {
+                    $items = $data['items'] ?? [];
+                    $items_json = is_string($data['items_json'] ?? null) ? $data['items_json'] : json_encode($items, JSON_UNESCAPED_UNICODE);
+                    $total = (float)($data['total_price'] ?? $data['total'] ?? 0);
+                    $disc = (float)($data['discount_amount'] ?? $data['discount'] ?? 0);
+                    $c_name = trim($data['customer_name'] ?? $t_ord['client_name'] ?? '');
+                    $c_phone = trim($data['customer_phone'] ?? $t_ord['client_phone'] ?? '');
+
+                    $upd_t = $pdo->prepare("UPDATE temp_invoices SET 
+                        total_value = ?,
+                        discount_value = ?,
+                        items_json = ?,
+                        client_name = ?,
+                        client_phone = ?
+                        WHERE id = ?");
+                    $upd_t->execute([$total, $disc, $items_json, $c_name, $c_phone, $t_ord['id']]);
+
+                    echo json_encode([
+                        'success' => true,
+                        'message' => "تم تحديث الفاتورة المؤقتة #{$t_ord['sales_code']} بنجاح ✓",
+                        'order_id' => $t_ord['sales_code']
+                    ], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
+                echo json_encode(['success' => false, 'error' => 'الطلب المطلوب تعديله غير موجود']);
+                break;
+            }
+
+            $items = $data['items'] ?? [];
+            if (empty($items) && !empty($data['items_json']) && is_string($data['items_json'])) {
+                $items = json_decode($data['items_json'], true) ?: [];
+            }
+            $items_json = is_string($data['items_json'] ?? null) ? $data['items_json'] : json_encode($items, JSON_UNESCAPED_UNICODE);
+
+            $total = (float)($data['total_price'] ?? $data['total'] ?? $current_order['total_price']);
+            $disc = (float)($data['discount_amount'] ?? $data['discount'] ?? $current_order['discount_amount']);
+            $deliv_fee = (float)($data['delivery_fee'] ?? $current_order['delivery_fee']);
+            $deliv_person = trim($data['delivery_person'] ?? $current_order['delivery_person']);
+            $c_name = trim($data['customer_name'] ?? $current_order['customer_name']);
+            $c_phone = trim($data['customer_phone'] ?? $current_order['customer_phone']);
+            $c_addr = trim($data['customer_address'] ?? $current_order['customer_address']);
+            $o_type = trim($data['order_type'] ?? $current_order['order_type']);
+
+            // Format human-readable order details
+            $lines = [];
+            if (is_array($items)) {
+                foreach ($items as $it) {
+                    $n = $it['name'] ?? $it['product_name'] ?? 'صنف';
+                    $q = $it['qty'] ?? $it['quantity'] ?? 1;
+                    $p = $it['price'] ?? $it['unit_price'] ?? 0;
+                    $lines[] = "{$n} × {$q} ({$p} ج.م)";
+                }
+            }
+            $details = !empty($lines) ? implode("\n", $lines) : ($current_order['order_details'] ?? '');
+
+            $upd = $pdo->prepare("UPDATE orders SET 
+                customer_name = ?,
+                customer_phone = ?,
+                customer_address = ?,
+                items_json = ?,
+                order_details = ?,
+                total_price = ?,
+                discount_amount = ?,
+                delivery_fee = ?,
+                shipping_cost = ?,
+                delivery_person = ?,
+                order_type = ?,
+                synced = 0
+                WHERE id = ?");
+            $upd->execute([
+                $c_name, $c_phone, $c_addr,
+                $items_json, $details,
+                $total, $disc, $deliv_fee, $deliv_fee,
+                $deliv_person, $o_type,
+                $order_id
+            ]);
+
+            // Sync with temp_invoices if this order has a corresponding temp invoice
+            try {
+                $pdo->prepare("UPDATE temp_invoices SET total_value = ?, discount_value = ?, items_json = ?, client_name = ?, client_phone = ? WHERE sales_code = ? OR notes LIKE ?")
+                    ->execute([$total, $disc, $items_json, $c_name, $c_phone, $order_id, "%#{$order_id}%"]);
+            } catch (Exception $e) {}
+
+            echo json_encode([
+                'success' => true,
+                'message' => "تم حفظ وتحديث أصناف وبيانات الطلب #{$order_id} بنجاح ✓",
+                'order_id' => $order_id,
+                'total' => $total
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
 
 // ============================================================
         case 'push_purchase':
@@ -2308,6 +2449,7 @@ try {
                     status = 'تم التسليم',
                     payment_status = 'مدفوع',
                     payment_method = 'كاش',
+                    settled_at = CURRENT_TIMESTAMP,
                     synced = 0
                     WHERE (delivery_person = ? OR delivery_person LIKE ?) 
                       AND synced != 1");
@@ -4177,9 +4319,22 @@ try {
                 break;
             }
 
-            // التأكد من جلب الأوردرات المسندة لهذا الطيار بمرونة (عمر أو عمر طيار)
-            $stmt = $pdo->prepare("SELECT * FROM orders WHERE (delivery_person = ? OR delivery_person LIKE ?) ORDER BY id DESC LIMIT 50");
-            $stmt->execute([$driver_name, "%{$driver_name}%"]);
+            ensure_orders_schema($pdo);
+            $twenty_four_hours_ago = date('Y-m-d H:i:s', time() - 86400);
+
+            // جلب أوردرات هذا الطيار:
+            // 1. الأوردرات النشطة/المعلقة تظل موجودة حتى تسليمها ومحاسبتها
+            // 2. الأوردرات المسلمة/المدفوعة تظل ظاهرة لمدة 24 ساعة فقط من وقت تقفيلها أو إنشائها
+            // بعد 24 ساعة تختفي تلقائياً من عهدة وسجل الدليفري بينما تبقى 100% في سجل الفواتير العام والتقارير
+            $stmt = $pdo->prepare("SELECT * FROM orders 
+                WHERE (delivery_person = ? OR delivery_person LIKE ?)
+                  AND (
+                    (status NOT IN ('تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed') AND payment_status != 'مدفوع')
+                    OR
+                    (COALESCE(settled_at, created_at) >= ?)
+                  )
+                ORDER BY id DESC LIMIT 100");
+            $stmt->execute([$driver_name, "%{$driver_name}%", $twenty_four_hours_ago]);
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // تصنيف وإحصاء أوردرات هذا الطيار بدقة
@@ -4213,11 +4368,9 @@ try {
                 elseif (in_array($status, ['بانتظار الطيار', 'بانتظار الاستلام', 'قيد التجهيز', 'جديد', 'مؤقتة', 'معلق', 'pending'])) {
                     $pending[] = $ord;
                 }
-                // أوردرات تم تسليمها
-                elseif (in_array($status, ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'])) {
-                    if ($created_date === $today) {
-                        $delivered_today[] = $ord;
-                    }
+                // أوردرات تم تسليمها (تظل ظاهرة لمدة 24 ساعة في عهدة وسجل الطيار)
+                elseif (in_array($status, ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed']) || ($ord['payment_status'] ?? '') === 'مدفوع') {
+                    $delivered_today[] = $ord;
                     if ($ord['is_cash']) {
                         $total_cash_in_hand += $ord['total_price'];
                     }
@@ -4305,8 +4458,9 @@ try {
                 break;
             }
 
-            // تحديث حالة الأوردر
-            $upd = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
+            // تحديث حالة الأوردر (وتسجيل وقت التسوية إذا تم التسليم)
+            $settle_sql = ($new_status === 'تم التسليم') ? ", settled_at = CURRENT_TIMESTAMP, payment_status = 'مدفوع'" : "";
+            $upd = $pdo->prepare("UPDATE orders SET status = ? {$settle_sql} WHERE id = ?");
             $upd->execute([$new_status, $order_id]);
 
             // إذا تم التسليم وكان كاش، نضيف المبلغ لعهدة الطيار

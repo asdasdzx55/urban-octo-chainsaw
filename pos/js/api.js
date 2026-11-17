@@ -188,6 +188,13 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 8.5 Update an existing order (items, totals, customer, delivery)
+   */
+  async updateOrder(payload) {
+    return await this.post('update_order', payload);
+  }
+
+  /**
    * 9. Get POS Shift / Financial Reports
    */
   async getPosReports(params = 'today') {

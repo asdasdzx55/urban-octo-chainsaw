@@ -587,6 +587,10 @@ class App {
   }
 
   quickSaveWithPrint() {
+    if (window.cart?.editingOrderId) {
+      window.cart.saveOrderEdits();
+      return;
+    }
     if (!window.cart || window.cart.items.length === 0) {
       this.showToast('سلة المشتريات فارغة!', 'warning');
       return;
@@ -604,6 +608,10 @@ class App {
   }
 
   quickSaveWithoutPrint() {
+    if (window.cart?.editingOrderId) {
+      window.cart.saveOrderEdits();
+      return;
+    }
     if (!window.cart || window.cart.items.length === 0) {
       this.showToast('سلة المشتريات فارغة!', 'warning');
       return;
@@ -949,6 +957,10 @@ class App {
 
   /* ==================== CHECKOUT & DELIVERY MODAL LOGIC ==================== */
   async openCheckoutModal() {
+    if (window.cart?.editingOrderId) {
+      window.cart.saveOrderEdits();
+      return;
+    }
     if (window.cart.items.length === 0) {
       this.showToast('سلة المشتريات فارغة!', 'error');
       return;

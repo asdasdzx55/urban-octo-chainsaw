@@ -270,7 +270,7 @@ class WebOrdersController {
         const netProductsVal = isDelivery ? Math.max(0, parseFloat(inv.total || 0) - parseFloat(inv.delivery_fee || 0)) : parseFloat(inv.total || 0);
 
         return `
-          <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition text-xs">
+          <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition text-xs cursor-pointer" onclick="window.openOrderDetails('${inv.order_id || inv.id}')">
             <td class="py-3 px-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">
               #${inv.order_id || inv.id}
             </td>
@@ -293,18 +293,26 @@ class WebOrdersController {
               ${inv.cashier || 'كاشير المحل'}
             </td>
             <td class="py-3 px-3 text-center">
-              <div class="flex items-center justify-center gap-1.5 flex-wrap">
+              <div class="flex items-center justify-center gap-1 flex-wrap">
                 ${isPendingDelivery ? `
-                  <button type="button" onclick="window.ordersController.settleDeliveryOrder('${inv.id}', ${inv.total || 0}, ${inv.delivery_fee || 0})" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1 shadow-xs transition cursor-pointer" title="محاسبة الدليفري ونقل الفاتورة نقداً لكاشير دريم سوفت بدون رسوم التوصيل">
+                  <button type="button" onclick="event.stopPropagation(); window.ordersController.settleDeliveryOrder('${inv.id}', ${inv.total || 0}, ${inv.delivery_fee || 0})" class="px-2 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1 shadow-xs transition cursor-pointer" title="محاسبة الدليفري ونقل الفاتورة نقداً لكاشير دريم سوفت بدون رسوم التوصيل">
                     <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
-                    <span>💰 محاسبة ونقل للكاشير</span>
+                    <span>محاسبة</span>
                   </button>
                 ` : ''}
-                <button type="button" onclick="window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="عرض وطباعة الفاتورة الحرارية">
-                  <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                  <span>عرض وطباعة</span>
+                <button type="button" onclick="event.stopPropagation(); window.cart?.loadOrderForEditing('${inv.order_id || inv.id}')" class="px-2 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold text-xs flex items-center gap-1 border border-amber-200 dark:border-amber-900/60 transition cursor-pointer" title="تعديل أصناف وبيانات الفاتورة بالسلة">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                  <span>تعديل</span>
                 </button>
-                <button type="button" onclick="window.ordersController.refundInvoiceDirect('${inv.order_id || inv.id}')" class="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center gap-1 border border-rose-200 dark:border-rose-900/60 transition cursor-pointer" title="استرجاع أصناف الفاتورة">
+                <button type="button" onclick="event.stopPropagation(); window.openOrderDetails('${inv.order_id || inv.id}')" class="px-2 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center gap-1 border border-gray-200 dark:border-gray-700 transition cursor-pointer" title="عرض تفاصيل الأوردر">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                  <span>تفاصيل</span>
+                </button>
+                <button type="button" onclick="event.stopPropagation(); window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="px-2 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="عرض وطباعة الفاتورة الحرارية">
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                  <span>طباعة</span>
+                </button>
+                <button type="button" onclick="event.stopPropagation(); window.ordersController.refundInvoiceDirect('${inv.order_id || inv.id}')" class="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center gap-1 border border-rose-200 dark:border-rose-900/60 transition cursor-pointer" title="استرجاع أصناف الفاتورة">
                   <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                   <span>مرتجع</span>
                 </button>
@@ -335,7 +343,7 @@ class WebOrdersController {
         }
 
         return `
-          <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col gap-2.5 cursor-pointer hover:border-indigo-300 transition" onclick="window.openOrderDetails('${inv.order_id || inv.id}')">
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
@@ -356,20 +364,24 @@ class WebOrdersController {
             </div>
 
             <!-- Action Buttons for Phone -->
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+            <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-700/60">
               ${isPendingDelivery ? `
-                <button type="button" onclick="window.ordersController.settleDeliveryOrder('${inv.id}', ${inv.total || 0}, ${inv.delivery_fee || 0})" class="col-span-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
+                <button type="button" onclick="event.stopPropagation(); window.ordersController.settleDeliveryOrder('${inv.id}', ${inv.total || 0}, ${inv.delivery_fee || 0})" class="col-span-3 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
                   <i data-lucide="hand-coins" class="w-4 h-4"></i>
-                  <span>💰 محاسبة الدليفري وتوريد للكاشير الأساسي</span>
+                  <span>💰 محاسبة الدليفري وتوريد للكاشير</span>
                 </button>
               ` : ''}
-              <button type="button" onclick="window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition shadow-2xs">
-                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                <span>عرض وطباعة</span>
+              <button type="button" onclick="event.stopPropagation(); window.cart?.loadOrderForEditing('${inv.order_id || inv.id}')" class="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1 border border-amber-200 dark:border-amber-900/60 transition">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                <span>تعديل</span>
               </button>
-              <button type="button" onclick="window.ordersController.refundInvoiceDirect('${inv.order_id || inv.id}')" class="py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-200 dark:border-rose-900/60 transition shadow-2xs">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                <span>استرجاع / مرتجع</span>
+              <button type="button" onclick="event.stopPropagation(); window.openOrderDetails('${inv.order_id || inv.id}')" class="py-2 px-2 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center justify-center gap-1 border border-gray-200 dark:border-gray-700 transition">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>تفاصيل</span>
+              </button>
+              <button type="button" onclick="event.stopPropagation(); window.ordersController.viewInvoiceReceipt('${inv.order_id || inv.id}')" class="py-2 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-xs flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800 transition">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>طباعة</span>
               </button>
             </div>
           </div>
@@ -790,6 +802,233 @@ class WebOrdersController {
     }
   }
 
+
+  // ==================== ORDER FULL DETAILS MODAL ====================
+  async openOrderDetails(orderId) {
+    if (!orderId) return;
+    const cleanId = String(orderId).replace(/[^0-9]/g, '');
+    
+    window.app?.showLoading(true, 'جاري جلب تفاصيل الأوردر...');
+    try {
+      const res = await window.api.getOrderDetails(orderId);
+      window.app?.showLoading(false);
+      
+      if (!res || !res.success || !res.order) {
+        window.app?.showToast(res?.error || 'لم يتم العثور على تفاصيل الأوردر', 'warning');
+        return;
+      }
+      
+      const ord = res.order;
+      this.currentDetailsOrder = ord;
+      
+      // 1. Title & Meta
+      const titleEl = document.getElementById('odm-order-title');
+      if (titleEl) titleEl.textContent = `الأوردر #${ord.id || ord.order_id || cleanId}`;
+      
+      const metaEl = document.getElementById('odm-meta-text');
+      if (metaEl) {
+        metaEl.textContent = `📅 ${ord.created_at || '-'} • 👤 بواسطة: ${ord.cashier || 'كاشير المحل'}`;
+      }
+      
+      // 2. Badges
+      const typeBadge = document.getElementById('odm-type-badge');
+      if (typeBadge) {
+        const isDelivery = ord.order_type === 'delivery' || parseFloat(ord.delivery_fee || 0) > 0 || !!ord.delivery_person;
+        typeBadge.textContent = isDelivery ? '🛵 دليفري وتوصيل' : (ord.source === 'web' ? '🌐 متجر أونلاين' : '🏬 صالة واستلام');
+        typeBadge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isDelivery ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200'}`;
+      }
+      
+      const statusBadge = document.getElementById('odm-status-badge');
+      if (statusBadge) {
+        const st = ord.status || 'جديد';
+        const isSettled = ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'].includes(st);
+        statusBadge.textContent = isSettled ? '✅ تم التسليم والتقفيل' : st;
+        statusBadge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isSettled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'}`;
+      }
+      
+      const payBadge = document.getElementById('odm-payment-badge');
+      if (payBadge) {
+        const pm = ord.payment_method || 'كاش';
+        const isPaid = ord.payment_status === 'مدفوع' || ['تم التسليم', 'مكتمل', 'completed', 'تم التقفيل'].includes(ord.status);
+        payBadge.textContent = isPaid ? `💵 مدفوع (${pm})` : `⚠️ غير مدفوع (${pm})`;
+        payBadge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isPaid ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200' : 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200'}`;
+      }
+      
+      // 3. Customer Box
+      const custName = document.getElementById('odm-customer-name');
+      if (custName) custName.textContent = ord.customer_name || 'عميل نقدي';
+      
+      const custPhone = document.getElementById('odm-customer-phone');
+      const btnCall = document.getElementById('odm-btn-call');
+      const btnWa = document.getElementById('odm-btn-whatsapp');
+      const rawPhone = (ord.customer_phone || '').trim();
+      const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+      
+      if (custPhone) custPhone.textContent = rawPhone || 'بدون رقم هاتف';
+      if (btnCall) {
+        if (cleanPhone) {
+          btnCall.href = `tel:${cleanPhone}`;
+          btnCall.classList.remove('hidden');
+        } else {
+          btnCall.classList.add('hidden');
+        }
+      }
+      if (btnWa) {
+        if (cleanPhone) {
+          const waNum = cleanPhone.startsWith('0') ? '2' + cleanPhone : cleanPhone;
+          btnWa.href = `https://wa.me/${waNum}`;
+          btnWa.classList.remove('hidden');
+        } else {
+          btnWa.classList.add('hidden');
+        }
+      }
+      
+      const custAddr = document.getElementById('odm-customer-address');
+      if (custAddr) custAddr.textContent = ord.customer_address || ord.address || 'استلام مباشر من المحل';
+      
+      const notesBox = document.getElementById('odm-notes-box');
+      const notesText = document.getElementById('odm-notes-text');
+      const noteContent = ord.details || ord.notes || ord.order_details || '';
+      if (notesBox && notesText) {
+        if (noteContent && noteContent.trim()) {
+          notesText.textContent = noteContent.trim();
+          notesBox.classList.remove('hidden');
+        } else {
+          notesBox.classList.add('hidden');
+        }
+      }
+      
+      // 4. Delivery Box
+      const drvName = document.getElementById('odm-driver-name');
+      if (drvName) drvName.textContent = ord.delivery_person || 'غير محدد';
+      
+      const delivFee = parseFloat(ord.delivery_fee || 0);
+      const feeEl = document.getElementById('odm-delivery-fee');
+      if (feeEl) feeEl.textContent = `${delivFee.toFixed(2)} ج.م`;
+      
+      const delivStatusEl = document.getElementById('odm-delivery-status');
+      if (delivStatusEl) delivStatusEl.textContent = ord.status || 'قيد الانتظار';
+      
+      const payMethodEl = document.getElementById('odm-payment-method');
+      if (payMethodEl) payMethodEl.textContent = ord.payment_method || 'كاش';
+      
+      // 5. Items List Table
+      const items = Array.isArray(ord.items) ? ord.items : [];
+      const tbody = document.getElementById('odm-items-tbody');
+      const itemsCountEl = document.getElementById('odm-items-count');
+      const barcodeEl = document.getElementById('odm-barcode-label');
+      
+      if (itemsCountEl) itemsCountEl.textContent = items.length;
+      if (barcodeEl) barcodeEl.textContent = ord.invoice_barcode ? `باركود: ${ord.invoice_barcode}` : '';
+      
+      if (tbody) {
+        if (items.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-400">لا توجد أصناف مفصلة مسجلة</td></tr>`;
+        } else {
+          tbody.innerHTML = items.map((it, idx) => {
+            const p = parseFloat(it.price || it.unit_price || 0);
+            const q = parseFloat(it.qty || it.quantity || 1);
+            const lineTotal = (p * q).toFixed(2);
+            const isScale = it.is_scale || false;
+            const qStr = isScale ? `${q.toFixed(3)} كجم` : `${q}`;
+            return `
+              <tr class="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50/70 dark:hover:bg-gray-700/30">
+                <td class="py-2.5 px-3 font-mono text-gray-400">${idx + 1}</td>
+                <td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">
+                  <div>${it.name || it.product_name || 'صنف'}</div>
+                  ${it.barcode ? `<div class="text-[10px] text-gray-400 font-mono">${it.barcode}</div>` : ''}
+                </td>
+                <td class="py-2.5 px-3 font-mono text-gray-700 dark:text-gray-300">${p.toFixed(2)} ج.م</td>
+                <td class="py-2.5 px-3 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400">${qStr}</td>
+                <td class="py-2.5 px-3 text-left font-mono font-black text-gray-900 dark:text-white">${lineTotal} ج.م</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+      
+      // 6. Financial Summary
+      const subtotal = parseFloat(ord.subtotal || 0);
+      const discount = parseFloat(ord.discount || ord.discount_amount || 0);
+      const total = parseFloat(ord.total || ord.total_price || 0);
+      
+      const subEl = document.getElementById('odm-subtotal');
+      if (subEl) subEl.textContent = `${subtotal.toFixed(2)} ج.م`;
+      
+      const discEl = document.getElementById('odm-discount');
+      const discRow = document.getElementById('odm-discount-row');
+      if (discEl && discRow) {
+        if (discount > 0) {
+          discEl.textContent = `-${discount.toFixed(2)} ج.م`;
+          discRow.classList.remove('hidden');
+        } else {
+          discRow.classList.add('hidden');
+        }
+      }
+      
+      const delivRow = document.getElementById('odm-delivery-row');
+      const delivVal = document.getElementById('odm-deliv-val');
+      if (delivRow && delivVal) {
+        if (delivFee > 0) {
+          delivVal.textContent = `+${delivFee.toFixed(2)} ج.م`;
+          delivRow.classList.remove('hidden');
+        } else {
+          delivRow.classList.add('hidden');
+        }
+      }
+      
+      const grandTotalEl = document.getElementById('odm-grand-total');
+      if (grandTotalEl) grandTotalEl.textContent = `${total.toFixed(2)} ج.م`;
+      
+      // 7. Buttons Visibility
+      const isSettled = ['تم التسليم', 'مكتمل', 'مكتملة', 'تم التقفيل', 'completed'].includes(ord.status);
+      const isDelivery = ord.order_type === 'delivery' || delivFee > 0;
+      const btnSettle = document.getElementById('odm-btn-settle');
+      if (btnSettle) {
+        if (isDelivery && !isSettled) {
+          btnSettle.classList.remove('hidden');
+        } else {
+          btnSettle.classList.add('hidden');
+        }
+      }
+      
+      // Show Modal
+      document.getElementById('order-details-modal')?.classList.remove('hidden');
+      if (window.lucide) window.lucide.createIcons();
+      
+    } catch (err) {
+      window.app?.showLoading(false);
+      console.error('Error opening order details:', err);
+      window.app?.showToast('خطأ أثناء جلب تفاصيل الأوردر', 'error');
+    }
+  }
+
+  closeOrderDetailsModal() {
+    document.getElementById('order-details-modal')?.classList.add('hidden');
+    this.currentDetailsOrder = null;
+  }
+
+  editOrderInCart() {
+    if (!this.currentDetailsOrder) return;
+    const orderId = this.currentDetailsOrder.id || this.currentDetailsOrder.order_id;
+    this.closeOrderDetailsModal();
+    window.cart?.loadOrderForEditing(orderId);
+  }
+
+  settleCurrentDetailsOrder() {
+    if (!this.currentDetailsOrder) return;
+    const ord = this.currentDetailsOrder;
+    this.closeOrderDetailsModal();
+    this.settleDeliveryOrder(ord.id || ord.order_id, ord.total || ord.total_price || 0, ord.delivery_fee || 0);
+  }
+
+  printCurrentDetailsReceipt() {
+    if (!this.currentDetailsOrder) return;
+    window.cart?.printInvoice(this.currentDetailsOrder);
+  }
+
 }
 
 window.ordersController = new WebOrdersController();
+window.openOrderDetails = (id) => window.ordersController?.openOrderDetails(id);
+window.closeOrderDetails = () => window.ordersController?.closeOrderDetailsModal();

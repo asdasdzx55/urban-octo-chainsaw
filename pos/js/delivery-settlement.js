@@ -776,6 +776,15 @@ class DeliverySettlementController {
     // Mini Stats summary
 
     const statsHtml = `
+      <div class="p-2 mb-2 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center justify-between gap-1">
+        <span class="flex items-center gap-1 font-bold">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-500"></i>
+          <span>سجل أوردرات الطيار (النشطة + المقفلة خلال 24 ساعة):</span>
+        </span>
+        <button type="button" onclick="window.deliverySettlementController.closeSettleModal(); window.app?.switchView('sales');" class="text-[10px] text-indigo-600 dark:text-indigo-400 underline font-bold cursor-pointer hover:text-indigo-800">
+          فتح سجل الفواتير العام ↗
+        </button>
+      </div>
       <div class="grid grid-cols-4 gap-2 mb-3">
         <div class="p-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 text-center">
           <span class="text-[10px] text-gray-500">تم تسليمها</span>
@@ -806,15 +815,15 @@ class DeliverySettlementController {
 
       return `
 
-        <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2 text-xs">
+        <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2 text-xs hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-2xs transition cursor-pointer" onclick="window.openOrderDetails('${ord.id}')">
 
-          <div>
+          <div class="min-w-0 flex-1">
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
 
               <span class="font-mono font-bold text-gray-900 dark:text-white">#${ord.id}</span>
 
-              <span class="font-semibold text-gray-700 dark:text-gray-300">${ord.customer_name || 'عميل دليفري'}</span>
+              <span class="font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[130px]">${ord.customer_name || 'عميل دليفري'}</span>
 
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${isDelivered ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-amber-100 text-amber-800'}">
 
@@ -826,11 +835,23 @@ class DeliverySettlementController {
 
             <p class="text-[10px] text-gray-400 mt-0.5 truncate max-w-xs">${ord.customer_address || ord.address || '-'}</p>
 
+            <!-- Quick Action Links -->
+            <div class="flex items-center gap-1.5 mt-1.5" onclick="event.stopPropagation()">
+              <button type="button" onclick="event.stopPropagation(); window.openOrderDetails('${ord.id}')" class="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center gap-0.5 transition cursor-pointer">
+                <i data-lucide="eye" class="w-2.5 h-2.5"></i>
+                <span>تفاصيل الأوردر</span>
+              </button>
+              <button type="button" onclick="event.stopPropagation(); window.deliverySettlementController?.closeSettleModal(); window.cart?.loadOrderForEditing('${ord.id}')" class="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[10px] font-bold flex items-center gap-0.5 transition cursor-pointer">
+                <i data-lucide="edit-3" class="w-2.5 h-2.5"></i>
+                <span>تعديل بالسلة</span>
+              </button>
+            </div>
+
           </div>
 
 
 
-          <div class="text-left flex flex-col items-end">
+          <div class="text-left flex flex-col items-end shrink-0">
 
             <span class="font-mono font-black text-gray-900 dark:text-white">${parseFloat(ord.total_price || 0).toFixed(2)} ج.م</span>
 
@@ -852,7 +873,7 @@ class DeliverySettlementController {
 
               </button>
 
-            ` : `<span class="text-[9.5px] text-emerald-600 font-bold block mt-0.5">✅ تم التوريد للصندوق</span>`}
+            ` : `<span class="text-[9.5px] text-emerald-600 font-bold block mt-0.5">✅ تم التوريد (24 س)</span>`}
 
           </div>
 
@@ -1428,23 +1449,28 @@ class DeliverySettlementController {
           </div>
 
           <!-- Action Buttons -->
-          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <button type="button" onclick="event.stopPropagation(); window.openOrderDetails('${order.id}')" class="py-2 px-2 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center justify-center gap-1 border border-gray-200 dark:border-gray-600 cursor-pointer">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>تفاصيل</span>
+            </button>
+            <button type="button" onclick="event.stopPropagation(); window.cart?.loadOrderForEditing('${order.id}')" class="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center justify-center gap-1 border border-amber-200 dark:border-amber-900/60 cursor-pointer">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              <span>تعديل</span>
+            </button>
             ${isDelivered ? `
-              <button onclick="window.deliverySettlementController.openAssignModal(${order.id})" class="col-span-2 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
-                <i data-lucide="user-check" class="w-4 h-4"></i>
-                <span>🛵 إسناد لطيار لحساب خدمته (${fee.toFixed(0)} ج.م)</span>
+              <button onclick="window.deliverySettlementController.openAssignModal(${order.id})" class="col-span-2 py-2 px-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
+                <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                <span>إسناد لطيار (${fee.toFixed(0)} ج.م)</span>
               </button>
             ` : `
-              <!-- Option 1: Assign to permanent driver -->
-              <button onclick="window.deliverySettlementController.openAssignModal(${order.id})" class="py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-1.5 transition border border-indigo-200 dark:border-indigo-800/60 cursor-pointer">
+              <button onclick="window.deliverySettlementController.openAssignModal(${order.id})" class="py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800/60 cursor-pointer">
                 <i data-lucide="bike" class="w-3.5 h-3.5"></i>
-                <span>إسناد لطيار</span>
+                <span>إسناد طيار</span>
               </button>
-
-              <!-- Option 2: Settle ad-hoc with note -->
-              <button onclick="window.deliverySettlementController.openAdhocSettleModal(${order.id})" class="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
+              <button onclick="window.deliverySettlementController.openAdhocSettleModal(${order.id})" class="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1 transition shadow-xs cursor-pointer">
                 <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i>
-                <span>تقفيل بملاحظة</span>
+                <span>تقفيل</span>
               </button>
             `}
           </div>

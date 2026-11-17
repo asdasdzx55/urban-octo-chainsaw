@@ -1417,25 +1417,61 @@ class POSCart {
     const dsEmptyNotice = document.getElementById('ds-empty-notice');
     const dsTableBadge = document.getElementById('ds-table-badge-count');
     const ledTotal = document.getElementById('ds-led-total');
+    const summarySubtotal = document.getElementById('ds-summary-subtotal');
+    const summaryDiscount = document.getElementById('ds-summary-discount');
+    const summaryAfterDiscount = document.getElementById('ds-summary-after-discount');
     const ledItemsCount = document.getElementById('ds-led-items-count');
     const ledQtyCount = document.getElementById('ds-led-qty-count');
-    const ledDiscount = document.getElementById('ds-led-discount');
-    const dsInvoiceLabel = document.getElementById('ds-active-invoice-label');
+    const dsInvoiceNum = document.getElementById('ds-invoice-num');
     const dsCustomerName = document.getElementById('ds-customer-name');
+    const dsDeliveryFeeDisplay = document.getElementById('ds-delivery-fee-display');
+    const dsStatusIndicator = document.getElementById('ds-status-indicator-text');
+    const dsOrderTypeSelect = document.getElementById('ds-order-type-select');
+    const dsInvoiceLabel = document.getElementById('ds-active-invoice-label');
     const dsOrderType = document.getElementById('ds-order-type-badge');
     const dsEditingBanner = document.getElementById('ds-editing-banner');
     const dsEditingTitle = document.getElementById('ds-editing-title');
 
-    // Update DreamSoft LED Displays
-    if (ledTotal) ledTotal.textContent = total.toFixed(2);
+    // Update DreamSoft Totals with 3 decimals (0.000) matching DreamSoft exact screenshot
+    if (ledTotal) ledTotal.textContent = total.toFixed(3);
+    if (summarySubtotal) summarySubtotal.value = this.getSubtotal().toFixed(3);
+    if (summaryDiscount) summaryDiscount.value = this.discountAmount.toFixed(3);
+    if (summaryAfterDiscount) summaryAfterDiscount.value = total.toFixed(3);
+
     if (ledItemsCount) ledItemsCount.textContent = this.items.length;
     if (ledQtyCount) {
       const totalPieces = this.items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0);
       ledQtyCount.textContent = Number.isInteger(totalPieces) ? totalPieces : totalPieces.toFixed(2);
     }
-    if (ledDiscount) ledDiscount.textContent = this.discountAmount.toFixed(2);
     if (dsTableBadge) dsTableBadge.textContent = `${this.items.length} أصناف`;
     this.updateDsChange();
+
+    if (dsDeliveryFeeDisplay) {
+      dsDeliveryFeeDisplay.value = this.orderType === 'delivery' ? parseFloat(this.deliveryFee || 0).toFixed(2) : '0.00';
+    }
+
+    if (dsStatusIndicator) {
+      dsStatusIndicator.textContent = this.orderType === 'delivery' ? 'فاتورة مبيعات : دليفرى' : 'فاتورة مبيعات : نقدى';
+    }
+
+    if (dsOrderTypeSelect) {
+      dsOrderTypeSelect.value = this.orderType === 'delivery' ? 'delivery' : 'hall';
+    }
+
+    if (dsCustomerName) {
+      if ('value' in dsCustomerName) dsCustomerName.value = this.customerName || 'عميل نقدي';
+      dsCustomerName.textContent = this.customerName || 'عميل نقدي';
+    }
+
+    if (dsInvoiceNum) {
+      if (this.editingOrderId) {
+        dsInvoiceNum.value = this.editingOrderId;
+      } else {
+        const completed = this.getCompletedOrders();
+        const lastId = completed.length > 0 ? (parseInt(completed[0].order_id || completed[0].id) || 13430) : 13430;
+        dsInvoiceNum.value = lastId + 1;
+      }
+    }
 
     // Update DreamSoft Header Details
     if (this.editingOrderId) {
@@ -1452,10 +1488,6 @@ class POSCart {
     } else {
       if (dsInvoiceLabel) dsInvoiceLabel.textContent = `فاتورة بيع جديدة`;
       if (dsEditingBanner) dsEditingBanner.classList.add('hidden');
-    }
-
-    if (dsCustomerName) {
-      dsCustomerName.textContent = this.customerName || 'عميل نقدي';
     }
 
     if (dsOrderType) {
@@ -1506,7 +1538,7 @@ class POSCart {
       `;
     }).join('');
 
-    // DreamSoft Table Rows HTML
+    // DreamSoft Table Rows HTML (Ordered and styled to match DreamSoft peach table exactly)
     const tableRowsHTML = this.items.map((item, idx) => {
       const isWeight = item.unit_type === 'weight' || item.unit === 'كجم';
       const step = isWeight ? 0.25 : 1;
@@ -1514,38 +1546,38 @@ class POSCart {
       const nextQty = isWeight ? parseFloat((item.qty + step).toFixed(3)) : item.qty + 1;
       const gramsVal = Math.round(item.qty * 1000);
       const qtyLabel = isWeight ? (item.qty < 1 ? `${gramsVal} جم` : `${parseFloat(item.qty).toFixed(3)} كجم`) : item.qty;
-      const lineTotal = (item.price * item.qty).toFixed(2);
+      const lineTotal = (item.price * item.qty).toFixed(3);
       const itemCode = item.local_code || item.barcode || item.product_id;
 
       return `
-        <tr class="hover:bg-indigo-50/50 dark:hover:bg-slate-700/50 transition">
-          <td class="text-center font-bold font-mono text-slate-500 py-2 px-1 text-[11px]">${idx + 1}</td>
-          <td class="font-mono font-bold text-slate-600 dark:text-slate-300 py-2 px-2 text-[11px] truncate max-w-[95px]" title="${itemCode}">${itemCode}</td>
-          <td class="py-2 px-2">
-            <div class="font-bold text-slate-900 dark:text-white leading-tight truncate max-w-xs text-xs" title="${item.name}">${item.name}</div>
-            ${isWeight ? `<span class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[9px] font-bold">⚖️ وزن: ${gramsVal} جم</span>` : ''}
-            ${item.is_pack ? `<span class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold">📦 كرتونة</span>` : ''}
+        <tr class="hover:bg-blue-100/60 transition bg-white">
+          <td class="text-center font-bold font-mono text-slate-700 py-1 px-1 text-[11px]">${idx + 1}</td>
+          <td class="font-mono font-bold text-slate-800 py-1 px-2 text-[11px] truncate max-w-[95px]" title="${itemCode}">${itemCode}</td>
+          <td class="py-1 px-2">
+            <div class="font-bold text-blue-950 leading-tight truncate max-w-xs text-xs" title="${item.name}">${item.name}</div>
+            ${isWeight ? `<span class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">⚖️ وزن: ${gramsVal} جم</span>` : ''}
+            ${item.is_pack ? `<span class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold">📦 كرتونة</span>` : ''}
           </td>
-          <td class="text-center font-bold text-slate-600 dark:text-slate-300 py-2 px-1 text-[11px]">${item.unit || (isWeight ? 'كجم' : 'قطعة')}</td>
-          <td class="text-center py-2 px-1">
-            <button type="button" onclick="window.cart?.openEditPriceModal('${item.cart_key || item.product_id}')" class="px-1.5 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-black text-xs border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="تعديل السعر (F3)">
+          <td class="text-center py-1 px-1">
+            <div class="inline-flex items-center gap-1 bg-white p-0.5 rounded border border-slate-300 shadow-2xs">
+              <button type="button" onclick="window.cart?.updateQty('${item.cart_key || item.product_id}', ${prevQty})" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition">-</button>
+              <span onclick="${isWeight ? `window.app?.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 min-w-[34px] text-center font-mono font-bold text-xs text-slate-900 ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? 'اضغط لتعديل الوزن بالجرام' : ''}">
+                ${qtyLabel}
+              </span>
+              <button type="button" onclick="window.cart?.updateQty('${item.cart_key || item.product_id}', ${nextQty})" class="w-5 h-5 rounded bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition">+</button>
+            </div>
+          </td>
+          <td class="text-center font-bold text-slate-700 py-1 px-1 text-[11px]">${item.unit || (isWeight ? 'كجم' : 'قطعة')}</td>
+          <td class="text-center py-1 px-1">
+            <button type="button" onclick="window.cart?.openEditPriceModal('${item.cart_key || item.product_id}')" class="px-1.5 py-0.5 rounded bg-sky-50 hover:bg-sky-100 text-blue-900 font-mono font-black text-xs border border-sky-300 transition cursor-pointer" title="تعديل السعر (F3)">
               <span>${item.price.toFixed(2)}</span>
             </button>
           </td>
-          <td class="text-center py-2 px-1">
-            <div class="inline-flex items-center gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-xl border border-slate-300 dark:border-slate-600 shadow-2xs">
-              <button type="button" onclick="window.cart?.updateQty('${item.cart_key || item.product_id}', ${prevQty})" class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition">-</button>
-              <span onclick="${isWeight ? `window.app?.openWeightModalForItem(${item.product_id})` : ''}" class="px-1 min-w-[34px] text-center font-mono font-bold text-xs text-slate-900 dark:text-white ${isWeight ? 'cursor-pointer hover:text-amber-600 underline' : ''}" title="${isWeight ? 'اضغط لتعديل الوزن بالجرام' : ''}">
-                ${qtyLabel}
-              </span>
-              <button type="button" onclick="window.cart?.updateQty('${item.cart_key || item.product_id}', ${nextQty})" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 transition">+</button>
-            </div>
-          </td>
-          <td class="text-center font-mono text-rose-500 font-bold py-2 px-1 text-[11px]">0.00</td>
-          <td class="text-center font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 py-2 px-1 whitespace-nowrap">${lineTotal} ج.م</td>
-          <td class="text-center py-2 px-1">
-            <button type="button" onclick="window.cart?.removeItem('${item.cart_key || item.product_id}')" class="p-1 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer" title="حذف هذا الصنف">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          <td class="text-center font-mono text-rose-600 font-bold py-1 px-1 text-[11px]">0.000</td>
+          <td class="text-center font-mono font-black text-xs text-blue-950 py-1 px-1 whitespace-nowrap">${lineTotal}</td>
+          <td class="text-center py-1 px-1">
+            <button type="button" onclick="window.cart?.removeItem('${item.cart_key || item.product_id}')" class="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer" title="حذف هذا الصنف">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </td>
         </tr>
@@ -1634,17 +1666,17 @@ class POSCart {
 
     if (paid === 0) {
       changeEl.textContent = '0.00';
-      changeEl.className = 'text-sm font-black font-mono text-cyan-300 dreamsoft-led-glow-cyan';
+      changeEl.className = 'text-sm font-black font-mono text-blue-900';
       return;
     }
 
     const change = paid - total;
     if (change >= 0) {
       changeEl.textContent = change.toFixed(2);
-      changeEl.className = 'text-sm font-black font-mono text-cyan-300 dreamsoft-led-glow-cyan';
+      changeEl.className = 'text-sm font-black font-mono text-emerald-700';
     } else {
       changeEl.textContent = `متبقي: ${Math.abs(change).toFixed(2)}`;
-      changeEl.className = 'text-xs font-black font-mono text-amber-400 dreamsoft-led-glow-amber';
+      changeEl.className = 'text-xs font-black font-mono text-rose-700';
     }
   }
 
@@ -2308,6 +2340,95 @@ class POSCart {
       console.error('Error saving order edits:', err);
       window.app?.showToast('خطأ أثناء حفظ التعديلات', 'error');
     }
+  }
+
+
+  // ==================== DREAMSOFT REPLICA ACTIONS ====================
+  setDsOrderType(val) {
+    this.orderType = (val === 'delivery') ? 'delivery' : 'hall';
+    const statusText = document.getElementById('ds-status-indicator-text');
+    if (statusText) {
+      statusText.textContent = this.orderType === 'delivery' ? 'فاتورة مبيعات : دليفرى' : 'فاتورة مبيعات : نقدى';
+    }
+    const delivFeeDisplay = document.getElementById('ds-delivery-fee-display');
+    if (delivFeeDisplay) {
+      delivFeeDisplay.value = this.orderType === 'delivery' ? parseFloat(this.deliveryFee || 0).toFixed(2) : '0.00';
+    }
+    this.render();
+  }
+
+  removeLastItem() {
+    if (!this.items || this.items.length === 0) {
+      window.app?.showToast('لا توجد أصناف لحذفها من الفاتورة', 'info');
+      return;
+    }
+    const removed = this.items.pop();
+    this.saveToStorage();
+    this.render();
+    window.app?.showToast(`تم حذف الصنف (${removed.name || ''}) من الفاتورة (Del)`, 'info');
+  }
+
+  holdCart() {
+    if (!this.items || this.items.length === 0) {
+      window.app?.showToast('السلة فارغة، لا يوجد ما يتم حفظه مؤقتاً', 'warning');
+      return;
+    }
+    const heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
+    const heldItem = {
+      id: 'held_' + Date.now(),
+      created_at: new Date().toISOString(),
+      customer_name: this.customerName || 'عميل نقدي',
+      customer_phone: this.customerPhone || '',
+      order_type: this.orderType || 'hall',
+      delivery_fee: this.deliveryFee || 0,
+      notes: document.getElementById('ds-invoice-notes')?.value || '',
+      items: JSON.parse(JSON.stringify(this.items))
+    };
+    heldCarts.push(heldItem);
+    localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
+    this.clear();
+    const notesEl = document.getElementById('ds-invoice-notes');
+    if (notesEl) notesEl.value = '';
+    window.app?.showToast('تم حفظ الفاتورة مؤقتاً بنجاح ✨ (اضغط F8 للاستدعاء)', 'success');
+  }
+
+  restoreHeldCart(idxOrId) {
+    let heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
+    let idx = -1;
+    if (typeof idxOrId === 'number') {
+      idx = idxOrId;
+    } else {
+      idx = heldCarts.findIndex(c => c.id === idxOrId);
+    }
+    if (idx === -1 || !heldCarts[idx]) return;
+    if (this.items.length > 0 && !confirm('السلة الحالية بها أصناف، هل تريد استبدالها بأصناف الفاتورة المؤقتة؟')) {
+      return;
+    }
+    const held = heldCarts.splice(idx, 1)[0];
+    localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
+    this.items = held.items || [];
+    this.customerName = held.customer_name || 'عميل نقدي';
+    this.customerPhone = held.customer_phone || '';
+    this.orderType = held.order_type || 'hall';
+    this.deliveryFee = held.delivery_fee || 0;
+    const notesEl = document.getElementById('ds-invoice-notes');
+    if (notesEl && held.notes) notesEl.value = held.notes;
+    this.saveToStorage();
+    this.render();
+    this.closeTempInvoicesModal();
+    window.app?.showToast('تم استدعاء الفاتورة المؤقتة إلى السلة بنجاح 📋', 'success');
+  }
+
+  deleteHeldCart(idxOrId) {
+    let heldCarts = JSON.parse(localStorage.getItem('pos_held_carts') || '[]');
+    if (typeof idxOrId === 'number') {
+      heldCarts.splice(idxOrId, 1);
+    } else {
+      heldCarts = heldCarts.filter(c => c.id !== idxOrId);
+    }
+    localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
+    this.loadTempInvoices();
+    window.app?.showToast('تم حذف الفاتورة المؤقتة', 'info');
   }
 
 }

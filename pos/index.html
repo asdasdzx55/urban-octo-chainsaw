@@ -763,310 +763,296 @@
     </section>
 
     <!-- ==================== VIEW 1.5: DREAMSOFT CASHIER DESKTOP (مظهر دريم سوفت للكمبيوتر فقط) ==================== -->
-    <section id="view-pos-dreamsoft" class="hidden flex-1 flex-col gap-2.5 h-full overflow-hidden min-h-0 pb-0">
+    <section id="view-pos-dreamsoft" class="hidden flex-1 flex-col gap-1.5 h-full overflow-hidden min-h-0 p-2 select-none" style="background-color: #cce4f7;">
       
-      <!-- DreamSoft Top Information & Cashier Strip -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl px-3.5 py-2 border border-gray-200/90 dark:border-gray-700 shadow-xs flex items-center justify-between gap-3 shrink-0">
+      <!-- Window Title Bar & Navigation Ribbon -->
+      <div class="flex items-center justify-between px-2.5 py-1 bg-gradient-to-r from-sky-200 via-blue-200 to-sky-300 border border-sky-400/80 rounded-t-lg shadow-2xs shrink-0">
         
-        <!-- Right Side: Invoice Status, Cashier, Live Clock, Order Type -->
-        <div class="flex items-center gap-2.5 min-w-0">
-          <!-- Invoice Number Badge -->
-          <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 text-white font-mono shadow-2xs shrink-0">
-            <i data-lucide="receipt" class="w-4 h-4 text-emerald-400"></i>
-            <span id="ds-active-invoice-label" class="text-xs font-black tracking-wide">فاتورة بيع جديدة</span>
+        <!-- Right: Window Title & Icon -->
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-blue-700 text-white flex items-center justify-center text-xs shadow-2xs font-bold">🛒</span>
+          <span class="text-xs font-black text-blue-950">المبيعات - دريم سوفت (نقطة البيع الرئيسية)</span>
+        </div>
+
+        <!-- Center: Action Buttons Ribbon (Classic desktop icons) -->
+        <div class="flex items-center gap-1">
+          <!-- F5: حفظ الفاتورة -->
+          <button type="button" onclick="window.app?.quickSaveWithPrint()" class="px-2 py-0.5 rounded bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="حفظ وطباعة الفاتورة (F5)">
+            <i data-lucide="printer" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>حفظ (F5)</span>
+          </button>
+
+          <!-- F2: فاتورة جديدة -->
+          <button type="button" onclick="window.cart?.newSale()" class="px-2 py-0.5 rounded bg-white hover:bg-blue-50 text-blue-800 border border-blue-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="فاتورة جديدة (F2)">
+            <i data-lucide="plus" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span>جديد (F2)</span>
+          </button>
+
+          <!-- F7: حفظ مؤقت -->
+          <button type="button" onclick="window.cart?.holdCart()" class="px-2 py-0.5 rounded bg-white hover:bg-amber-50 text-amber-900 border border-amber-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="حفظ مؤقت (F7)">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>حفظ مؤقت (F7)</span>
+          </button>
+
+          <!-- F8: استدعاء مؤقت -->
+          <button type="button" onclick="window.cart?.showTempInvoicesModal()" class="px-2 py-0.5 rounded bg-white hover:bg-amber-50 text-amber-900 border border-amber-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="استدعاء من حفظ مؤقت (F8)">
+            <i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>استدعاء (F8)</span>
+          </button>
+
+          <!-- Delete: حذف صنف -->
+          <button type="button" onclick="window.cart?.removeLastItem()" class="px-2 py-0.5 rounded bg-white hover:bg-rose-50 text-rose-800 border border-rose-400 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer" title="حذف الصنف الأخير (Delete)">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-600"></i>
+            <span>حذف (Del)</span>
+          </button>
+
+          <!-- Previous / Next invoice -->
+          <button type="button" onclick="window.cart?.navigateInvoice(-1)" class="w-6 h-6 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 flex items-center justify-center cursor-pointer" title="الفاتورة السابقة">
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+          <button type="button" onclick="window.cart?.navigateInvoice(1)" class="w-6 h-6 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 flex items-center justify-center cursor-pointer" title="الفاتورة التالية">
+            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          </button>
+
+          <!-- Switch to Catalog Mode -->
+          <button type="button" onclick="window.app?.togglePosLayoutMode('catalog')" class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-300 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer ms-2" title="التبديل إلى مظهر الكتالوج المصور">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>مظهر الكتالوج</span>
+          </button>
+
+          <!-- F10: Fullscreen -->
+          <button type="button" onclick="window.app?.toggleFullscreen()" class="px-1.5 py-0.5 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-[11px] font-bold cursor-pointer" title="شاشة كاملة (F10)">
+            <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Left: Window Decorative Controls -->
+        <div class="flex items-center gap-1">
+          <span class="w-3 h-3 rounded-full bg-slate-300 border border-slate-400 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-slate-300 border border-slate-400 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-rose-400 border border-rose-500 inline-block"></span>
+        </div>
+
+      </div>
+
+      <!-- Header Information Panel (Form fields matching DreamSoft layout) -->
+      <div class="bg-gradient-to-b from-sky-100 to-sky-200/90 border-x border-b border-sky-400/80 p-2 flex flex-col gap-1.5 shrink-0 shadow-2xs">
+        
+        <!-- Line 1: رقم الفاتورة | تاريخ الفاتورة | نوع الفاتورة -->
+        <div class="grid grid-cols-12 gap-2 items-center">
+          <!-- رقم الفاتورة -->
+          <div class="col-span-4 flex items-center gap-1.5">
+            <label class="ds-win-label w-20">رقم الفاتورة:</label>
+            <input type="text" id="ds-invoice-num" readonly value="13431" class="ds-win-input flex-1 text-center font-mono font-black text-rose-700 bg-white">
           </div>
 
-          <!-- Live Clock -->
-          <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-mono font-bold shrink-0">
-            <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-500"></i>
-            <span id="ds-live-clock">...</span>
+          <!-- تاريخ الفاتورة -->
+          <div class="col-span-5 flex items-center gap-1.5">
+            <label class="ds-win-label w-20">تاريخ الفاتورة:</label>
+            <input type="text" id="ds-live-clock" readonly value="..." class="ds-win-input flex-1 font-mono text-center text-slate-800 bg-white">
           </div>
 
-          <!-- Cashier & User -->
-          <div class="hidden 2xl:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold shrink-0">
-            <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-            <span id="ds-cashier-name">كاشير: سوريان هاوس (كاشير 1)</span>
+          <!-- نوع الفاتورة -->
+          <div class="col-span-3 flex items-center gap-1.5">
+            <label class="ds-win-label w-18">نوع الفاتورة:</label>
+            <select id="ds-order-type-select" onchange="window.cart?.setDsOrderType(this.value)" class="ds-win-input flex-1 text-center font-bold text-blue-900 bg-white">
+              <option value="hall">1 | نقدي</option>
+              <option value="delivery">2 | دليفري</option>
+              <option value="credit">3 | آجل</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Line 2: المخزن | العميل | م التوصيل -->
+        <div class="grid grid-cols-12 gap-2 items-center">
+          <!-- المخزن -->
+          <div class="col-span-4 flex items-center gap-1.5">
+            <label class="ds-win-label w-20">المخزن:</label>
+            <div class="flex-1 flex gap-1">
+              <input type="text" readonly value="1" class="ds-win-input w-8 text-center font-mono bg-white">
+              <input type="text" readonly value="البيت السوري" class="ds-win-input flex-1 font-bold text-slate-800 bg-white">
+            </div>
           </div>
 
-          <!-- Order Type & Customer -->
-          <div class="flex items-center gap-1.5 text-xs font-bold shrink-0">
-            <span id="ds-order-type-badge" class="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-              <span>🛒 بيع صالة (كاش)</span>
+          <!-- العميل -->
+          <div class="col-span-5 flex items-center gap-1.5">
+            <label class="ds-win-label w-20">العميل:</label>
+            <div class="flex-1 flex gap-1 items-center">
+              <input type="text" id="ds-customer-name" readonly value="عميل نقدي" class="ds-win-input flex-1 font-bold text-blue-900 bg-white">
+              <button type="button" onclick="window.app?.openCheckoutModal()" class="px-2 py-1 bg-white hover:bg-sky-50 text-blue-700 border border-sky-400 rounded text-xs font-bold shrink-0 cursor-pointer" title="تغيير العميل أو تفاصيل الدليفري (F6)">
+                <span>👤 اختيار</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- م التوصيل -->
+          <div class="col-span-3 flex items-center gap-1.5">
+            <label class="ds-win-label w-18">م التوصيل:</label>
+            <input type="text" id="ds-delivery-fee-display" readonly value="0.00" class="ds-win-input flex-1 text-center font-mono font-bold text-slate-800 bg-white">
+          </div>
+        </div>
+
+        <!-- Line 3: كود الصنف | الكمية | صافي الحساب | شارة الحالة باللون الأحمر -->
+        <div class="grid grid-cols-12 gap-2 items-center pt-0.5">
+          <!-- كود الصنف (Scanner Input with Cursor) -->
+          <div class="col-span-5 flex items-center gap-1.5">
+            <label class="ds-win-label w-20 text-blue-900 font-black">كود الصنف:</label>
+            <div class="flex-1 flex gap-1">
+              <input type="search" id="ds-barcode-input" name="ds_barcode_direct" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="امسح الباركود أو اكتب الكود واضغط Enter..." class="ds-win-input flex-1 font-mono font-black text-blue-900 text-sm border-2 border-blue-500 focus:bg-yellow-50 focus:border-blue-700 shadow-inner px-2 py-1">
+            </div>
+          </div>
+
+          <!-- مضاعف الكمية -->
+          <div class="col-span-2 flex items-center gap-1">
+            <label class="ds-win-label">الكمية:</label>
+            <input type="number" id="ds-qty-multiplier" value="1" min="1" step="1" class="ds-win-input w-14 text-center font-mono font-black text-blue-900">
+            <span class="text-xs font-black text-slate-500">×</span>
+          </div>
+
+          <!-- شارة حالة الفاتورة الحمراء مثل دريم سوفت -->
+          <div class="col-span-3 flex items-center gap-1.5">
+            <span id="ds-status-indicator-text" class="text-xs font-black text-rose-600 animate-pulse tracking-wide">
+              فاتورة مبيعات : نقدى
             </span>
-            <button type="button" onclick="window.app?.openCheckoutModal()" class="px-2.5 py-1 rounded-xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 flex items-center gap-1 transition cursor-pointer" title="تغيير العميل أو التحويل لدليفري (F6)">
-              <i data-lucide="user" class="w-3.5 h-3.5"></i>
-              <span id="ds-customer-name" class="truncate max-w-[120px]">عميل نقدي</span>
-              <span class="text-[10px] text-sky-500">✍️</span>
+          </div>
+
+          <!-- عدادات الكميات المتاحة -->
+          <div class="col-span-2 flex items-center justify-end gap-1.5 text-[11px] font-bold">
+            <span class="text-slate-600">المتاح:</span>
+            <span class="px-1.5 py-0.5 bg-rose-600 text-white rounded font-mono text-[10px]">عبوة 0</span>
+            <span class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[10px]">جرام 0</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Editing Order Banner (if in edit mode) -->
+      <div id="ds-editing-banner" class="hidden px-3 py-1 bg-amber-500 text-white text-xs font-black flex items-center justify-between rounded shadow-xs shrink-0">
+        <span id="ds-editing-title">جاري تعديل أوردر #...</span>
+        <div class="flex items-center gap-1">
+          <button type="button" onclick="window.cart?.saveOrderEdits()" class="px-2 py-0.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs">حفظ التعديلات</button>
+          <button type="button" onclick="window.cart?.cancelOrderEditing(true)" class="p-0.5 rounded bg-amber-700 hover:bg-amber-800 text-white font-bold">✕</button>
+        </div>
+      </div>
+
+      <!-- Main Central Section: Invoice Data Table (Center/Right) + Totals Box (Left) -->
+      <div class="flex-1 grid grid-cols-12 gap-2 min-h-0 overflow-hidden">
+        
+        <!-- ==================== LEFT: TOTALS PANEL (لوحة الإجماليات على اليسار مثل الصورة) ==================== -->
+        <div class="col-span-3 flex flex-col gap-2 bg-gradient-to-b from-sky-100 to-sky-200/90 border border-sky-400/80 rounded-lg p-2.5 shadow-2xs h-full min-h-0 justify-between">
+          
+          <div class="flex flex-col gap-2">
+            <!-- 1. صافي القيمة (Large Red Digits on White Box - No Neon!) -->
+            <div class="flex flex-col gap-0.5">
+              <label class="text-center font-black text-blue-950 text-sm tracking-wide">صافي القيمة</label>
+              <div class="ds-total-card p-2 flex flex-col items-center justify-center">
+                <span id="ds-led-total" class="ds-total-red">
+                  0.000
+                </span>
+                <span class="text-[10px] font-bold text-slate-500">جنيه مصري</span>
+              </div>
+            </div>
+
+            <!-- 2. المدفوع -->
+            <div class="flex flex-col gap-0.5">
+              <label class="text-center font-black text-blue-950 text-xs">المدفوع</label>
+              <div class="relative">
+                <input type="number" id="ds-cash-paid-input" min="0" step="1" placeholder="0.00" oninput="window.cart?.updateDsChange()" class="ds-win-input w-full text-center font-mono font-black text-base py-1 text-slate-900 border-2 border-slate-400">
+              </div>
+              <!-- Quick Cash Chips -->
+              <div class="grid grid-cols-4 gap-1 mt-1">
+                <button type="button" onclick="window.cart?.setDsExactCash()" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-blue-800 border border-blue-300 text-[10px] font-bold shadow-2xs text-center cursor-pointer">بالضبط</button>
+                <button type="button" onclick="window.cart?.addDsCash(50)" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-slate-800 border border-slate-300 text-[10px] font-mono font-bold shadow-2xs text-center cursor-pointer">+50</button>
+                <button type="button" onclick="window.cart?.addDsCash(100)" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-slate-800 border border-slate-300 text-[10px] font-mono font-bold shadow-2xs text-center cursor-pointer">+100</button>
+                <button type="button" onclick="window.cart?.addDsCash(200)" class="py-0.5 px-1 rounded bg-white hover:bg-blue-50 text-slate-800 border border-slate-300 text-[10px] font-mono font-bold shadow-2xs text-center cursor-pointer">+200</button>
+              </div>
+            </div>
+
+            <!-- 3. المتبقي -->
+            <div class="flex flex-col gap-0.5">
+              <label class="text-center font-black text-blue-950 text-xs">المتبقي</label>
+              <div class="ds-win-input w-full text-center font-mono font-black text-sm py-1 text-blue-900 bg-white border-2 border-slate-400 h-[34px] flex items-center justify-center">
+                <span id="ds-led-change">0.00</span>
+              </div>
+            </div>
+
+            <!-- 4. ملاحظات -->
+            <div class="flex flex-col gap-0.5">
+              <label class="text-xs font-bold text-rose-700">ملاحظات</label>
+              <textarea id="ds-invoice-notes" rows="2" placeholder="أي ملاحظات على الفاتورة..." class="ds-win-input w-full text-xs font-medium resize-none bg-white"></textarea>
+            </div>
+          </div>
+
+          <!-- Fast Action Buttons (حفظ وطباعة F5) -->
+          <div class="flex flex-col gap-1.5 pt-2 border-t border-sky-300">
+            <button type="button" id="ds-btn-save-print" onclick="window.app?.quickSaveWithPrint()" class="w-full py-2 px-3 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md flex items-center justify-between cursor-pointer transition active:scale-98">
+              <span>🖨️ حفظ وطباعة الفاتورة</span>
+              <kbd class="px-1.5 py-0.2 bg-emerald-800 text-white font-mono text-[10px] rounded">F5</kbd>
+            </button>
+            <button type="button" onclick="window.cart?.showTempInvoicesModal()" class="w-full py-1.5 px-3 rounded bg-amber-500 hover:bg-amber-600 text-white font-black text-xs shadow-xs flex items-center justify-between cursor-pointer transition active:scale-98">
+              <span>📋 استدعاء معلق</span>
+              <kbd class="px-1.5 py-0.2 bg-amber-700 text-white font-mono text-[10px] rounded">F8</kbd>
             </button>
           </div>
+
         </div>
 
-        <!-- Left Side: Invoice Navigation & Mode Switcher -->
-        <div class="flex items-center gap-1.5 shrink-0">
-          <!-- 1. Previous Invoice -->
-          <button type="button" onclick="window.cart?.navigateInvoice(-1)" class="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-2xs" title="الفاتورة السابقة (رجوع)">
-            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-          </button>
-
-          <!-- 2. Next Invoice -->
-          <button type="button" onclick="window.cart?.navigateInvoice(1)" class="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-2xs" title="الفاتورة التالية (تقدم)">
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-          </button>
-
-          <!-- 3. Print Last / Current -->
-          <button type="button" onclick="window.cart?.printCurrentOrLast()" class="w-8 h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-2xs" title="طباعة الفاتورة 🖨️">
-            <i data-lucide="printer" class="w-4 h-4"></i>
-          </button>
-
-          <!-- 4. F2 New Sale -->
-          <button type="button" onclick="window.cart?.newSale()" class="px-2.5 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition cursor-pointer shadow-xs active:scale-95 text-xs font-bold" title="فاتورة جديدة (F2)">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>جديدة</span>
-            <kbd class="text-[9px] font-mono px-1 bg-emerald-800 rounded">F2</kbd>
-          </button>
-
-          <!-- 5. F9 Suspended / Temp Invoices -->
-          <button type="button" onclick="window.cart?.showTempInvoicesModal()" class="relative px-2.5 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-2xs text-xs font-bold" title="الفواتير المؤقتة والمعلقة (F9)">
-            <i data-lucide="clock" class="w-4 h-4"></i>
-            <span>معلقة</span>
-            <span id="ds-temp-invoices-badge" class="hidden px-1 rounded-full text-[9px] font-bold bg-amber-500 text-white font-mono">0</span>
-            <kbd class="text-[9px] font-mono px-1 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded">F9</kbd>
-          </button>
-
-          <!-- Separator -->
-          <div class="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-0.5"></div>
-
-          <!-- 6. Toggle to Catalog Touch Mode -->
-          <button type="button" onclick="window.app?.togglePosLayoutMode()" class="px-3 h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer shadow-2xs" title="التبديل لمظهر الكتالوج المصور وشبكة الصور">
-            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
-            <span id="pos-layout-mode-label">🛍️ مظهر الكتالوج</span>
-          </button>
-        </div>
-
-      </div>
-
-      <!-- DreamSoft Barcode & Direct Entry Strip -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 border border-gray-200/90 dark:border-gray-700 shadow-xs flex items-center gap-2.5 shrink-0">
-        
-        <!-- Quantity Multiplier Input -->
-        <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/80 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 shrink-0 shadow-2xs" title="الكمية المراد إضافتها عند مسح الباركود">
-          <label for="ds-qty-multiplier" class="text-xs font-black text-slate-700 dark:text-slate-200">الكمية:</label>
-          <input type="number" id="ds-qty-multiplier" value="1" min="1" step="1" class="w-14 bg-white dark:bg-slate-800 text-center font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 rounded-lg border border-slate-300 dark:border-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 py-0.5">
-          <span class="text-xs font-black text-slate-400">×</span>
-        </div>
-
-        <!-- Barcode / Search Input -->
-        <div class="relative flex-1">
-          <i data-lucide="scan-barcode" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400"></i>
-          <input type="search" id="ds-barcode-input" name="ds_barcode_direct" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="امسح الباركود بالسكنر أو اكتب اسم/كود الصنف واضغط Enter... (يمكنك كتابة 5*كود الصنف)" class="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-600 rounded-xl ps-9 pe-3 py-2 text-xs sm:text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition">
-        </div>
-
-        <!-- Quick Action Buttons -->
-        <div class="flex items-center gap-1.5 shrink-0">
-          <!-- Grams / Scale Weight Modal -->
-          <button type="button" onclick="window.app?.openManualWeightModal()" class="px-2.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1 border border-amber-200 dark:border-amber-800 transition cursor-pointer" title="إدخال وزن بالجرام لأصناف الميزان">
-            <i data-lucide="scale" class="w-3.5 h-3.5"></i>
-            <span>⚖️ بالوزن</span>
-          </button>
-
-          <!-- Detailed Search (F7) -->
-          <button type="button" onclick="window.app?.toggleAdvancedSearch()" class="px-2.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer" title="تصفية تفصيلية وبحث متقدم (F7)">
-            <i data-lucide="search" class="w-3.5 h-3.5"></i>
-            <span>بحث F7</span>
-          </button>
-
-          <!-- Scanner Status Pulse -->
-          <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold shrink-0">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>السكنر جاهز</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- DreamSoft Main Workspace (Dominant Table 8 cols + Side Panel 4 cols) -->
-      <div class="flex-1 grid grid-cols-12 gap-3 min-h-0 overflow-hidden">
-        
-        <!-- ==================== CENTER: DOMINANT INVOICE DATA GRID (8 COLS) ==================== -->
-        <div class="col-span-8 flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700 shadow-xs overflow-hidden min-h-0">
+        <!-- ==================== RIGHT: INVOICE DATA TABLE (جدول الأصناف مثل الصورة) ==================== -->
+        <div class="col-span-9 flex flex-col bg-white border border-sky-400/80 rounded-lg shadow-2xs overflow-hidden h-full min-h-0">
           
-          <!-- Editing Order Banner (DreamSoft view) -->
-          <div id="ds-editing-banner" class="hidden px-4 py-2 bg-amber-500 text-white flex items-center justify-between shrink-0 shadow-xs">
-            <div class="flex items-center gap-2">
-              <i data-lucide="edit-3" class="w-4 h-4 animate-bounce"></i>
-              <span id="ds-editing-title" class="text-xs font-black">جاري تعديل أوردر #...</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button type="button" onclick="window.cart?.saveOrderEdits()" class="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1 shadow-2xs">
-                <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                <span>حفظ التعديلات</span>
-              </button>
-              <button type="button" onclick="window.cart?.cancelOrderEditing(true)" class="p-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white" title="إلغاء التعديل">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Table Header Strip -->
-          <div class="bg-slate-100 dark:bg-slate-700/80 px-3.5 py-2 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between shrink-0">
-            <div class="flex items-center gap-2">
-              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
-              <span class="text-xs font-black text-gray-900 dark:text-white">جدول أصناف الفاتورة الحالية (كاشير دريم سوفت)</span>
-              <span id="ds-table-badge-count" class="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300">0 أصناف</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="window.app?.promptQuickDiscount()" class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer" title="إضافة خصم على الفاتورة (F11)">
-                <span>خصم الفاتورة (F11)</span>
-              </button>
-              <button type="button" onclick="window.cart?.clearCart(true)" class="text-[11px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer">
-                <i data-lucide="trash-2" class="w-3 h-3"></i>
-                <span>مسح الجدول</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- DreamSoft Table Scroll Container -->
-          <div class="flex-1 overflow-y-auto min-h-0 dreamsoft-table-scroll">
-            <table class="dreamsoft-table">
+          <!-- Table Scroll Wrapper -->
+          <div class="flex-1 overflow-y-auto min-h-0" style="background-color: #e8ecf8;">
+            <table class="ds-table-replica">
               <thead class="sticky top-0 z-10 shadow-2xs">
                 <tr>
-                  <th class="text-center w-10">م</th>
+                  <th class="w-8">م</th>
                   <th class="w-24">كود الصنف</th>
                   <th>اسم الصنف</th>
-                  <th class="text-center w-20">الوحدة</th>
-                  <th class="text-center w-24">السعر</th>
-                  <th class="text-center w-36">الكمية / الوزن</th>
-                  <th class="text-center w-20">الخصم</th>
-                  <th class="text-center w-28">الإجمالي</th>
-                  <th class="text-center w-12">حذف</th>
+                  <th class="w-20">الكمية</th>
+                  <th class="w-16">العدد</th>
+                  <th class="w-20">سعر البيع</th>
+                  <th class="w-18">الخصم قيمة</th>
+                  <th class="w-24">إجمالي السعر</th>
+                  <th class="w-10">حذف</th>
                 </tr>
               </thead>
               <tbody id="dreamsoft-table-body">
-                <!-- Rendered dynamically by cart.js -->
+                <!-- Dynamically rendered by cart.js -->
               </tbody>
             </table>
 
-            <!-- Empty Notice in Table -->
-            <div id="ds-empty-notice" class="flex flex-col items-center justify-center py-20 text-gray-400">
-              <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center mb-2.5">
-                <i data-lucide="shopping-cart" class="w-7 h-7 opacity-30 text-slate-500"></i>
-              </div>
-              <p class="text-xs font-bold text-gray-700 dark:text-gray-300">الفاتورة فارغة • ابدأ بمسح باركود المنتج بالسكنر</p>
-              <p class="text-[11px] text-gray-400 mt-1">أو اكتب اسم أو كود المنتج في خانة الباركود بالأعلى واضغط Enter</p>
+            <!-- Empty Table State -->
+            <div id="ds-empty-notice" class="flex flex-col items-center justify-center py-24 text-slate-500">
+              <span class="text-4xl mb-2 opacity-50">🧾</span>
+              <p class="text-sm font-bold text-slate-700">الفاتورة فارغة • ابدأ بمسح باركود الصنف</p>
+              <p class="text-xs text-slate-500 mt-0.5">أو ادخل كود الصنف في خانة [كود الصنف] بالأعلى واضغط Enter</p>
             </div>
           </div>
 
-        </div>
-
-        <!-- ==================== SIDE: DIGITAL LED SCREEN & CONTROLS (4 COLS) ==================== -->
-        <div class="col-span-4 flex flex-col gap-2.5 h-full min-h-0 overflow-hidden">
-          
-          <!-- Glowing LED Screen Display Box -->
-          <div class="dreamsoft-led-screen rounded-2xl p-3.5 shadow-xl flex flex-col gap-2.5 shrink-0">
-            
-            <!-- Top Counter: المطلوب سداده (Total Due / الصافي) -->
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center justify-between text-xs font-bold text-emerald-400 tracking-wide uppercase">
-                <span class="flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>المطلوب سداده (الصافي)</span>
-                </span>
-                <span class="font-mono text-[10px] text-gray-400">TOTAL DUE</span>
+          <!-- Table Bottom Summary Bar (المربعات السفلية مثل الصورة) -->
+          <div class="bg-gradient-to-r from-sky-100 via-sky-200 to-sky-100 border-t border-sky-400/80 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0 text-xs font-bold text-blue-950">
+            <!-- اليمين: إجمالي القيمة | الخصم | الصافي -->
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1">
+                <span>إجمالي القيمة:</span>
+                <input type="text" id="ds-summary-subtotal" readonly value="0.000" class="ds-win-input w-20 text-center font-mono font-bold text-slate-900 bg-white">
               </div>
-              <div class="bg-black/50 rounded-xl px-3 py-2 border border-emerald-500/40 flex items-baseline justify-between">
-                <span id="ds-led-total" class="text-3xl sm:text-4xl font-black font-mono tracking-wider text-emerald-400 dreamsoft-led-glow-green">
-                  0.00
-                </span>
-                <span class="text-xs font-bold text-emerald-300 font-sans">ج.م</span>
+
+              <div class="flex items-center gap-1">
+                <span>خصم الفاتورة:</span>
+                <input type="text" id="ds-summary-discount" readonly value="0.000" class="ds-win-input w-16 text-center font-mono font-bold text-rose-600 bg-white">
+              </div>
+
+              <div class="flex items-center gap-1">
+                <span>الإجمالي بعد الخصم:</span>
+                <input type="text" id="ds-summary-after-discount" readonly value="0.000" class="ds-win-input w-20 text-center font-mono font-black text-blue-900 bg-white">
               </div>
             </div>
 
-            <!-- Cash Paid & Change Inputs -->
-            <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-700/80">
-              <!-- المدفوع نقداً -->
-              <div class="flex flex-col gap-1">
-                <label for="ds-cash-paid-input" class="text-[11px] font-bold text-slate-300">المدفوع نقداً:</label>
-                <input type="number" id="ds-cash-paid-input" min="0" step="1" placeholder="0.00" oninput="window.cart?.updateDsChange()" class="w-full bg-slate-800 text-white font-mono font-black text-sm px-2.5 py-1.5 rounded-xl border border-slate-600 focus:border-emerald-400 focus:outline-none text-left">
-              </div>
-              <!-- الباقي للعميل -->
-              <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-bold text-slate-300">الباقي للعميل:</label>
-                <div class="bg-black/40 rounded-xl px-2.5 py-1.5 border border-slate-700 flex items-center justify-between h-[34px]">
-                  <span id="ds-led-change" class="text-sm font-black font-mono text-cyan-300 dreamsoft-led-glow-cyan">0.00</span>
-                  <span class="text-[10px] text-slate-400">ج.م</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Quick Cash Chips (+50, +100, +200, بالضبط) -->
-            <div class="grid grid-cols-4 gap-1.5">
-              <button type="button" onclick="window.cart?.setDsExactCash()" class="py-1 px-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/40 text-emerald-300 text-[10px] font-bold transition active:scale-95 cursor-pointer text-center">
-                بالضبط
-              </button>
-              <button type="button" onclick="window.cart?.addDsCash(50)" class="py-1 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-mono font-bold border border-slate-600 transition active:scale-95 cursor-pointer text-center">
-                +50
-              </button>
-              <button type="button" onclick="window.cart?.addDsCash(100)" class="py-1 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-mono font-bold border border-slate-600 transition active:scale-95 cursor-pointer text-center">
-                +100
-              </button>
-              <button type="button" onclick="window.cart?.addDsCash(200)" class="py-1 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-mono font-bold border border-slate-600 transition active:scale-95 cursor-pointer text-center">
-                +200
-              </button>
-            </div>
-
-            <!-- Quick Stats Strip -->
-            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-700/60 font-mono">
-              <span>الأصناف: <strong id="ds-led-items-count" class="text-white">0</strong></span>
-              <span>القطع: <strong id="ds-led-qty-count" class="text-white">0</strong></span>
-              <span>الخصم: <strong id="ds-led-discount" class="text-rose-400">0.00</strong></span>
-            </div>
-          </div>
-
-          <!-- DreamSoft Cashier Primary Actions -->
-          <div class="flex flex-col gap-2 shrink-0">
-            
-            <!-- F5: حفظ وطباعة (Huge Emerald Button) -->
-            <button type="button" id="ds-btn-save-print" onclick="window.app?.quickSaveWithPrint()" class="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-between transition transform active:scale-98 cursor-pointer">
-              <div class="flex items-center gap-2">
-                <i data-lucide="printer" class="w-4 h-4"></i>
-                <span>حفظ وطباعة الإيصال</span>
-              </div>
-              <kbd class="px-2 py-0.5 rounded-lg bg-emerald-900/80 text-emerald-100 font-mono text-xs font-bold border border-emerald-400/30">F5</kbd>
-            </button>
-
-            <div class="grid grid-cols-2 gap-2">
-              <!-- F4: حفظ فقط بدون طباعة -->
-              <button type="button" onclick="window.app?.quickSaveWithoutPrint()" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs flex items-center justify-between border border-gray-300 dark:border-gray-600 transition cursor-pointer active:scale-95 shadow-2xs">
-                <span class="flex items-center gap-1.5">
-                  <i data-lucide="save" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
-                  <span>حفظ فقط</span>
-                </span>
-                <kbd class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">F4</kbd>
-              </button>
-
-              <!-- F6: دليفري وتفاصيل -->
-              <button type="button" onclick="window.app?.openCheckoutModal()" class="py-2 px-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/70 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 font-bold text-xs flex items-center justify-between border border-purple-200 dark:border-purple-800 transition cursor-pointer active:scale-95 shadow-2xs">
-                <span class="flex items-center gap-1">
-                  <i data-lucide="bike" class="w-3.5 h-3.5 text-emerald-500"></i>
-                  <span>دليفري/آجل</span>
-                </span>
-                <kbd class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-white dark:bg-gray-800 rounded border border-purple-300 dark:border-purple-700">F6</kbd>
-              </button>
-            </div>
-
-          </div>
-
-          <!-- Fast-Pick Items Panel (الأصناف السريعة بدون باركود) -->
-          <div class="flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/90 dark:border-gray-700 p-2.5 flex flex-col min-h-0 shadow-xs">
-            <div class="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-gray-700 shrink-0">
-              <span class="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
-                <span>أصناف سريعة (بدون باركود)</span>
-              </span>
-              <button type="button" onclick="window.app?.toggleAdvancedSearch()" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline">المزيد 🔍</button>
-            </div>
-            <div id="ds-fast-items-grid" class="flex-1 overflow-y-auto grid grid-cols-2 gap-1.5 pt-2 min-h-0 content-start">
-              <!-- Rendered dynamically by app.js -->
+            <!-- اليسار: عدد الأصناف والقطع -->
+            <div class="flex items-center gap-3 text-[11px] text-slate-600 font-mono">
+              <span>عدد الأصناف: <strong id="ds-led-items-count" class="text-blue-900">0</strong></span>
+              <span>إجمالي القطع: <strong id="ds-led-qty-count" class="text-blue-900">0</strong></span>
             </div>
           </div>
 
@@ -1074,38 +1060,48 @@
 
       </div>
 
-      <!-- Sticky Bottom Function Keys Bar (F1..F12) -->
-      <div class="dreamsoft-fn-bar flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-2xl border shadow-lg shrink-0 overflow-x-auto no-scrollbar">
-        <button type="button" onclick="window.cart?.newSale()" class="ds-fn-btn bg-slate-800 hover:bg-slate-700 text-slate-200">
-          <kbd class="bg-slate-700">F2</kbd><span>فاتورة جديدة</span>
-        </button>
-        <button type="button" onclick="window.cart?.editLastItemPrice()" class="ds-fn-btn bg-slate-800 hover:bg-slate-700 text-slate-200">
-          <kbd class="bg-slate-700">F3</kbd><span>تعديل سعر/كمية</span>
-        </button>
-        <button type="button" onclick="window.app?.quickSaveWithoutPrint()" class="ds-fn-btn bg-amber-950/70 hover:bg-amber-900 text-amber-200 border border-amber-600/40">
-          <kbd class="bg-amber-800">F4</kbd><span>حفظ مؤقت</span>
-        </button>
-        <button type="button" onclick="window.app?.quickSaveWithPrint()" class="ds-fn-btn bg-emerald-600 hover:bg-emerald-500 text-white font-black shadow-xs">
-          <kbd class="bg-emerald-800">F5</kbd><span>حفظ وطباعة</span>
-        </button>
-        <button type="button" onclick="window.app?.openCheckoutModal()" class="ds-fn-btn bg-purple-950/70 hover:bg-purple-900 text-purple-200 border border-purple-600/40">
-          <kbd class="bg-purple-800">F6</kbd><span>دليفري / عميل</span>
-        </button>
-        <button type="button" onclick="window.app?.toggleAdvancedSearch()" class="ds-fn-btn bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-600/40">
-          <kbd class="bg-indigo-800">F7</kbd><span>بحث أصناف</span>
-        </button>
-        <button type="button" onclick="window.app?.switchView('returns')" class="ds-fn-btn bg-rose-950/70 hover:bg-rose-900 text-rose-200 border border-rose-600/40">
-          <kbd class="bg-rose-800">F8</kbd><span>مرتجع</span>
-        </button>
-        <button type="button" onclick="window.cart?.showTempInvoicesModal()" class="ds-fn-btn bg-sky-950/70 hover:bg-sky-900 text-sky-200 border border-sky-600/40">
-          <kbd class="bg-sky-800">F9</kbd><span>معلقة</span>
-        </button>
-        <button type="button" onclick="window.app?.toggleFullscreen()" class="ds-fn-btn bg-slate-800 hover:bg-slate-700 text-slate-200">
-          <kbd class="bg-slate-700">F10</kbd><span>شاشة كاملة</span>
-        </button>
-        <button type="button" onclick="window.app?.promptQuickDiscount()" class="ds-fn-btn bg-slate-800 hover:bg-slate-700 text-slate-200">
-          <kbd class="bg-slate-700">F11</kbd><span>خصم</span>
-        </button>
+      <!-- Bottom Function Keys Toolbar (الشريط الذهبي/البيج الكلاسيكي للدريم سوفت من الصورة) -->
+      <div class="ds-footer-bar flex items-center justify-between shrink-0 text-[11px] shadow-xs">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-rose-600 font-black flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-rose-100 border border-rose-300 text-rose-700 font-mono">F5</kbd>
+            <span>حفظ الفاتورة</span>
+          </span>
+
+          <span class="text-rose-600 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-rose-100 border border-rose-300 text-rose-700 font-mono">Delete</kbd>
+            <span>لحذف صنف</span>
+          </span>
+
+          <span class="text-blue-800 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">Home</kbd>
+            <span>للرجوع لكود الصنف</span>
+          </span>
+
+          <span class="text-blue-800 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">F7</kbd>
+            <span>حفظ مؤقت</span>
+          </span>
+
+          <span class="text-blue-800 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-blue-100 border border-blue-300 text-blue-800 font-mono">F8</kbd>
+            <span>استدعاء من حفظ مؤقت</span>
+          </span>
+
+          <span class="text-purple-800 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-purple-100 border border-purple-300 text-purple-800 font-mono">F6</kbd>
+            <span>دليفري / عميل</span>
+          </span>
+
+          <span class="text-slate-700 font-bold flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-slate-200 border border-slate-300 text-slate-800 font-mono">F2</kbd>
+            <span>فاتورة جديدة</span>
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2 text-slate-500 font-mono text-[10px]">
+          <span>DreamSoft POS Mode</span>
+        </div>
       </div>
 
     </section>

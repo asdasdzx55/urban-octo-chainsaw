@@ -281,141 +281,124 @@ button:active, .mobile-tab-btn:active {
   }
 }
 
-
 /* ==========================================================================
-   DreamSoft POS Desktop Cashier Engine & Visual System (v2.8.5)
+   DreamSoft POS Desktop Exact Software Replica (v2.9.0)
+   Matches classic Windows DreamSoft POS colors & layout without neon glow
    ========================================================================== */
 
-/* High-Density DreamSoft Invoice Table */
-.dreamsoft-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-family: 'Cairo', -apple-system, sans-serif;
+/* Outer Desktop Window Styling */
+#view-pos-dreamsoft {
+  background-color: #cce4f7;
+  color: #0f172a;
+  font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;
+  user-select: none;
 }
 
-.dreamsoft-table thead th {
-  padding: 0.55rem 0.6rem;
-  background-color: #f1f5f9;
-  color: #334155;
+/* Header & Form Labels */
+.ds-win-label {
+  color: #0b3b80;
   font-weight: 800;
   font-size: 0.72rem;
-  border-bottom: 2px solid #cbd5e1;
   white-space: nowrap;
 }
 
-.dark .dreamsoft-table thead th {
-  background-color: #1e293b;
-  color: #cbd5e1;
-  border-bottom: 2px solid #334155;
+/* Classic Windows 3D Inset Inputs */
+.ds-win-input {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #7ba4d5;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.08);
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
-.dreamsoft-table tbody tr {
-  transition: background-color 0.12s ease;
+.ds-win-input:focus {
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
-.dreamsoft-table tbody tr:nth-child(even) {
-  background-color: rgba(248, 250, 252, 0.75);
+/* Table: Peach Header & Lavender/Pastel Canvas */
+.ds-table-replica {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border: 1px solid #7ba4d5;
+  font-size: 0.75rem;
 }
 
-.dark .dreamsoft-table tbody tr:nth-child(even) {
-  background-color: rgba(30, 41, 59, 0.35);
+.ds-table-replica thead th {
+  background: #fed7aa; /* Peach / salmon tone from DreamSoft */
+  color: #0b3b80;
+  border: 1px solid #cbd5e1;
+  padding: 5px 6px;
+  font-weight: 900;
+  font-size: 0.72rem;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.dreamsoft-table tbody tr:hover {
-  background-color: rgba(99, 102, 241, 0.08) !important;
+.ds-table-replica tbody {
+  background-color: #e8ecf8; /* Soft lavender/blue canvas */
 }
 
-.dark .dreamsoft-table tbody tr:hover {
-  background-color: rgba(99, 102, 241, 0.18) !important;
+.ds-table-replica tbody tr {
+  background-color: #ffffff;
+  border-bottom: 1px solid #cbd5e1;
+  transition: background-color 0.1s ease;
 }
 
-.dreamsoft-table tbody td {
-  padding: 0.45rem 0.55rem;
+.ds-table-replica tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.ds-table-replica tbody tr:hover {
+  background-color: #dbeafe !important;
+}
+
+.ds-table-replica tbody td {
+  padding: 3.5px 6px;
+  border: 1px solid #cbd5e1;
   font-size: 0.75rem;
   vertical-align: middle;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-.dark .dreamsoft-table tbody td {
-  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+/* Left Totals Box: Crisp White Cards with Bold RED Digits (NO NEON) */
+.ds-total-card {
+  background: #ffffff;
+  border: 2px solid #7ba4d5;
+  border-radius: 6px;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* DreamSoft High-Contrast Glowing Digital Screen (LCD/LED) */
-.dreamsoft-led-screen {
-  background: linear-gradient(135deg, #090d16 0%, #0f172a 100%);
-  border: 2px solid #1e293b;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 8px 20px -4px rgba(0, 0, 0, 0.3);
+.ds-total-red {
+  color: #dc2626; /* Crisp DreamSoft Bold Red */
+  font-family: 'Segoe UI', Tahoma, Consolas, monospace;
+  font-weight: 900;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  text-align: center;
 }
 
-.dreamsoft-led-glow-green {
-  text-shadow: 0 0 16px rgba(52, 211, 153, 0.5), 0 0 4px rgba(52, 211, 153, 0.8);
-}
-
-.dreamsoft-led-glow-amber {
-  text-shadow: 0 0 16px rgba(251, 191, 36, 0.5), 0 0 4px rgba(251, 191, 36, 0.8);
-}
-
-.dreamsoft-led-glow-cyan {
-  text-shadow: 0 0 14px rgba(34, 211, 238, 0.45), 0 0 3px rgba(34, 211, 238, 0.7);
-}
-
-/* DreamSoft Keyboard Function Keys Toolbar (F1..F12) */
-.dreamsoft-fn-bar {
-  background: #090d16;
-  border-color: #1e293b;
-}
-
-.ds-fn-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
-  border-radius: 0.75rem;
+/* Bottom Function Keys Toolbar */
+.ds-footer-bar {
+  background: #ffedd5; /* Warm light peach/golden cream */
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  padding: 4px 10px;
   font-size: 0.72rem;
   font-weight: 700;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  cursor: pointer;
 }
 
-.ds-fn-btn:hover {
-  transform: translateY(-1px);
-}
-
-.ds-fn-btn:active {
-  transform: scale(0.96);
-}
-
-.ds-fn-btn kbd {
-  display: inline-block;
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.375rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.68rem;
-  font-weight: 900;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* Custom Scrollbar for DreamSoft Table */
-.dreamsoft-table-scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.dreamsoft-table-scroll::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.5);
-  border-radius: 4px;
-}
-.dreamsoft-table-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.7);
-}
-
-
-/* ABSOLUTE MOBILE ENFORCEMENT: DreamSoft desktop view and function bars NEVER show on mobile screens */
+/* Strict Mobile Isolation: DreamSoft layout NEVER displays on mobile screens */
 @media (max-width: 1023px) {
   #view-pos-dreamsoft,
   .dreamsoft-fn-bar,
-  #pos-desktop-dreamsoft-view {
+  .ds-footer-bar {
     display: none !important;
   }
 }

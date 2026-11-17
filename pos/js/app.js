@@ -1579,20 +1579,47 @@ class App {
         return;
       }
 
-      // F7: Toggle Detailed Search with Price Range Filter
+      // F7: حفظ مؤقت (Hold Temporary Invoice)
       if (e.key === 'F7' || e.keyCode === 118) {
         e.preventDefault();
         e.stopPropagation();
-        this.toggleAdvancedSearch();
+        window.cart?.holdCart();
         return;
       }
 
-      // F8: Switch to returns
+      // F8: استدعاء من حفظ مؤقت (Show Temporary Invoices Modal)
       if (e.key === 'F8' || e.keyCode === 119) {
         e.preventDefault();
         e.stopPropagation();
-        this.switchView('returns');
+        window.cart?.showTempInvoicesModal();
         return;
+      }
+
+      // Delete: حذف صنف (Delete last item if not typing in input)
+      if (e.key === 'Delete' || e.keyCode === 46) {
+        const active = document.activeElement;
+        const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+        if (!isInput) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.cart?.removeLastItem();
+          return;
+        }
+      }
+
+      // Home: للرجوع لكود الصنف (Focus barcode input)
+      if (e.key === 'Home' || e.keyCode === 36) {
+        const active = document.activeElement;
+        if (!active || active.id !== 'ds-barcode-input') {
+          e.preventDefault();
+          e.stopPropagation();
+          const barcodeInp = document.getElementById('ds-barcode-input') || document.getElementById('search-input');
+          if (barcodeInp) {
+            barcodeInp.focus();
+            if (typeof barcodeInp.select === 'function') barcodeInp.select();
+          }
+          return;
+        }
       }
 
       // F9: Show suspended / temporary invoices modal
@@ -1794,12 +1821,25 @@ class App {
     if (!clockEl) return;
     const update = () => {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'numeric', day: 'numeric' });
-      clockEl.textContent = `${dateStr} • ${timeStr}`;
+      const d = String(now.getDate()).padStart(2, '0');
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const y = now.getFullYear();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const h = String(hours).padStart(2, '0');
+      const formatted = `${d}/${m}/${y} ${h}:${minutes}:${seconds} ${ampm}`;
+      if ('value' in clockEl) {
+        clockEl.value = formatted;
+      }
+      clockEl.textContent = formatted;
     };
     update();
-    setInterval(update, 1000);
+    if (!this._dsClockInterval) {
+      this._dsClockInterval = setInterval(update, 1000);
+    }
   }
 
   renderDsFastItems() {

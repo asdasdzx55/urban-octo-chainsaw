@@ -1170,16 +1170,229 @@ class PurchasesController {
             '</div>' +
           '</div>' +
 
-          '<div class="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-700">' +
+          '<div class="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-700">' +
             '<div class="text-left">' +
               '<div class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">' + total.toFixed(2) + ' ج.م</div>' +
               (pm === 'آجل' ? '<span class="text-[10px] text-gray-400">المدفوع: ' + paid.toFixed(2) + ' ج.م</span>' : '') +
             '</div>' +
+            '<button type="button" onclick="window.purchasesController?.openEditPurchaseModal(' + inv.id + ')" class="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer shrink-0 shadow-2xs" title="تعديل الفاتورة وتصحيح المبالغ">' +
+              '<i data-lucide="edit-3" class="w-3.5 h-3.5"></i>' +
+              '<span>تعديل ✏️</span>' +
+            '</button>' +
           '</div>' +
         '</div>';
     }).join('');
 
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  /* ==================== EDIT PURCHASE INVOICE MODAL METHODS ==================== */
+  async openEditPurchaseModal(purchaseId) {
+    if (!purchaseId) return;
+    window.app?.showLoading(true, 'جاري جلب تفاصيل الفاتورة...');
+    try {
+      const res = await window.api.getPurchaseDetails(purchaseId);
+      window.app?.showLoading(false);
+      if (!res || !res.success || !res.purchase) {
+        window.app?.showToast(res?.error || 'تعذر جلب تفاصيل الفاتورة', 'error');
+        return;
+      }
+
+      const p = res.purchase;
+      this.currentEditingPurchase = p;
+
+      document.getElementById('epm-purchase-id').value = p.id;
+      document.getElementById('epm-inv-num').value = p.invoice_number || '';
+      
+      // Suppliers select
+      const supSelect = document.getElementById('epm-supplier-select');
+      if (supSelect) {
+        const suppliers = window.expensesController?.suppliers || [];
+        supSelect.innerHTML = suppliers.map(s => 
+          `<option value="${s.id}" ${s.id == p.supplier_id ? 'selected' : ''}>${s.name} (الرصيد: ${parseFloat(s.balance || 0).toFixed(2)} ج.م)</option>`
+        ).join('');
+        if (p.supplier_id && !suppliers.some(s => s.id == p.supplier_id)) {
+          supSelect.innerHTML = `<option value="${p.supplier_id}" selected>${p.supplier_name || 'المورد'}</option>` + supSelect.innerHTML;
+        }
+      }
+
+      // Date
+      const dateInp = document.getElementById('epm-date');
+      if (dateInp) {
+        const dStr = p.date || p.created_at || '';
+        dateInp.value = dStr ? dStr.replace(' ', 'T').slice(0, 16) : '';
+      }
+
+      // Payment Method
+      const pmSelect = document.getElementById('epm-pm');
+      if (pmSelect) pmSelect.value = p.payment_method || 'نقدي';
+
+      // Financials
+      document.getElementById('epm-total').value = parseFloat(p.total_amount || 0).toFixed(2);
+      document.getElementById('epm-paid').value = parseFloat(p.paid_amount || 0).toFixed(2);
+      document.getElementById('epm-discount').value = parseFloat(p.discount || 0).toFixed(2);
+      document.getElementById('epm-notes').value = p.notes || '';
+
+      this.calcEditRemaining();
+
+      // Show items summary if present
+      const itemsBox = document.getElementById('epm-items-box');
+      const itemsList = document.getElementById('epm-items-list');
+      if (itemsBox && itemsList) {
+        if (res.items && res.items.length > 0) {
+          itemsBox.classList.remove('hidden');
+          itemsList.innerHTML = res.items.map(it => 
+            `<div class="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-800 last:border-0 font-mono text-[11px]">
+               <span class="font-bold text-gray-800 dark:text-gray-200">${it.name}</span>
+               <span class="text-gray-500">${it.qty} ${it.unit || ''} × ${parseFloat(it.cost_price || 0).toFixed(2)} = <b class="text-amber-600 dark:text-amber-400">${parseFloat(it.total_cost || 0).toFixed(2)} ج.م</b></span>
+             </div>`
+          ).join('');
+        } else {
+          itemsBox.classList.add('hidden');
+          itemsList.innerHTML = '';
+        }
+      }
+
+      const modal = document.getElementById('edit-purchase-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ أثناء جلب الفاتورة: ' + err.message, 'error');
+    }
+  }
+
+  closeEditPurchaseModal() {
+    const modal = document.getElementById('edit-purchase-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    this.currentEditingPurchase = null;
+  }
+
+  calcEditRemaining() {
+    const total = parseFloat(document.getElementById('epm-total')?.value || 0);
+    const paid = parseFloat(document.getElementById('epm-paid')?.value || 0);
+    const disc = parseFloat(document.getElementById('epm-discount')?.value || 0);
+    const rem = Math.max(0, total - paid - disc);
+    const remBadge = document.getElementById('epm-rem-badge');
+    if (remBadge) {
+      remBadge.textContent = `${rem.toFixed(2)} ج.م`;
+      if (rem > 0) {
+        remBadge.className = 'px-2.5 py-1 rounded-lg bg-amber-600 text-white font-mono font-black text-sm';
+      } else {
+        remBadge.className = 'px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-mono font-black text-sm';
+      }
+    }
+  }
+
+  onEditPmChanged() {
+    const pm = document.getElementById('epm-pm')?.value || 'نقدي';
+    const totalInput = document.getElementById('epm-total');
+    const paidInput = document.getElementById('epm-paid');
+    if (totalInput && paidInput) {
+      const tot = parseFloat(totalInput.value || 0);
+      if (pm === 'نقدي') {
+        paidInput.value = tot.toFixed(2);
+      } else {
+        paidInput.value = '0.00';
+      }
+    }
+    this.calcEditRemaining();
+  }
+
+  async submitEditPurchase() {
+    const pid = parseInt(document.getElementById('epm-purchase-id')?.value || 0, 10);
+    if (!pid) return;
+
+    const invNum = document.getElementById('epm-inv-num')?.value.trim() || '';
+    const supSelect = document.getElementById('epm-supplier-select');
+    const supId = supSelect ? parseInt(supSelect.value, 10) : 0;
+    const supName = supSelect && supSelect.selectedIndex > -1 ? supSelect.options[supSelect.selectedIndex].text.split('(')[0].trim() : '';
+    const pm = document.getElementById('epm-pm')?.value || 'نقدي';
+    const total = parseFloat(document.getElementById('epm-total')?.value || 0);
+    const paid = parseFloat(document.getElementById('epm-paid')?.value || 0);
+    const discount = parseFloat(document.getElementById('epm-discount')?.value || 0);
+    const date = document.getElementById('epm-date')?.value || '';
+    const notes = document.getElementById('epm-notes')?.value.trim() || '';
+
+    if (total <= 0) {
+      window.app?.showToast('يرجى إدخال إجمالي صحيح للفاتورة أكبر من الصفر', 'warning');
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري حفظ تعديلات الفاتورة وتحديث الحسابات...');
+    try {
+      const payload = {
+        purchase_id: pid,
+        invoice_number: invNum,
+        supplier_id: supId,
+        supplier_name: supName,
+        payment_method: pm,
+        total_amount: total,
+        paid_amount: paid,
+        discount: discount,
+        date: date ? date.replace('T', ' ') : '',
+        notes: notes
+      };
+
+      const res = await window.api.editPurchase(payload);
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم حفظ تعديل الفاتورة بنجاح ✓', 'success');
+        this.closeEditPurchaseModal();
+        await this.loadPurchasesHistory();
+
+        // Refresh suppliers list and statement if open
+        if (window.expensesController) {
+          await window.expensesController.loadSuppliers();
+          if (window.expensesController.activeSupplierId) {
+            await window.expensesController.openSupplierLedger(window.expensesController.activeSupplierId, window.expensesController.activeSupplierName);
+          }
+        }
+      } else {
+        window.app?.showToast(res?.error || 'تعذر تعديل الفاتورة', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ: ' + err.message, 'error');
+    }
+  }
+
+  async submitDeletePurchase() {
+    const pid = parseInt(document.getElementById('epm-purchase-id')?.value || 0, 10);
+    if (!pid) return;
+
+    if (!confirm('⚠️ هل أنت متأكد من رغبتك في حذف فاتورة المشتريات هذه نهائياً؟\nسيتم رد الرصيد وتصحيح كشف حساب المورد تلقائياً.')) {
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري حذف الفاتورة ورد الحسابات...');
+    try {
+      const res = await window.api.deletePurchase(pid);
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم حذف الفاتورة بنجاح', 'success');
+        this.closeEditPurchaseModal();
+        await this.loadPurchasesHistory();
+        if (window.expensesController) {
+          await window.expensesController.loadSuppliers();
+          if (window.expensesController.activeSupplierId) {
+            await window.expensesController.openSupplierLedger(window.expensesController.activeSupplierId, window.expensesController.activeSupplierName);
+          }
+        }
+      } else {
+        window.app?.showToast(res?.error || 'تعذر حذف الفاتورة', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ: ' + err.message, 'error');
+    }
   }
 
   // ==================== DREAMSOFT PURCHASES REPLICA ACTIONS ====================

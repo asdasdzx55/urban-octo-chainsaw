@@ -2962,6 +2962,7 @@
                     <th class="py-3 px-3.5">المتبقي</th>
                     <th class="py-3 px-3.5">تفاصيل / ملاحظات</th>
                     <th class="py-3 px-3.5 text-center">الأصناف</th>
+                    <th class="py-3 px-3.5 text-center">تعديل</th>
                   </tr>
                 </thead>
                 <tbody id="sup-ledger-table-body">
@@ -6063,6 +6064,249 @@
   <script src="js/auth.js?v=2.7.5"></script>
   <script src="js/customers.js?v=2.7.7"></script>
   <script src="js/app.js?v=3.2.1"></script>
+  <!-- ==================== EDIT PURCHASE INVOICE MODAL (تعديل فاتورة مشتريات) ==================== -->
+  <div id="edit-purchase-modal" class="fixed inset-0 z-[80] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 hidden" onclick="if(event.target === this) window.purchasesController?.closeEditPurchaseModal()">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 w-full max-w-xl shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[92vh] overflow-y-auto flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150 text-right">
+      
+      <!-- Header -->
+      <div class="flex items-start justify-between pb-3 border-b border-gray-100 dark:border-gray-700 gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+            <i data-lucide="edit-3" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-black text-gray-900 dark:text-white">تعديل فاتورة مشتريات / توريد بضاعة</h3>
+            <p class="text-xs text-gray-500 font-medium">تصحيح الأرقام والمبالغ وطريقة الدفع مع إعادة احتساب رصيد المورد تلقائياً</p>
+          </div>
+        </div>
+        <button type="button" onclick="window.purchasesController?.closeEditPurchaseModal()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 flex items-center justify-center transition cursor-pointer shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Hidden ID -->
+      <input type="hidden" id="epm-purchase-id" value="">
+
+      <!-- Fields Form -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الفاتورة / إذن التوريد:</label>
+          <input type="text" id="epm-inv-num" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-xs font-bold focus:ring-2 focus:ring-amber-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">المورد:</label>
+          <select id="epm-supplier-select" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-amber-500">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">تاريخ الفاتورة:</label>
+          <input type="datetime-local" id="epm-date" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-amber-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">طريقة الدفع:</label>
+          <select id="epm-pm" onchange="window.purchasesController?.onEditPmChanged()" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-amber-500">
+            <option value="نقدي">نقدي (كاش خالص)</option>
+            <option value="آجل">آجل (على الحساب / متبقي دين)</option>
+          </select>
+        </div>
+
+        <!-- Financials -->
+        <div class="col-span-1 sm:col-span-2 p-3.5 bg-amber-50/60 dark:bg-amber-950/30 rounded-2xl border border-amber-200/80 dark:border-amber-800/60 flex flex-col gap-3">
+          <div class="grid grid-cols-3 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-black text-gray-700 dark:text-gray-300 mb-1">إجمالي الفاتورة:</label>
+              <input type="number" step="0.01" id="epm-total" oninput="window.purchasesController?.calcEditRemaining()" class="w-full px-3 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 text-amber-700 dark:text-amber-400 font-mono font-black text-sm text-center focus:ring-2 focus:ring-amber-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-black text-gray-700 dark:text-gray-300 mb-1">المدفوع نقدياً:</label>
+              <input type="number" step="0.01" id="epm-paid" oninput="window.purchasesController?.calcEditRemaining()" class="w-full px-3 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-400 font-mono font-black text-sm text-center focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-black text-gray-700 dark:text-gray-300 mb-1">الخصم:</label>
+              <input type="number" step="0.01" id="epm-discount" oninput="window.purchasesController?.calcEditRemaining()" class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 font-mono font-black text-sm text-center focus:ring-2 focus:ring-amber-500">
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-amber-200 dark:border-amber-800/60 text-xs">
+            <span class="font-bold text-gray-600 dark:text-gray-400">المتبقي الآجل (يضاف لرصيد المورد):</span>
+            <span id="epm-rem-badge" class="px-2.5 py-1 rounded-lg bg-amber-600 text-white font-mono font-black text-sm">0.00 ج.م</span>
+          </div>
+        </div>
+
+        <div class="col-span-1 sm:col-span-2">
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ملاحظات الفاتورة:</label>
+          <input type="text" id="epm-notes" placeholder="ملاحظات اختيارية..." class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-medium">
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+        <button type="button" onclick="window.purchasesController?.submitDeletePurchase()" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer" title="حذف الفاتورة نهائياً مع رد الرصيد">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>حذف الفاتورة</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.purchasesController?.closeEditPurchaseModal()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold transition cursor-pointer">إلغاء</button>
+          <button type="button" onclick="window.purchasesController?.submitEditPurchase()" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>حفظ التعديل ✓</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== EDIT SUPPLIER PAYMENT (سند صرف) MODAL ==================== -->
+  <div id="edit-supplier-payment-modal" class="fixed inset-0 z-[80] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 hidden" onclick="if(event.target === this) window.expensesController?.closeEditPaymentModal()">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150 text-right">
+      
+      <!-- Header -->
+      <div class="flex items-start justify-between pb-3 border-b border-gray-100 dark:border-gray-700 gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
+            <i data-lucide="banknote" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-gray-900 dark:text-white">تعديل دفعة مورد (سند صرف)</h3>
+            <p class="text-xs text-gray-500 font-medium">تصحيح المبلغ المدفوع للمورد وتعديل الرصيد تلقائياً</p>
+          </div>
+        </div>
+        <button type="button" onclick="window.expensesController?.closeEditPaymentModal()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 flex items-center justify-center transition cursor-pointer shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Hidden ID -->
+      <input type="hidden" id="espm-expense-id" value="">
+      <input type="hidden" id="espm-supplier-id" value="">
+
+      <!-- Supplier Info Badge -->
+      <div class="p-3 bg-blue-50/70 dark:bg-blue-950/40 rounded-2xl border border-blue-200/80 dark:border-blue-800/60 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="user-check" class="w-4 h-4 text-blue-600"></i>
+          <span id="espm-supplier-name" class="font-bold text-xs text-gray-900 dark:text-white">-</span>
+        </div>
+        <span id="espm-current-balance" class="text-xs font-mono font-bold text-blue-700 dark:text-blue-300">الرصيد: -</span>
+      </div>
+
+      <!-- Form Fields -->
+      <div class="flex flex-col gap-3">
+        <div>
+          <label class="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1">المبلغ المصروف / المدفوع (ج.م):</label>
+          <input type="number" step="0.01" id="espm-amount" class="w-full px-4 py-2.5 rounded-xl border-2 border-blue-400 dark:border-blue-600 bg-white dark:bg-gray-900 text-blue-900 dark:text-blue-300 font-mono font-black text-lg text-center focus:ring-2 focus:ring-blue-500 shadow-inner">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">طريقة الدفع:</label>
+          <select id="espm-pm" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-bold">
+            <option value="كاش">كاش (نقدي من الخزينة)</option>
+            <option value="فودافون كاش">فودافون كاش</option>
+            <option value="انستا باي">انستا باي (InstaPay)</option>
+            <option value="فيزا">فيزا / بطاقة</option>
+            <option value="تحويل بنكي">تحويل بنكي</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">تاريخ السند:</label>
+          <input type="datetime-local" id="espm-date" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-mono">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">البيان / ملاحظات الدفعة:</label>
+          <input type="text" id="espm-note" placeholder="البيان أو سبب السداد..." class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-medium">
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+        <button type="button" onclick="window.expensesController?.submitDeletePayment()" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1 transition cursor-pointer" title="إلغاء الدفعة ورد قيمتها لرصيد المورد">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>حذف الدفعة</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.expensesController?.closeEditPaymentModal()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إلغاء</button>
+          <button type="button" onclick="window.expensesController?.submitEditPayment()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>حفظ التعديل ✓</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== EDIT SUPPLIER RECEIPT (سند قبض) MODAL ==================== -->
+  <div id="edit-supplier-receipt-modal" class="fixed inset-0 z-[80] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 hidden" onclick="if(event.target === this) window.expensesController?.closeEditReceiptModal()">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150 text-right">
+      
+      <div class="flex items-start justify-between pb-3 border-b border-gray-100 dark:border-gray-700 gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+            <i data-lucide="receipt" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-gray-900 dark:text-white">تعديل مقبوض من مورد (سند قبض)</h3>
+            <p class="text-xs text-gray-500 font-medium">تصحيح المبلغ المقبوض من المورد وتعديل الرصيد</p>
+          </div>
+        </div>
+        <button type="button" onclick="window.expensesController?.closeEditReceiptModal()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition cursor-pointer shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="esrm-receipt-id" value="">
+
+      <div class="flex flex-col gap-3">
+        <div>
+          <label class="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1">المبلغ المقبوض (ج.م):</label>
+          <input type="number" step="0.01" id="esrm-amount" class="w-full px-4 py-2.5 rounded-xl border-2 border-emerald-400 dark:border-emerald-600 bg-white dark:bg-gray-900 text-emerald-900 dark:text-emerald-300 font-mono font-black text-lg text-center focus:ring-2 focus:ring-emerald-500 shadow-inner">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">طريقة القبض:</label>
+          <select id="esrm-pm" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-bold">
+            <option value="كاش">كاش (نقدي للخزينة)</option>
+            <option value="انستا باي">انستا باي (InstaPay)</option>
+            <option value="فودافون كاش">فودافون كاش</option>
+            <option value="تحويل بنكي">تحويل بنكي</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">التاريخ:</label>
+          <input type="datetime-local" id="esrm-date" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-mono">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">البيان / ملاحظات:</label>
+          <input type="text" id="esrm-note" placeholder="ملاحظات سند القبض..." class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs font-medium">
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+        <button type="button" onclick="window.expensesController?.submitDeleteReceipt()" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1 transition cursor-pointer" title="حذف سند القبض">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>حذف السند</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.expensesController?.closeEditReceiptModal()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-xs font-bold cursor-pointer">إلغاء</button>
+          <button type="button" onclick="window.expensesController?.submitEditReceipt()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>حفظ التعديل ✓</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ==================== DREAMSOFT PRODUCT SEARCH MODAL (F1) ==================== -->
   <div id="ds-product-search-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-2xs flex items-center justify-center p-3 sm:p-5 hidden">
     <div class="w-full max-w-4xl bg-[#cce4f7] rounded-xl border-2 border-sky-400 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150">

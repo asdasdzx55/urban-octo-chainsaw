@@ -1755,6 +1755,376 @@ try {
             break;
 
         // ============================================================
+        // 2.31 جلب تفاصيل فاتورة مشتريات محددة مع الأصناف (Get Purchase Details)
+        // ============================================================
+        case 'get_purchase_details':
+            $pid = (int)($_GET['purchase_id'] ?? $json_payload['purchase_id'] ?? 0);
+            if ($pid <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم فاتورة المشتريات غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $p_stmt = $pdo->prepare("SELECT * FROM purchases WHERE id = ? LIMIT 1");
+            $p_stmt->execute([$pid]);
+            $purchase = $p_stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$purchase) {
+                echo json_encode(['success' => false, 'error' => 'فاتورة المشتريات غير موجودة'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $i_stmt = $pdo->prepare("SELECT * FROM purchase_items WHERE purchase_id = ? ORDER BY id ASC");
+            $i_stmt->execute([$pid]);
+            $items = $i_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $sup = null;
+            if (!empty($purchase['supplier_id'])) {
+                $s_stmt = $pdo->prepare("SELECT id, name, phone, balance, supplier_code FROM suppliers WHERE id = ? LIMIT 1");
+                $s_stmt->execute([$purchase['supplier_id']]);
+                $sup = $s_stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            echo json_encode([
+                'success' => true,
+                'purchase' => $purchase,
+                'supplier' => $sup,
+                'items' => $items
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.32 تعديل فاتورة مشتريات وتصحيح المبالغ والرصيد (Edit Purchase Invoice)
+        // ============================================================
+        case 'edit_purchase':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $pid = (int)($data['purchase_id'] ?? $data['id'] ?? 0);
+            if ($pid <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم فاتورة المشتريات غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $p_stmt = $pdo->prepare("SELECT * FROM purchases WHERE id = ? LIMIT 1");
+            $p_stmt->execute([$pid]);
+            $old_p = $p_stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$old_p) {
+                echo json_encode(['success' => false, 'error' => 'فاتورة المشتريات غير موجودة'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $old_tot = (float)$old_p['total_amount'];
+            $old_paid = (float)$old_p['paid_amount'];
+            $old_disc = (float)$old_p['discount'];
+            $old_sup_id = (int)$old_p['supplier_id'];
+            $old_unpaid = max(0.0, $old_tot - $old_paid - $old_disc);
+
+            $new_inv_num = trim($data['invoice_number'] ?? $old_p['invoice_number']);
+            $new_sup_id = isset($data['supplier_id']) ? (int)$data['supplier_id'] : $old_sup_id;
+            $new_sup_name = trim($data['supplier_name'] ?? $old_p['supplier_name']);
+            $new_pm = trim($data['payment_method'] ?? $old_p['payment_method']);
+            $new_tot = isset($data['total_amount']) ? (float)$data['total_amount'] : $old_tot;
+            $new_paid = isset($data['paid_amount']) ? (float)$data['paid_amount'] : ($new_pm === 'آجل' ? 0.0 : $new_tot);
+            $new_disc = isset($data['discount']) ? (float)$data['discount'] : $old_disc;
+            $new_date = !empty($data['date']) ? $data['date'] : $old_p['date'];
+            $new_unpaid = max(0.0, $new_tot - $new_paid - $new_disc);
+            $new_status = ($new_unpaid <= 0) ? 'مكتملة' : 'آجل';
+
+            // إذا تغير المورد أو اسمه، تأكد من وجوده
+            if ($new_sup_id > 0 && empty($new_sup_name)) {
+                $new_sup_name = $pdo->query("SELECT name FROM suppliers WHERE id = {$new_sup_id}")->fetchColumn() ?: $old_p['supplier_name'];
+            }
+
+            // تعديل رصيد المورد بالفرق بين المبلغ الآجل القديم والجديد
+            if ($old_sup_id === $new_sup_id && $new_sup_id > 0) {
+                $diff = $new_unpaid - $old_unpaid;
+                if (abs($diff) > 0.001) {
+                    $pdo->prepare("UPDATE suppliers SET balance = balance + ? WHERE id = ?")->execute([$diff, $new_sup_id]);
+                }
+            } else {
+                if ($old_sup_id > 0 && $old_unpaid > 0) {
+                    $pdo->prepare("UPDATE suppliers SET balance = balance - ? WHERE id = ?")->execute([$old_unpaid, $old_sup_id]);
+                }
+                if ($new_sup_id > 0 && $new_unpaid > 0) {
+                    $pdo->prepare("UPDATE suppliers SET balance = balance + ? WHERE id = ?")->execute([$new_unpaid, $new_sup_id]);
+                }
+            }
+
+            // تحديث سجل فاتورة المشتريات
+            $upd = $pdo->prepare("UPDATE purchases SET 
+                invoice_number = ?,
+                supplier_id = ?,
+                supplier_name = ?,
+                payment_method = ?,
+                total_amount = ?,
+                paid_amount = ?,
+                discount = ?,
+                date = ?,
+                status = ?
+                WHERE id = ?");
+            $upd->execute([
+                $new_inv_num, $new_sup_id, $new_sup_name, $new_pm,
+                $new_tot, $new_paid, $new_disc, $new_date, $new_status, $pid
+            ]);
+
+            // إذا كان هناك سند سداد مرتبط بهذه الفاتورة في expenses وتغير المدفوع
+            if ($new_paid != $old_paid) {
+                try {
+                    $exp_chk = $pdo->prepare("SELECT id FROM expenses WHERE category = 'سداد موردين' AND note LIKE ? LIMIT 1");
+                    $exp_chk->execute(["%فاتورة مشتريات {$pid}%"]);
+                    $found_exp_id = $exp_chk->fetchColumn();
+                    if ($found_exp_id) {
+                        if ($new_paid > 0) {
+                            $pdo->prepare("UPDATE expenses SET amount = ? WHERE id = ?")->execute([$new_paid, $found_exp_id]);
+                        } else {
+                            $pdo->prepare("DELETE FROM expenses WHERE id = ?")->execute([$found_exp_id]);
+                        }
+                    }
+                } catch (Exception $e) {}
+            }
+
+            // إذا تم إرسال أصناف معدلة
+            if (!empty($data['items']) && is_array($data['items'])) {
+                // حفظ الأصناف المعدلة
+                $pdo->prepare("DELETE FROM purchase_items WHERE purchase_id = ?")->execute([$pid]);
+                $item_ins = $pdo->prepare("INSERT INTO purchase_items (
+                    purchase_id, product_id, barcode, name, qty, unit, cost_price, selling_price, total_cost
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($data['items'] as $it) {
+                    $item_ins->execute([
+                        $pid,
+                        !empty($it['product_id']) ? (int)$it['product_id'] : null,
+                        trim($it['barcode'] ?? ''),
+                        trim($it['name'] ?? 'صنف'),
+                        (float)($it['qty'] ?? 1),
+                        trim($it['unit'] ?? 'قطعة'),
+                        (float)($it['cost_price'] ?? $it['cost'] ?? 0),
+                        (float)($it['selling_price'] ?? $it['price'] ?? 0),
+                        (float)($it['total_cost'] ?? ((float)($it['qty'] ?? 1) * (float)($it['cost_price'] ?? 0)))
+                    ]);
+                }
+            }
+
+            // جلب الرصيد المحدث للمورد
+            $current_bal = 0.0;
+            if ($new_sup_id > 0) {
+                $current_bal = (float)($pdo->query("SELECT balance FROM suppliers WHERE id = {$new_sup_id}")->fetchColumn() ?: 0.0);
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => "✅ تم حفظ تعديل فاتورة المشتريات رقم (#{$new_inv_num}) وتحديث الحسابات بنجاح!",
+                'purchase_id' => $pid,
+                'total_amount' => $new_tot,
+                'paid_amount' => $new_paid,
+                'remaining' => $new_unpaid,
+                'supplier_balance' => $current_bal
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.33 حذف فاتورة مشتريات مع رد الرصيد (Delete Purchase Invoice)
+        // ============================================================
+        case 'delete_purchase':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $pid = (int)($data['purchase_id'] ?? $data['id'] ?? 0);
+            if ($pid <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم فاتورة المشتريات غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $p_stmt = $pdo->prepare("SELECT * FROM purchases WHERE id = ? LIMIT 1");
+            $p_stmt->execute([$pid]);
+            $p = $p_stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$p) {
+                echo json_encode(['success' => false, 'error' => 'الفاتورة غير موجودة أو تم حذفها مسبقاً'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $unpaid = max(0.0, (float)$p['total_amount'] - (float)$p['paid_amount'] - (float)$p['discount']);
+            $sup_id = (int)$p['supplier_id'];
+            if ($sup_id > 0 && $unpaid > 0) {
+                $pdo->prepare("UPDATE suppliers SET balance = balance - ? WHERE id = ?")->execute([$unpaid, $sup_id]);
+            }
+
+            // حذف الأصناف والفاتورة
+            $pdo->prepare("DELETE FROM purchase_items WHERE purchase_id = ?")->execute([$pid]);
+            $pdo->prepare("DELETE FROM purchases WHERE id = ?")->execute([$pid]);
+
+            // حذف أي سداد مرتبط تم إنشاؤه تلقائياً
+            try {
+                $pdo->prepare("DELETE FROM expenses WHERE category = 'سداد موردين' AND note LIKE ?")->execute(["%فاتورة مشتريات {$pid}%"]);
+            } catch (Exception $e) {}
+
+            echo json_encode(['success' => true, 'message' => "🗑️ تم حذف فاتورة المشتريات ورد الرصيد بنجاح!"], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.34 تعديل دفعة مورد / سند صرف (Edit Supplier Payment)
+        // ============================================================
+        case 'edit_supplier_payment':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $exp_id = (int)($data['expense_id'] ?? $data['id'] ?? 0);
+            $new_amount = (float)($data['amount'] ?? 0);
+            $new_pm = trim($data['payment_method'] ?? 'كاش');
+            $new_note = trim($data['note'] ?? '');
+            $new_date = !empty($data['date']) ? $data['date'] : null;
+
+            if ($exp_id <= 0 || $new_amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'بيانات الدفعة غير صحيحة، يجب إدخال مبلغ أكبر من الصفر!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $chk = $pdo->prepare("SELECT * FROM expenses WHERE id = ? LIMIT 1");
+            $chk->execute([$exp_id]);
+            $old_exp = $chk->fetch(PDO::FETCH_ASSOC);
+            if (!$old_exp) {
+                echo json_encode(['success' => false, 'error' => 'حركة السداد غير موجودة!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $old_amount = (float)$old_exp['amount'];
+            $sup_id = (int)($data['supplier_id'] ?? $old_exp['supplier_id']);
+
+            // حساب الفرق: السداد يقلل رصيد المورد. إذا زاد السداد، ينقص الرصيد أكثر
+            $diff = $new_amount - $old_amount;
+            if ($sup_id > 0 && abs($diff) > 0.001) {
+                $pdo->prepare("UPDATE suppliers SET balance = balance - ? WHERE id = ?")->execute([$diff, $sup_id]);
+            }
+
+            $sup_name = $pdo->query("SELECT name FROM suppliers WHERE id = {$sup_id}")->fetchColumn() ?: '';
+            $final_note = !empty($new_note) ? $new_note : $old_exp['note'];
+            if (!empty($sup_name) && strpos($final_note, '[سداد مورد:') === false) {
+                $final_note = "[سداد مورد: {$sup_name}] " . $final_note;
+            }
+
+            $upd = $pdo->prepare("UPDATE expenses SET 
+                amount = ?, 
+                payment_method = ?, 
+                note = ?, 
+                supplier_id = ?,
+                date = COALESCE(?, date)
+                WHERE id = ?");
+            $upd->execute([$new_amount, $new_pm, $final_note, $sup_id ?: null, $new_date, $exp_id]);
+
+            $new_bal = $sup_id > 0 ? (float)($pdo->query("SELECT balance FROM suppliers WHERE id = {$sup_id}")->fetchColumn() ?: 0.0) : 0.0;
+
+            echo json_encode([
+                'success' => true,
+                'message' => "✅ تم تعديل مبلغ الدفعة إلى ({$new_amount} ج.م) وتحديث رصيد المورد بنجاح!",
+                'expense_id' => $exp_id,
+                'amount' => $new_amount,
+                'supplier_balance' => $new_bal
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.35 حذف دفعة مورد مع رد الرصيد (Delete Supplier Payment)
+        // ============================================================
+        case 'delete_supplier_payment':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $exp_id = (int)($data['expense_id'] ?? $data['id'] ?? 0);
+            if ($exp_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم الدفعة غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $chk = $pdo->prepare("SELECT * FROM expenses WHERE id = ? LIMIT 1");
+            $chk->execute([$exp_id]);
+            $exp = $chk->fetch(PDO::FETCH_ASSOC);
+            if (!$exp) {
+                echo json_encode(['success' => false, 'error' => 'الدفعة غير موجودة أو تم حذفها مسبقاً'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $amount = (float)$exp['amount'];
+            $sup_id = (int)$exp['supplier_id'];
+            if ($sup_id > 0 && $amount > 0) {
+                // إلغاء السداد يرد الرصيد (يزيد الدين)
+                $pdo->prepare("UPDATE suppliers SET balance = balance + ? WHERE id = ?")->execute([$amount, $sup_id]);
+            }
+
+            $pdo->prepare("DELETE FROM expenses WHERE id = ?")->execute([$exp_id]);
+
+            echo json_encode(['success' => true, 'message' => "🗑️ تم حذف الدفعة وإعادة الرصيد للمورد بنجاح!"], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.36 تعديل مقبوض من مورد (Edit Supplier Receipt)
+        // ============================================================
+        case 'edit_supplier_receipt':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $rec_id = (int)($data['receipt_id'] ?? $data['id'] ?? 0);
+            $new_amount = (float)($data['amount'] ?? 0);
+            $new_pm = trim($data['payment_method'] ?? 'كاش');
+            $new_note = trim($data['note'] ?? '');
+            $new_date = !empty($data['date']) ? $data['date'] : null;
+
+            if ($rec_id <= 0 || $new_amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'بيانات السند غير صحيحة!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $chk = $pdo->prepare("SELECT * FROM supplier_receipts WHERE id = ? LIMIT 1");
+            $chk->execute([$rec_id]);
+            $old_rec = $chk->fetch(PDO::FETCH_ASSOC);
+            if (!$old_rec) {
+                echo json_encode(['success' => false, 'error' => 'سند القبض غير موجود!'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $old_amount = (float)$old_rec['amount'];
+            $sup_id = (int)$old_rec['supplier_id'];
+            $diff = $new_amount - $old_amount;
+            if ($sup_id > 0 && abs($diff) > 0.001) {
+                // سند القبض من المورد يزيد رصيد المورد (دينه)
+                $pdo->prepare("UPDATE suppliers SET balance = balance + ? WHERE id = ?")->execute([$diff, $sup_id]);
+            }
+
+            $upd = $pdo->prepare("UPDATE supplier_receipts SET 
+                amount = ?, 
+                payment_method = ?, 
+                note = ?, 
+                date = COALESCE(?, date)
+                WHERE id = ?");
+            $upd->execute([$new_amount, $new_pm, $new_note ?: $old_rec['note'], $new_date, $rec_id]);
+
+            $new_bal = $sup_id > 0 ? (float)($pdo->query("SELECT balance FROM suppliers WHERE id = {$sup_id}")->fetchColumn() ?: 0.0) : 0.0;
+
+            echo json_encode([
+                'success' => true,
+                'message' => "✅ تم تعديل مبلغ سند القبض إلى ({$new_amount} ج.م) وتحديث الرصيد بنجاح!",
+                'receipt_id' => $rec_id,
+                'amount' => $new_amount,
+                'supplier_balance' => $new_bal
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.37 حذف مقبوض من مورد (Delete Supplier Receipt)
+        // ============================================================
+        case 'delete_supplier_receipt':
+            $data = !empty($json_payload) ? $json_payload : $_POST;
+            $rec_id = (int)($data['receipt_id'] ?? $data['id'] ?? 0);
+            if ($rec_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم السند غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $chk = $pdo->prepare("SELECT * FROM supplier_receipts WHERE id = ? LIMIT 1");
+            $chk->execute([$rec_id]);
+            $rec = $chk->fetch(PDO::FETCH_ASSOC);
+            if (!$rec) {
+                echo json_encode(['success' => false, 'error' => 'سند القبض غير موجود'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $amount = (float)$rec['amount'];
+            $sup_id = (int)$rec['supplier_id'];
+            if ($sup_id > 0 && $amount > 0) {
+                $pdo->prepare("UPDATE suppliers SET balance = balance - ? WHERE id = ?")->execute([$amount, $sup_id]);
+            }
+
+            $pdo->prepare("DELETE FROM supplier_receipts WHERE id = ?")->execute([$rec_id]);
+
+            echo json_encode(['success' => true, 'message' => "🗑️ تم حذف سند القبض وتعديل الرصيد بنجاح!"], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
         // 2.4 جلب قائمة الموردين (Get Suppliers)
         // ============================================================
         case 'get_suppliers':

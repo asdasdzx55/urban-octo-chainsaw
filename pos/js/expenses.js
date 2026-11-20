@@ -964,7 +964,7 @@ class ExpensesController {
     }
 
     if (txs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-gray-400 font-bold">لا توجد حركات مطابقة للفلتر المحدد</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-400 font-bold">لا توجد حركات مطابقة للفلتر المحدد</td></tr>`;
       if (mobileContainer) {
         mobileContainer.innerHTML = `<div class="py-8 text-center text-gray-400 font-bold text-xs">لا توجد حركات مطابقة للفلتر المحدد</div>`;
       }
@@ -1000,7 +1000,7 @@ class ExpensesController {
       if (hasItems) {
         itemsRow = `
           <tr id="sup-tx-items-${t.id}" class="hidden bg-gray-50/90 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-700/60">
-            <td colspan="8" class="p-3">
+            <td colspan="9" class="p-3">
               <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-xs">
                 <div class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-2 flex items-center gap-1">
                   <i data-lucide="package" class="w-3.5 h-3.5"></i>
@@ -1042,6 +1042,24 @@ class ExpensesController {
           <td class="py-2.5 px-3 text-left" dir="ltr">${remStr}</td>
           <td class="py-2.5 px-3 text-[11px] text-gray-500">${t.notes || t.note || ''}</td>
           <td class="py-2.5 px-3 text-center">${itemsBtn}</td>
+          <td class="py-2.5 px-3 text-center">
+            ${isPurch ? `
+              <button type="button" onclick="window.purchasesController?.openEditPurchaseModal(${t.id})" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 font-bold text-[10px] transition border border-amber-200 dark:border-amber-800 cursor-pointer shadow-2xs" title="تعديل الفاتورة وتصحيح المبالغ">
+                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                <span>تعديل</span>
+              </button>
+            ` : (isReceipt ? `
+              <button type="button" onclick="window.expensesController?.openEditReceiptModal(${t.id}, ${t.credit}, '${(t.payment_method || 'كاش').replace(/'/g, "\\'")}', '${(t.note || t.notes || '').replace(/'/g, "\\'")}', '${t.date || ''}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold text-[10px] transition border border-emerald-200 dark:border-emerald-800 cursor-pointer shadow-2xs" title="تعديل سند القبض وتصحيح الرقم">
+                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                <span>تعديل</span>
+              </button>
+            ` : `
+              <button type="button" onclick="window.expensesController?.openEditPaymentModal(${t.id}, ${t.debit}, '${(t.payment_method || 'كاش').replace(/'/g, "\\'")}', '${(t.note || t.notes || '').replace(/'/g, "\\'")}', ${this.activeSupplierId || 0}, '${(this.activeSupplierName || '').replace(/'/g, "\\'")}', '${t.date || ''}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-400 font-bold text-[10px] transition border border-blue-200 dark:border-blue-800 cursor-pointer shadow-2xs" title="تعديل الدفعة وتصحيح الرقم">
+                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                <span>تعديل</span>
+              </button>
+            `)}
+          </td>
         </tr>
         ${itemsRow}
       `;
@@ -1098,7 +1116,25 @@ class ExpensesController {
               </div>
             </div>
 
-            ${itemsBtn ? `<div class="pt-1 flex items-center justify-between border-t border-gray-100 dark:border-gray-700/60">${itemsBtn}</div>` : ''}
+            <div class="pt-1.5 flex items-center justify-between border-t border-gray-100 dark:border-gray-700/60">
+              <div>${itemsBtn}</div>
+              ${isPurch ? `
+                <button type="button" onclick="window.purchasesController?.openEditPurchaseModal(${t.id})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 font-bold text-xs transition border border-amber-200 dark:border-amber-800 cursor-pointer">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                  <span>تعديل الفاتورة ✏️</span>
+                </button>
+              ` : (isReceipt ? `
+                <button type="button" onclick="window.expensesController?.openEditReceiptModal(${t.id}, ${t.credit}, '${(t.payment_method || 'كاش').replace(/'/g, "\\'")}', '${(t.note || t.notes || '').replace(/'/g, "\\'")}', '${t.date || ''}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold text-xs transition border border-emerald-200 dark:border-emerald-800 cursor-pointer">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                  <span>تعديل المقبوض ✏️</span>
+                </button>
+              ` : `
+                <button type="button" onclick="window.expensesController?.openEditPaymentModal(${t.id}, ${t.debit}, '${(t.payment_method || 'كاش').replace(/'/g, "\\'")}', '${(t.note || t.notes || '').replace(/'/g, "\\'")}', ${this.activeSupplierId || 0}, '${(this.activeSupplierName || '').replace(/'/g, "\\'")}', '${t.date || ''}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-400 font-bold text-xs transition border border-blue-200 dark:border-blue-800 cursor-pointer">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                  <span>تعديل الدفعة ✏️</span>
+                </button>
+              `)}
+            </div>
             ${itemsAccordion}
           </div>
         `;
@@ -1301,6 +1337,239 @@ class ExpensesController {
     printArea.innerHTML = printHTML;
     window.print();
   }
+
+  /* ==================== EDIT SUPPLIER PAYMENT & RECEIPT MODALS ==================== */
+  openEditPaymentModal(expenseId, amount, pm = 'كاش', note = '', supId = 0, supName = '', dateStr = '') {
+    if (!expenseId) return;
+    
+    document.getElementById('espm-expense-id').value = expenseId;
+    document.getElementById('espm-supplier-id').value = supId || this.activeSupplierId || '';
+    
+    const nameEl = document.getElementById('espm-supplier-name');
+    if (nameEl) nameEl.textContent = supName || this.activeSupplierName || 'المورد';
+
+    const balEl = document.getElementById('espm-current-balance');
+    if (balEl && this.currentSupplierLedger?.supplier) {
+      const b = parseFloat(this.currentSupplierLedger.supplier.balance || 0);
+      balEl.textContent = `الرصيد: ${b.toFixed(2)} ج.م`;
+    }
+
+    const amtInp = document.getElementById('espm-amount');
+    if (amtInp) {
+      amtInp.value = parseFloat(amount || 0).toFixed(2);
+      setTimeout(() => amtInp.focus(), 100);
+    }
+
+    const pmSel = document.getElementById('espm-pm');
+    if (pmSel) pmSel.value = pm || 'كاش';
+
+    const dateInp = document.getElementById('espm-date');
+    if (dateInp) {
+      dateInp.value = dateStr ? dateStr.replace(' ', 'T').slice(0, 16) : '';
+    }
+
+    const noteInp = document.getElementById('espm-note');
+    if (noteInp) {
+      let cleanNote = note || '';
+      cleanNote = cleanNote.replace(/\[سداد مورد:[^\]]+\]\s*/g, '');
+      noteInp.value = cleanNote;
+    }
+
+    const modal = document.getElementById('edit-supplier-payment-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeEditPaymentModal() {
+    const modal = document.getElementById('edit-supplier-payment-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  async submitEditPayment() {
+    const expId = parseInt(document.getElementById('espm-expense-id')?.value || 0, 10);
+    const supId = parseInt(document.getElementById('espm-supplier-id')?.value || 0, 10);
+    const amount = parseFloat(document.getElementById('espm-amount')?.value || 0);
+    const pm = document.getElementById('espm-pm')?.value || 'كاش';
+    const note = document.getElementById('espm-note')?.value.trim() || '';
+    const date = document.getElementById('espm-date')?.value || '';
+
+    if (!expId || amount <= 0) {
+      window.app?.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'warning');
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري تعديل مبلغ الدفعة وتحديث الرصيد...');
+    try {
+      const res = await window.api.editSupplierPayment({
+        expense_id: expId,
+        supplier_id: supId,
+        amount: amount,
+        payment_method: pm,
+        note: note,
+        date: date ? date.replace('T', ' ') : ''
+      });
+
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم تعديل الدفعة بنجاح ✓', 'success');
+        this.closeEditPaymentModal();
+        await this.loadSuppliers();
+        await this.loadSuppliersReport();
+        if (this.activeSupplierId) {
+          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        }
+      } else {
+        window.app?.showToast(res?.error || 'تعذر تعديل الدفعة', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ: ' + err.message, 'error');
+    }
+  }
+
+  async submitDeletePayment() {
+    const expId = parseInt(document.getElementById('espm-expense-id')?.value || 0, 10);
+    if (!expId) return;
+
+    if (!confirm('⚠️ هل أنت متأكد من إلغاء دفعة المورد هذه نهائياً؟\nسيتم رد المبلغ لرصيد المورد كدين مطلوب سداده.')) {
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري حذف الدفعة وتحديث الحسابات...');
+    try {
+      const res = await window.api.deleteSupplierPayment(expId);
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم حذف الدفعة بنجاح', 'success');
+        this.closeEditPaymentModal();
+        await this.loadSuppliers();
+        await this.loadSuppliersReport();
+        if (this.activeSupplierId) {
+          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        }
+      } else {
+        window.app?.showToast(res?.error || 'تعذر حذف الدفعة', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ: ' + err.message, 'error');
+    }
+  }
+
+  openEditReceiptModal(receiptId, amount, pm = 'كاش', note = '', dateStr = '') {
+    if (!receiptId) return;
+
+    document.getElementById('esrm-receipt-id').value = receiptId;
+    const amtInp = document.getElementById('esrm-amount');
+    if (amtInp) {
+      amtInp.value = parseFloat(amount || 0).toFixed(2);
+      setTimeout(() => amtInp.focus(), 100);
+    }
+
+    const pmSel = document.getElementById('esrm-pm');
+    if (pmSel) pmSel.value = pm || 'كاش';
+
+    const dateInp = document.getElementById('esrm-date');
+    if (dateInp) {
+      dateInp.value = dateStr ? dateStr.replace(' ', 'T').slice(0, 16) : '';
+    }
+
+    const noteInp = document.getElementById('esrm-note');
+    if (noteInp) noteInp.value = note || '';
+
+    const modal = document.getElementById('edit-supplier-receipt-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeEditReceiptModal() {
+    const modal = document.getElementById('edit-supplier-receipt-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  async submitEditReceipt() {
+    const recId = parseInt(document.getElementById('esrm-receipt-id')?.value || 0, 10);
+    const amount = parseFloat(document.getElementById('esrm-amount')?.value || 0);
+    const pm = document.getElementById('esrm-pm')?.value || 'كاش';
+    const note = document.getElementById('esrm-note')?.value.trim() || '';
+    const date = document.getElementById('esrm-date')?.value || '';
+
+    if (!recId || amount <= 0) {
+      window.app?.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'warning');
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري تعديل سند القبض وتحديث الرصيد...');
+    try {
+      const res = await window.api.editSupplierReceipt({
+        receipt_id: recId,
+        amount: amount,
+        payment_method: pm,
+        note: note,
+        date: date ? date.replace('T', ' ') : ''
+      });
+
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم تعديل سند القبض بنجاح ✓', 'success');
+        this.closeEditReceiptModal();
+        await this.loadSuppliers();
+        await this.loadSuppliersReport();
+        if (this.activeSupplierId) {
+          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        }
+      } else {
+        window.app?.showToast(res?.error || 'تعذر تعديل سند القبض', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ: ' + err.message, 'error');
+    }
+  }
+
+  async submitDeleteReceipt() {
+    const recId = parseInt(document.getElementById('esrm-receipt-id')?.value || 0, 10);
+    if (!recId) return;
+
+    if (!confirm('⚠️ هل أنت متأكد من حذف سند القبض هذا نهائياً؟\nسيتم خصم المبلغ من رصيد المورد.')) {
+      return;
+    }
+
+    window.app?.showLoading(true, 'جاري حذف سند القبض...');
+    try {
+      const res = await window.api.deleteSupplierReceipt(recId);
+      window.app?.showLoading(false);
+      if (res && res.success) {
+        window.app?.showToast(res.message || 'تم حذف سند القبض بنجاح', 'success');
+        this.closeEditReceiptModal();
+        await this.loadSuppliers();
+        await this.loadSuppliersReport();
+        if (this.activeSupplierId) {
+          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        }
+      } else {
+        window.app?.showToast(res?.error || 'تعذر حذف سند القبض', 'error');
+      }
+    } catch (err) {
+      window.app?.showLoading(false);
+      window.app?.showToast('خطأ: ' + err.message, 'error');
+    }
+  }
+
 }
 
 window.expensesController = new ExpensesController();

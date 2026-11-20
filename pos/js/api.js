@@ -286,6 +286,55 @@ class SyrianHomeAPI {
   }
 
   /**
+   * 16.1 Get Purchase Invoice Details with Items
+   */
+  async getPurchaseDetails(purchaseId) {
+    return await this.get('get_purchase_details', { purchase_id: purchaseId });
+  }
+
+  /**
+   * 16.2 Edit Purchase Invoice
+   */
+  async editPurchase(payload) {
+    return await this.post('edit_purchase', payload);
+  }
+
+  /**
+   * 16.3 Delete Purchase Invoice
+   */
+  async deletePurchase(purchaseId) {
+    return await this.post('delete_purchase', { purchase_id: purchaseId });
+  }
+
+  /**
+   * 16.4 Edit Supplier Payment
+   */
+  async editSupplierPayment(payload) {
+    return await this.post('edit_supplier_payment', payload);
+  }
+
+  /**
+   * 16.5 Delete Supplier Payment
+   */
+  async deleteSupplierPayment(expenseId) {
+    return await this.post('delete_supplier_payment', { expense_id: expenseId });
+  }
+
+  /**
+   * 16.6 Edit Supplier Receipt
+   */
+  async editSupplierReceipt(payload) {
+    return await this.post('edit_supplier_receipt', payload);
+  }
+
+  /**
+   * 16.7 Delete Supplier Receipt
+   */
+  async deleteSupplierReceipt(receiptId) {
+    return await this.post('delete_supplier_receipt', { receipt_id: receiptId });
+  }
+
+  /**
    * 17. Get Suppliers List
    */
   async getSuppliers() {

@@ -1350,9 +1350,15 @@ class PurchasesController {
 
         // Refresh suppliers list and statement if open
         if (window.expensesController) {
-          await window.expensesController.loadSuppliers();
-          if (window.expensesController.activeSupplierId) {
-            await window.expensesController.openSupplierLedger(window.expensesController.activeSupplierId, window.expensesController.activeSupplierName);
+          try {
+            if (typeof window.expensesController.loadSuppliers === 'function') {
+              await window.expensesController.loadSuppliers();
+            }
+            if (window.expensesController.activeSupplierId) {
+              await window.expensesController.openSupplierLedger(window.expensesController.activeSupplierId, window.expensesController.activeSupplierName);
+            }
+          } catch (e) {
+            console.warn('Expenses reload error:', e);
           }
         }
       } else {
@@ -1381,9 +1387,15 @@ class PurchasesController {
         this.closeEditPurchaseModal();
         await this.loadPurchasesHistory();
         if (window.expensesController) {
-          await window.expensesController.loadSuppliers();
-          if (window.expensesController.activeSupplierId) {
-            await window.expensesController.openSupplierLedger(window.expensesController.activeSupplierId, window.expensesController.activeSupplierName);
+          try {
+            if (typeof window.expensesController.loadSuppliers === 'function') {
+              await window.expensesController.loadSuppliers();
+            }
+            if (window.expensesController.activeSupplierId) {
+              await window.expensesController.openSupplierLedger(window.expensesController.activeSupplierId, window.expensesController.activeSupplierName);
+            }
+          } catch (e) {
+            console.warn('Expenses reload error:', e);
           }
         }
       } else {

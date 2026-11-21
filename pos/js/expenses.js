@@ -767,7 +767,27 @@ class ExpensesController {
     window.app?.showToast('تم تصدير تقرير الموردين بنجاح 📑', 'success');
   }
 
-  async ensureSuppliersLoaded() {
+  async loadSuppliers() {
+    try {
+      if (window.purchasesController && typeof window.purchasesController.loadSuppliers === 'function') {
+        await window.purchasesController.loadSuppliers();
+        if (window.purchasesController.suppliers && window.purchasesController.suppliers.length > 0) {
+          this.suppliers = window.purchasesController.suppliers;
+        }
+      } else {
+        const res = await window.api.getSuppliers();
+        if (res && res.success && Array.isArray(res.suppliers)) {
+          this.suppliers = res.suppliers;
+        }
+      }
+      this.renderSuppliersDropdown();
+    } catch (e) {
+      console.warn('ExpensesController.loadSuppliers error:', e);
+    }
+    return this.suppliers || [];
+  }
+
+    async ensureSuppliersLoaded() {
     if (this.suppliers && this.suppliers.length > 0) return this.suppliers;
     if (window.purchasesController?.suppliers && window.purchasesController.suppliers.length > 0) {
       this.suppliers = window.purchasesController.suppliers;
@@ -1463,10 +1483,14 @@ class ExpensesController {
       if (res && res.success) {
         window.app?.showToast(res.message || 'تم تعديل الدفعة بنجاح ✓', 'success');
         this.closeEditPaymentModal();
-        await this.loadSuppliers();
-        await this.loadSuppliersReport();
-        if (this.activeSupplierId) {
-          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        try {
+          await this.loadSuppliers();
+          await this.loadSuppliersReport();
+          if (this.activeSupplierId) {
+            await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+          }
+        } catch (refreshErr) {
+          console.warn('Refresh error after edit payment:', refreshErr);
         }
       } else {
         window.app?.showToast(res?.error || 'تعذر تعديل الدفعة', 'error');
@@ -1492,10 +1516,14 @@ class ExpensesController {
       if (res && res.success) {
         window.app?.showToast(res.message || 'تم حذف الدفعة بنجاح', 'success');
         this.closeEditPaymentModal();
-        await this.loadSuppliers();
-        await this.loadSuppliersReport();
-        if (this.activeSupplierId) {
-          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        try {
+          await this.loadSuppliers();
+          await this.loadSuppliersReport();
+          if (this.activeSupplierId) {
+            await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+          }
+        } catch (refreshErr) {
+          console.warn('Refresh error after delete payment:', refreshErr);
         }
       } else {
         window.app?.showToast(res?.error || 'تعذر حذف الدفعة', 'error');
@@ -1623,10 +1651,14 @@ class ExpensesController {
       if (res && res.success) {
         window.app?.showToast(res.message || 'تم تعديل سند القبض بنجاح ✓', 'success');
         this.closeEditReceiptModal();
-        await this.loadSuppliers();
-        await this.loadSuppliersReport();
-        if (this.activeSupplierId) {
-          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        try {
+          await this.loadSuppliers();
+          await this.loadSuppliersReport();
+          if (this.activeSupplierId) {
+            await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+          }
+        } catch (refreshErr) {
+          console.warn('Refresh error after edit receipt:', refreshErr);
         }
       } else {
         window.app?.showToast(res?.error || 'تعذر تعديل سند القبض', 'error');
@@ -1652,10 +1684,14 @@ class ExpensesController {
       if (res && res.success) {
         window.app?.showToast(res.message || 'تم حذف سند القبض بنجاح', 'success');
         this.closeEditReceiptModal();
-        await this.loadSuppliers();
-        await this.loadSuppliersReport();
-        if (this.activeSupplierId) {
-          await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+        try {
+          await this.loadSuppliers();
+          await this.loadSuppliersReport();
+          if (this.activeSupplierId) {
+            await this.openSupplierLedger(this.activeSupplierId, this.activeSupplierName);
+          }
+        } catch (refreshErr) {
+          console.warn('Refresh error after delete receipt:', refreshErr);
         }
       } else {
         window.app?.showToast(res?.error || 'تعذر حذف سند القبض', 'error');

@@ -309,6 +309,20 @@ class SyrianHomeAPI {
   /**
    * 16.4 Edit Supplier Payment
    */
+    /**
+   * 16.35 Get Expense / Supplier Payment Details
+   */
+  async getExpenseDetails(expenseId) {
+    return await this.get(`get_expense_details&expense_id=${expenseId}`);
+  }
+
+  /**
+   * 16.36 Get Supplier Receipt Details
+   */
+  async getSupplierReceiptDetails(receiptId) {
+    return await this.get(`get_supplier_receipt_details&receipt_id=${receiptId}`);
+  }
+
   async editSupplierPayment(payload) {
     return await this.post('edit_supplier_payment', payload);
   }

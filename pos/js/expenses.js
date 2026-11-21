@@ -1124,12 +1124,12 @@ class ExpensesController {
                   <span>تعديل الفاتورة ✏️</span>
                 </button>
               ` : (isReceipt ? `
-                <button type="button" onclick="window.expensesController?.openEditReceiptModal(${t.id}, ${t.credit}, '${(t.payment_method || 'كاش').replace(/'/g, "\\'")}', '${(t.note || t.notes || '').replace(/'/g, "\\'")}', '${t.date || ''}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold text-xs transition border border-emerald-200 dark:border-emerald-800 cursor-pointer">
+                <button type="button" onclick="window.expensesController?.openEditReceiptModal(${t.id})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold text-xs transition border border-emerald-200 dark:border-emerald-800 cursor-pointer">
                   <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                   <span>تعديل المقبوض ✏️</span>
                 </button>
               ` : `
-                <button type="button" onclick="window.expensesController?.openEditPaymentModal(${t.id}, ${t.debit}, '${(t.payment_method || 'كاش').replace(/'/g, "\\'")}', '${(t.note || t.notes || '').replace(/'/g, "\\'")}', ${this.activeSupplierId || 0}, '${(this.activeSupplierName || '').replace(/'/g, "\\'")}', '${t.date || ''}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-400 font-bold text-xs transition border border-blue-200 dark:border-blue-800 cursor-pointer">
+                <button type="button" onclick="window.expensesController?.openEditPaymentModal(${t.id})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-400 font-bold text-xs transition border border-blue-200 dark:border-blue-800 cursor-pointer">
                   <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                   <span>تعديل الدفعة ✏️</span>
                 </button>
@@ -1339,18 +1339,61 @@ class ExpensesController {
   }
 
   /* ==================== EDIT SUPPLIER PAYMENT & RECEIPT MODALS ==================== */
-  openEditPaymentModal(expenseId, amount, pm = 'كاش', note = '', supId = 0, supName = '', dateStr = '') {
+  async openEditPaymentModal(expenseId, amount = null, pm = null, note = null, supId = null, supName = null, dateStr = null) {
     if (!expenseId) return;
-    
-    document.getElementById('espm-expense-id').value = expenseId;
-    document.getElementById('espm-supplier-id').value = supId || this.activeSupplierId || '';
-    
+
+    let targetTx = null;
+    if (this.currentSupplierLedger && Array.isArray(this.currentSupplierLedger.transactions)) {
+      targetTx = this.currentSupplierLedger.transactions.find(t => t.id == expenseId);
+    }
+
+    // If details were not provided in arguments, try from ledger cache or API
+    if (amount === null && targetTx) {
+      amount = targetTx.debit || targetTx.amount || 0;
+      pm = targetTx.payment_method || 'كاش';
+      note = targetTx.notes || targetTx.note || '';
+      supId = this.activeSupplierId || 0;
+      supName = this.activeSupplierName || (this.currentSupplierLedger.supplier?.name || '');
+      dateStr = targetTx.date || '';
+    } else if (amount === null) {
+      window.app?.showLoading(true, 'جاري جلب تفاصيل الدفعة...');
+      try {
+        const res = await window.api.getExpenseDetails(expenseId);
+        window.app?.showLoading(false);
+        if (res && res.success && res.expense) {
+          const e = res.expense;
+          amount = e.amount;
+          pm = e.payment_method;
+          note = e.note;
+          supId = e.supplier_id;
+          supName = e.supplier_name;
+          dateStr = e.date;
+        } else {
+          window.app?.showToast(res?.error || 'تعذر جلب تفاصيل الدفعة', 'error');
+          return;
+        }
+      } catch (err) {
+        window.app?.showLoading(false);
+        window.app?.showToast('خطأ: ' + err.message, 'error');
+        return;
+      }
+    }
+
+    const expInput = document.getElementById('espm-expense-id');
+    if (expInput) expInput.value = expenseId;
+
+    const supInput = document.getElementById('espm-supplier-id');
+    if (supInput) supInput.value = supId || this.activeSupplierId || '';
+
     const nameEl = document.getElementById('espm-supplier-name');
-    if (nameEl) nameEl.textContent = supName || this.activeSupplierName || 'المورد';
+    if (nameEl) nameEl.textContent = supName || this.activeSupplierName || (this.currentSupplierLedger?.supplier?.name || 'المورد');
 
     const balEl = document.getElementById('espm-current-balance');
-    if (balEl && this.currentSupplierLedger?.supplier) {
-      const b = parseFloat(this.currentSupplierLedger.supplier.balance || 0);
+    if (balEl) {
+      let b = 0;
+      if (this.currentSupplierLedger?.supplier) {
+        b = parseFloat(this.currentSupplierLedger.supplier.balance || 0);
+      }
       balEl.textContent = `الرصيد: ${b.toFixed(2)} ج.م`;
     }
 
@@ -1463,10 +1506,59 @@ class ExpensesController {
     }
   }
 
-  openEditReceiptModal(receiptId, amount, pm = 'كاش', note = '', dateStr = '') {
+  async openEditReceiptModal(receiptId, amount = null, pm = null, note = null, dateStr = null) {
     if (!receiptId) return;
 
-    document.getElementById('esrm-receipt-id').value = receiptId;
+    let targetTx = null;
+    if (this.currentSupplierLedger && Array.isArray(this.currentSupplierLedger.transactions)) {
+      targetTx = this.currentSupplierLedger.transactions.find(t => t.id == receiptId);
+    }
+
+    if (amount === null && targetTx) {
+      amount = targetTx.credit || targetTx.amount || 0;
+      pm = targetTx.payment_method || 'كاش';
+      note = targetTx.notes || targetTx.note || '';
+      dateStr = targetTx.date || '';
+    } else if (amount === null) {
+      window.app?.showLoading(true, 'جاري جلب تفاصيل سند القبض...');
+      try {
+        const res = await window.api.getSupplierReceiptDetails(receiptId);
+        window.app?.showLoading(false);
+        if (res && res.success && res.receipt) {
+          const r = res.receipt;
+          amount = r.amount;
+          pm = r.payment_method;
+          note = r.note;
+          dateStr = r.date;
+        } else {
+          window.app?.showToast(res?.error || 'تعذر جلب تفاصيل السند', 'error');
+          return;
+        }
+      } catch (err) {
+        window.app?.showLoading(false);
+        window.app?.showToast('خطأ: ' + err.message, 'error');
+        return;
+      }
+    }
+
+    const recInput = document.getElementById('esrm-receipt-id');
+    if (recInput) recInput.value = receiptId;
+
+    const supInput = document.getElementById('esrm-supplier-id');
+    if (supInput) supInput.value = this.activeSupplierId || '';
+
+    const nameEl = document.getElementById('esrm-supplier-name');
+    if (nameEl) nameEl.textContent = this.activeSupplierName || (this.currentSupplierLedger?.supplier?.name || 'المورد');
+
+    const balEl = document.getElementById('esrm-current-balance');
+    if (balEl) {
+      let b = 0;
+      if (this.currentSupplierLedger?.supplier) {
+        b = parseFloat(this.currentSupplierLedger.supplier.balance || 0);
+      }
+      balEl.textContent = `الرصيد: ${b.toFixed(2)} ج.م`;
+    }
+
     const amtInp = document.getElementById('esrm-amount');
     if (amtInp) {
       amtInp.value = parseFloat(amount || 0).toFixed(2);
@@ -1482,7 +1574,11 @@ class ExpensesController {
     }
 
     const noteInp = document.getElementById('esrm-note');
-    if (noteInp) noteInp.value = note || '';
+    if (noteInp) {
+      let cleanNote = note || '';
+      cleanNote = cleanNote.replace(/\[قبض من مورد:[^\]]+\]\s*/g, '');
+      noteInp.value = cleanNote;
+    }
 
     const modal = document.getElementById('edit-supplier-receipt-modal');
     if (modal) {
@@ -1590,5 +1686,23 @@ window.paySupplierDirect = function(id) {
 window.receiveSupplierDirect = function(id) {
   if (window.expensesController) {
     window.expensesController.receiveSupplierDirect(id);
+  }
+};
+
+window.openEditPaymentModal = function(id) {
+  if (window.expensesController) {
+    window.expensesController.openEditPaymentModal(id);
+  }
+};
+
+window.openEditReceiptModal = function(id) {
+  if (window.expensesController) {
+    window.expensesController.openEditReceiptModal(id);
+  }
+};
+
+window.openEditPurchaseModal = function(id) {
+  if (window.purchasesController) {
+    window.purchasesController.openEditPurchaseModal(id);
   }
 };

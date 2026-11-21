@@ -1956,6 +1956,50 @@ try {
         // ============================================================
         // 2.34 تعديل دفعة مورد / سند صرف (Edit Supplier Payment)
         // ============================================================
+                // ============================================================
+        // 2.33 جلب تفاصيل سند صرف / دفعة (Get Expense Details)
+        // ============================================================
+        case 'get_expense_details':
+            $exp_id = (int)($_GET['expense_id'] ?? $_GET['id'] ?? $json_payload['expense_id'] ?? $json_payload['id'] ?? 0);
+            if ($exp_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم السند غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $stmt = $pdo->prepare("SELECT e.*, s.name as supplier_name, s.balance as supplier_balance 
+                                   FROM expenses e 
+                                   LEFT JOIN suppliers s ON e.supplier_id = s.id 
+                                   WHERE e.id = ? LIMIT 1");
+            $stmt->execute([$exp_id]);
+            $exp = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$exp) {
+                echo json_encode(['success' => false, 'error' => 'حركة السداد غير موجودة'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            echo json_encode(['success' => true, 'expense' => $exp], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // ============================================================
+        // 2.33b جلب تفاصيل سند قبض من مورد (Get Supplier Receipt Details)
+        // ============================================================
+        case 'get_supplier_receipt_details':
+            $rec_id = (int)($_GET['receipt_id'] ?? $_GET['id'] ?? $json_payload['receipt_id'] ?? $json_payload['id'] ?? 0);
+            if ($rec_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'رقم الإيصال غير صحيح'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $stmt = $pdo->prepare("SELECT r.*, s.name as supplier_name, s.balance as supplier_balance 
+                                   FROM supplier_receipts r 
+                                   LEFT JOIN suppliers s ON r.supplier_id = s.id 
+                                   WHERE r.id = ? LIMIT 1");
+            $stmt->execute([$rec_id]);
+            $rec = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$rec) {
+                echo json_encode(['success' => false, 'error' => 'سند القبض غير موجود'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            echo json_encode(['success' => true, 'receipt' => $rec], JSON_UNESCAPED_UNICODE);
+            break;
+
         case 'edit_supplier_payment':
             $data = !empty($json_payload) ? $json_payload : $_POST;
             $exp_id = (int)($data['expense_id'] ?? $data['id'] ?? 0);

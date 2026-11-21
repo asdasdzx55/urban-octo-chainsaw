@@ -540,10 +540,20 @@ class ReportsController {
               <th class="p-3">البيان والتفاصيل</th>
               <th class="p-3">طريقة الصرف</th>
               <th class="p-3 text-left">المبلغ المنصرف</th>
+              <th class="p-3 text-center">إجراءات</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            ${matched.map(item => `
+            ${matched.map(item => {
+              const isSupplierPayment = (item.category === 'سداد موردين') || (item.note && item.note.includes('سداد مورد')) || item.supplier_id;
+              const editBtn = isSupplierPayment
+                ? `<button type="button" onclick="window.openEditPaymentModal(${item.id})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-400 font-bold text-[10px] border border-blue-200 dark:border-blue-800 transition cursor-pointer shadow-2xs" title="تعديل دفعة المورد">
+                     <i data-lucide="edit-3" class="w-3 h-3"></i>
+                     <span>تعديل ✏️</span>
+                   </button>`
+                : `<span class="text-gray-300">-</span>`;
+
+              return `
               <tr class="hover:bg-rose-50/20 dark:hover:bg-rose-950/10 transition">
                 <td class="p-3 text-gray-500 font-mono text-[11px]">${item.date || item.created_at || 'اليوم'}</td>
                 <td class="p-3">
@@ -561,8 +571,11 @@ class ReportsController {
                 <td class="p-3 text-left font-black font-mono text-rose-600 dark:text-rose-400 text-sm">
                   ${parseFloat(item.amount || 0).toFixed(2)} ج.م
                 </td>
+                <td class="p-3 text-center">
+                  ${editBtn}
+                </td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       </div>
